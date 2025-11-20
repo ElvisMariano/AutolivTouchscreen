@@ -1,0 +1,49 @@
+{
+  "name": "autoliv-touch-screen",
+  "private": true,
+  "version": "0.0.0",
+  "main": "electron/main.cjs",
+  "description": "Autoliv Touch Screen Application",
+  "author": "Autoliv",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "electron:dev": "powershell -Command \"$env:ELECTRON_DEV_URL='http://localhost:3000/'; electron .\"",
+    "electron:build": "vite build && electron-builder",
+    "sign": "powershell -ExecutionPolicy Bypass -File ./sign-build.ps1"
+  },
+  "build": {
+    "appId": "com.autoliv.touchscreen",
+    "productName": "AutolivTouchScreen",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "win": {
+      "target": "dir",
+      "verifyUpdateCodeSignature": false
+    }
+  },
+  "dependencies": {
+    "@google/genai": "^1.29.1",
+    "@heroicons/react": "^2.2.0",
+    "framer-motion": "^12.23.24",
+    "pdfjs-dist": "^3.11.174",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "electron": "^33.2.1",
+    "electron-builder": "^26.0.12",
+    "electron-packager": "^17.1.2",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}

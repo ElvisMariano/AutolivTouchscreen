@@ -1,0 +1,136 @@
+  â€¢ electron-builder  version=26.0.12 os=10.0.26200
+  â€¢ loaded configuration  file=package.json ("build" field)
+  â€¢ executing @electron/rebuild  electronVersion=33.4.11 arch=x64 buildFromSource=false appDir=./
+  â€¢ installing native dependencies  arch=x64
+  â€¢ completed installing native dependencies
+  â€¢ packaging       platform=win32 arch=x64 electron=33.4.11 appOutDir=release\win-unpacked
+  â€¢ updating asar integrity executable resource  executablePath=release\win-unpacked\AutolivTouchScreen.exe
+  â€¢ default Electron icon is used  reason=application icon is not set
+  â€¢ downloading     url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z size=5.6 MB parts=1
+  â€¢ downloaded      url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z duration=668ms
+  â¨¯ cannot execute  cause=exit status 2
+                    out=
+    7-Zip (a) 21.07 (x64) : Copyright (c) 1999-2021 Igor Pavlov : 2021-12-26
+    
+    Scanning the drive for archives:
+    1 file, 5635384 bytes (5504 KiB)
+    
+    Extracting archive: C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\597678815.7z
+    --
+    Path = C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\597678815.7z
+    Type = 7z
+    Physical Size = 5635384
+    Headers Size = 1492
+    Method = LZMA2:24m LZMA:20 BCJ2
+    Solid = +
+    Blocks = 2
+    
+    
+    Sub items Errors: 2
+    
+    Archives with Errors: 1
+    
+    Sub items Errors: 2
+    
+                    errorOut=ERROR: Cannot create symbolic link : O cliente nÆo tem o privil‚gio necess rio. : C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\597678815\darwin\10.12\lib\libcrypto.dylib
+    ERROR: Cannot create symbolic link : O cliente nÆo tem o privil‚gio necess rio. : C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\597678815\darwin\10.12\lib\libssl.dylib
+    
+                    command='C:\Users\elvis\OneDrive\Documentos\00 - Projetos\AutolivTouchScreen\node_modules\7zip-bin\win\x64\7za.exe' x -snld -bd 'C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\597678815.7z' '-oC:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\597678815'
+                    workingDir=C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign
+  â€¢ Above command failed, retrying 3 more times
+  â€¢ downloading     url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z size=5.6 MB parts=1
+  â€¢ downloaded      url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z duration=481ms
+  â¨¯ cannot execute  cause=exit status 2
+                    out=
+    7-Zip (a) 21.07 (x64) : Copyright (c) 1999-2021 Igor Pavlov : 2021-12-26
+    
+    Scanning the drive for archives:
+    1 file, 5635384 bytes (5504 KiB)
+    
+    Extracting archive: C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\163022215.7z
+    --
+    Path = C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\163022215.7z
+    Type = 7z
+    Physical Size = 5635384
+    Headers Size = 1492
+    Method = LZMA2:24m LZMA:20 BCJ2
+    Solid = +
+    Blocks = 2
+    
+    
+    Sub items Errors: 2
+    
+    Archives with Errors: 1
+    
+    Sub items Errors: 2
+    
+                    errorOut=ERROR: Cannot create symbolic link : O cliente nÆo tem o privil‚gio necess rio. : C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\163022215\darwin\10.12\lib\libcrypto.dylib
+    ERROR: Cannot create symbolic link : O cliente nÆo tem o privil‚gio necess rio. : C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\163022215\darwin\10.12\lib\libssl.dylib
+    
+                    command='C:\Users\elvis\OneDrive\Documentos\00 - Projetos\AutolivTouchScreen\node_modules\7zip-bin\win\x64\7za.exe' x -snld -bd 'C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\163022215.7z' '-oC:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\163022215'
+                    workingDir=C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign
+  â€¢ Above command failed, retrying 3 more times
+  â€¢ downloading     url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z size=5.6 MB parts=1
+  â€¢ downloaded      url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z duration=455ms
+  â¨¯ cannot execute  cause=exit status 2
+                    out=
+    7-Zip (a) 21.07 (x64) : Copyright (c) 1999-2021 Igor Pavlov : 2021-12-26
+    
+    Scanning the drive for archives:
+    1 file, 5635384 bytes (5504 KiB)
+    
+    Extracting archive: C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\173827707.7z
+    --
+    Path = C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\173827707.7z
+    Type = 7z
+    Physical Size = 5635384
+    Headers Size = 1492
+    Method = LZMA2:24m LZMA:20 BCJ2
+    Solid = +
+    Blocks = 2
+    
+    
+    Sub items Errors: 2
+    
+    Archives with Errors: 1
+    
+    Sub items Errors: 2
+    
+                    errorOut=ERROR: Cannot create symbolic link : O cliente nÆo tem o privil‚gio necess rio. : C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\173827707\darwin\10.12\lib\libcrypto.dylib
+    ERROR: Cannot create symbolic link : O cliente nÆo tem o privil‚gio necess rio. : C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\173827707\darwin\10.12\lib\libssl.dylib
+    
+                    command='C:\Users\elvis\OneDrive\Documentos\00 - Projetos\AutolivTouchScreen\node_modules\7zip-bin\win\x64\7za.exe' x -snld -bd 'C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\173827707.7z' '-oC:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\173827707'
+                    workingDir=C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign
+  â€¢ Above command failed, retrying 3 more times
+  â€¢ downloading     url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z size=5.6 MB parts=1
+  â€¢ downloaded      url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z duration=490ms
+  â¨¯ cannot execute  cause=exit status 2
+                    out=
+    7-Zip (a) 21.07 (x64) : Copyright (c) 1999-2021 Igor Pavlov : 2021-12-26
+    
+    Scanning the drive for archives:
+    1 file, 5635384 bytes (5504 KiB)
+    
+    Extracting archive: C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\165994319.7z
+    --
+    Path = C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\165994319.7z
+    Type = 7z
+    Physical Size = 5635384
+    Headers Size = 1492
+    Method = LZMA2:24m LZMA:20 BCJ2
+    Solid = +
+    Blocks = 2
+    
+    
+    Sub items Errors: 2
+    
+    Archives with Errors: 1
+    
+    Sub items Errors: 2
+    
+                    errorOut=ERROR: Cannot create symbolic link : O cliente nÆo tem o privil‚gio necess rio. : C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\165994319\darwin\10.12\lib\libcrypto.dylib
+    ERROR: Cannot create symbolic link : O cliente nÆo tem o privil‚gio necess rio. : C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\165994319\darwin\10.12\lib\libssl.dylib
+    
+                    command='C:\Users\elvis\OneDrive\Documentos\00 - Projetos\AutolivTouchScreen\node_modules\7zip-bin\win\x64\7za.exe' x -snld -bd 'C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\165994319.7z' '-oC:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign\165994319'
+                    workingDir=C:\Users\elvis\AppData\Local\electron-builder\Cache\winCodeSign
+  â€¢ Above command failed, retrying 3 more times

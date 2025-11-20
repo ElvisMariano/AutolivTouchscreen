@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Linha de Produção Digital</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          keyframes: {
+            ripple: {
+              '0%': { transform: 'scale(0)', opacity: '0.5' },
+              '100%': { transform: 'scale(4)', opacity: '0' }
+            },
+            fadeIn: {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' }
+            }
+          },
+          animation: {
+            ripple: 'ripple 0.6s linear',
+            fadeIn: 'fadeIn 0.3s ease-in'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      overscroll-behavior-y: contain;
+    }
+  </style>
+  <style>
+    body {
+      overscroll-behavior-y: contain;
+    }
+  </style>
+
+  <!-- PDF.js carregado localmente via pacote pdfjs-dist -->
+</head>
+
+<body class="bg-gray-900 text-white overflow-hidden">
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
+</html>
