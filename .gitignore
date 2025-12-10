@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 release
+release-portable
+release-installer
 release-packager
 *.rar
 *.local
@@ -25,3 +27,17 @@ release-packager
 *.njsproj
 *.sln
 *.sw?
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Testing
+coverage
+
+# Production
+build
+
+# System Files
+Thumbs.db
