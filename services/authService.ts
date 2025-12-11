@@ -55,7 +55,7 @@ export async function checkUserPermission(username: string): Promise<{ exists: b
             return { exists: false };
         }
 
-        const roleName = (Array.isArray(data.role) ? data.role[0]?.name : data.role?.name) as string | undefined;
+        const roleName = (Array.isArray(data.role) ? (data.role[0] as any)?.name : (data.role as any)?.name) as string | undefined;
 
         return {
             exists: true,
@@ -236,5 +236,45 @@ export async function getRoles(): Promise<Array<{ id: string; name: string }>> {
     } catch (error) {
         console.error('Error fetching roles:', error);
         return [];
+    }
+}
+/**
+ * Verify if MSAL user exists in database
+ * Returns the user from DB (with ID) if exists, null otherwise.
+ */
+export async function syncMsalUser(username: string, name: string): Promise<User | null> {
+    try {
+        // 1. Check if user exists
+        const { data: existingUser, error: checkError } = await supabase
+            .from('users')
+            .select(`
+                id,
+                username,
+                role:permissions(
+                    id,
+                    name,
+                    allowed_resources
+                )
+            `)
+            .eq('username', username.toLowerCase())
+            .single();
+
+        if (existingUser && !checkError) {
+            // User exists, return it
+            const userRole = Array.isArray(existingUser.role) ? existingUser.role[0] : existingUser.role;
+            return {
+                id: existingUser.id,
+                username: existingUser.username,
+                role: userRole as any
+            };
+        }
+
+        // User does not exist - Strict Mode: Do not create.
+        console.warn(`User ${username} (${name}) not found in database.`);
+        return null;
+
+    } catch (error) {
+        console.error('Error verifying MSAL user:', error);
+        return null;
     }
 }

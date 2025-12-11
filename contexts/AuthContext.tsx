@@ -1,11 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User as AuthUser, AuthResult, autoLoginOperator, login as authLogin } from '../services/authService';
+import { User as AuthUser, AuthResult, syncMsalUser, logAccess } from '../services/authService';
+import { useMsal, useIsAuthenticated } from "@azure/msal-react";
+import { loginRequest } from "../src/authConfig";
 
 interface AuthContextType {
     currentUser: AuthUser | null;
     setCurrentUser: (user: AuthUser | null) => void;
+    unauthorizedUser: string | null;
     isLoading: boolean;
-    login: (username: string, password: string) => Promise<AuthResult>;
+    login: () => Promise<AuthResult>;
     logout: () => void;
 }
 
@@ -13,48 +16,58 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+    const [unauthorizedUser, setUnauthorizedUser] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const { instance, accounts } = useMsal();
+    const isAuthenticated = useIsAuthenticated();
 
     useEffect(() => {
-        const initAuth = async () => {
-            try {
-                const osUsername = window.electron?.getOsUsername();
-                console.log('AuthContext: OS Username determined as:', osUsername);
+        const checkAuth = async () => {
+            if (isAuthenticated && accounts.length > 0) {
+                const account = accounts[0];
+                try {
+                    // Sync user with DB to ensure we have a valid ID for logs
+                    const name = account.name || account.username;
+                    const dbUser = await syncMsalUser(account.username, name || 'Unknown');
 
-                if (osUsername) {
-                    // Try auto-login for operators
-                    const result = await autoLoginOperator(osUsername);
-                    if (result.success && result.user) {
-                        console.log('AuthContext: Auto-login successful for', result.user.username);
-                        setCurrentUser(result.user);
+                    if (dbUser) {
+                        setUnauthorizedUser(null);
+                        setCurrentUser(dbUser);
+                        // Log the access
+                        await logAccess(dbUser.id, 'login_success', `User Logged In (MSAL): ${name}`);
                     } else {
-                        console.log('AuthContext: Auto-login not available, will require password');
+                        // User not in DB - Unauthorized
+                        console.warn('User not found in DB:', name);
+                        setUnauthorizedUser(name || account.username);
+                        setCurrentUser(null);
                     }
+                } catch (error) {
+                    console.error('Error syncing MSAL user:', error);
+                    setUnauthorizedUser(null); // Or set generic error? Safe to clear.
                 }
-            } catch (error) {
-                console.error('AuthContext: Error during auto-login', error);
-            } finally {
-                setIsLoading(false);
+            } else if (!isAuthenticated) {
+                setCurrentUser(null);
+                setUnauthorizedUser(null);
             }
+            setIsLoading(false);
         };
 
-        initAuth();
-    }, []);
+        checkAuth();
+    }, [isAuthenticated, accounts, instance]);
 
-    const login = async (username: string, password: string): Promise<AuthResult> => {
-        const result = await authLogin(username, password);
-        if (result.success && result.user) {
-            setCurrentUser(result.user);
-        }
-        return result;
+    const login = async () => {
+        await instance.loginRedirect(loginRequest);
+        return { success: true };
     };
 
     const logout = () => {
+        instance.logoutRedirect();
         setCurrentUser(null);
+        setUnauthorizedUser(null);
     };
 
     return (
-        <AuthContext.Provider value={{ currentUser, setCurrentUser, isLoading, login, logout }}>
+        <AuthContext.Provider value={{ currentUser, setCurrentUser, unauthorizedUser, isLoading, login, logout }}>
             {children}
         </AuthContext.Provider>
     );

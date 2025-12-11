@@ -15,7 +15,9 @@ import AdminPanel from './components/AdminPanel';
 import Header from './components/common/Header';
 
 import LoginScreen from './components/LoginScreen';
+import UnauthorizedScreen from './components/UnauthorizedScreen';
 import { useAuth } from './contexts/AuthContext';
+
 
 const AppContent: React.FC = () => {
     const [currentPage, setCurrentPage] = useState<Page>(Page.Dashboard);
@@ -24,7 +26,7 @@ const AppContent: React.FC = () => {
     const [adminSubPage, setAdminSubPage] = useState<AdminSubPage>(AdminSubPage.Settings);
 
     // Auth Logic from Context
-    const { currentUser, isLoading } = useAuth();
+    const { currentUser, unauthorizedUser, isLoading } = useAuth();
     const { settings, updateSetting, logEvent } = useData();
 
     // Hooks must be called unconditionally
@@ -137,6 +139,10 @@ const AppContent: React.FC = () => {
                 <p>Iniciando sistema...</p>
             </div>
         );
+    }
+
+    if (unauthorizedUser) {
+        return <UnauthorizedScreen name={unauthorizedUser} />;
     }
 
     if (!currentUser) {
