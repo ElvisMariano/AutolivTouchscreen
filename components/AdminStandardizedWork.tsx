@@ -6,6 +6,9 @@ import { PencilSquareIcon, TrashIcon } from './common/Icons';
 import { cacheUrl, hasCache, putBlob } from '../services/offlineCache';
 import { usePDFStorage } from '../hooks/usePDFStorage';
 import { useI18n } from '../contexts/I18nContext';
+import { useLine } from '../contexts/LineContext';
+import { addLineDocument } from '../services/lineService';
+import { useAuth } from '../contexts/AuthContext';
 
 const AdminStandardizedWork: React.FC = () => {
     const { docs, addDocument, updateDocument, deleteDocument } = useData();
@@ -137,6 +140,8 @@ const AdminStandardizedWork: React.FC = () => {
     };
 
     const FormModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+        const { selectedLine } = useLine();
+        const { currentUser } = useAuth();
         const [formData, setFormData] = useState<Partial<Document>>(editingItem || {});
         const [uploadMode, setUploadMode] = useState<'url' | 'upload'>('url');
         const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -170,6 +175,12 @@ const AdminStandardizedWork: React.FC = () => {
         const handleSubmit = async (e: React.FormEvent) => {
             e.preventDefault();
 
+            // Validar linha
+            if (!selectedLine) {
+                alert('Por favor, selecione uma linha de produção primeiro.');
+                return;
+            }
+
             if (uploadMode === 'upload' && selectedFile) {
                 try {
                     setUploadProgress(t('admin.uploading'));
@@ -188,6 +199,23 @@ const AdminStandardizedWork: React.FC = () => {
                 updateDocument(formData as Document);
             } else {
                 addDocument({ ...(formData as any), category: DocumentCategory.StandardizedWork });
+
+                if (currentUser && formData.url && formData.title) {
+                    try {
+                        await addLineDocument(
+                            selectedLine.id,
+                            'standardized_work',
+                            formData.url,
+                            formData.title,
+                            currentUser.id,
+                            formData.version,
+                            { line_name: selectedLine.name }
+                        );
+                        console.log('Trabalho Padronizado vinculado à linha');
+                    } catch (error) {
+                        console.error('Erro ao vincular:', error);
+                    }
+                }
             }
             onClose();
         }
@@ -195,6 +223,13 @@ const AdminStandardizedWork: React.FC = () => {
         return (
             <Modal isOpen={true} onClose={onClose} title={editingItem ? t('admin.editStandardizedWork') : t('admin.addStandardizedWork')}>
                 <form onSubmit={handleSubmit} className="space-y-6">
+                    {!selectedLine && (
+                        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                            <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                                ⚠️ Selecione uma linha de produção no seletor acima.
+                            </p>
+                        </div>
+                    )}
                     <label className="text-xl block text-gray-900 dark:text-white">{t('common.title')} <input name="title" value={formData.title || ''} onChange={handleChange} className="w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-3 rounded-lg text-lg border-2 border-gray-300 dark:border-gray-600 focus:border-cyan-500 focus:outline-none transition-colors" required /></label>
 
                     <div className="flex gap-3 mb-4">

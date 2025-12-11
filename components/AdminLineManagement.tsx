@@ -6,6 +6,40 @@ import { createLine, updateLine, deleteLine, getAllLines } from '../services/lin
 import { getStationsByLine, createStation, deleteStation, WorkStation } from '../services/stationService';
 import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
+const getLineName = (name: string) => {
+    try {
+        if (name.startsWith('{')) {
+            const parsed = JSON.parse(name);
+            return parsed.name || name;
+        }
+    } catch {
+        return name;
+    }
+    return name;
+};
+
+const getLineDescription = (line: { name: string; description?: string }) => {
+    // Tenta recuperar descrição do JSON no nome (bug anterior)
+    try {
+        if (line.name.startsWith('{')) {
+            const parsed = JSON.parse(line.name);
+            if (parsed.description) return parsed.description;
+        }
+    } catch {
+        // Ignora erro de parse
+    }
+
+    // Valida descrição normal
+    if (!line.description) return null;
+    
+    // Filtra se for UUID (bug anterior onde ID do usuário foi salvo como descrição)
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(line.description)) {
+        return null;
+    }
+    
+    return line.description;
+};
+
 const AdminLineManagement: React.FC = () => {
     const { lines, refreshLines } = useLine();
     const { currentUser } = useAuth();
@@ -23,12 +57,41 @@ const AdminLineManagement: React.FC = () => {
     const [stationName, setStationName] = useState('');
     const [stationDescription, setStationDescription] = useState('');
 
+    const handleUpdateLine = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingLine || !lineName.trim()) return;
+
+        try {
+            await updateLine(editingLine, { name: lineName, description: lineDescription });
+            await refreshLines();
+            setEditingLine(null);
+            setLineName('');
+            setLineDescription('');
+        } catch (error) {
+            console.error('Error updating line:', error);
+            alert('Erro ao atualizar linha');
+        }
+    };
+
+    const startEditing = (line: any) => {
+        setEditingLine(line.id);
+        setLineName(getLineName(line.name));
+        setLineDescription(getLineDescription(line) || '');
+        setIsCreatingLine(false);
+    };
+
+    const cancelEditing = () => {
+        setEditingLine(null);
+        setLineName('');
+        setLineDescription('');
+    };
+
     const handleCreateLine = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!currentUser || !lineName.trim()) return;
 
         try {
-            await createLine({ name: lineName, description: lineDescription }, currentUser.id);
+            await createLine(lineName, lineDescription, currentUser.id);
             await refreshLines();
             setLineName('');
             setLineDescription('');
@@ -106,9 +169,9 @@ const AdminLineManagement: React.FC = () => {
                 Gestão de Linhas de Produção
             </h2>
 
-            {/* Criar Nova Linha */}
+            {/* Criar/Editar Linha */}
             <div className="mb-8">
-                {!isCreatingLine ? (
+                {!isCreatingLine && !editingLine ? (
                     <button
                         onClick={() => setIsCreatingLine(true)}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
@@ -118,7 +181,10 @@ const AdminLineManagement: React.FC = () => {
                     </button>
                 ) : (
                     <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-300 dark:border-gray-700">
-                        <form onSubmit={handleCreateLine} className="space-y-4">
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                            {editingLine ? 'Editar Linha' : 'Nova Linha'}
+                        </h3>
+                        <form onSubmit={editingLine ? handleUpdateLine : handleCreateLine} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                     Nome da Linha *
@@ -144,14 +210,18 @@ const AdminLineManagement: React.FC = () => {
                             </div>
                             <div className="flex gap-2">
                                 <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                                    Criar
+                                    {editingLine ? 'Salvar Alterações' : 'Criar'}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        setIsCreatingLine(false);
-                                        setLineName('');
-                                        setLineDescription('');
+                                        if (editingLine) {
+                                            cancelEditing();
+                                        } else {
+                                            setIsCreatingLine(false);
+                                            setLineName('');
+                                            setLineDescription('');
+                                        }
                                     }}
                                     className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
                                 >
@@ -168,13 +238,29 @@ const AdminLineManagement: React.FC = () => {
                 {lines.map(line => (
                     <div key={line.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-300 dark:border-gray-700">
                         <div className="flex justify-between items-start mb-2">
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{line.name}</h3>
-                                {line.description && (
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">{line.description}</p>
+                            <div className="flex-1">
+                                <div className="flex items-center gap-3">
+                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                                        {getLineName(line.name)}
+                                    </h3>
+                                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                        {line.station_count || 0} estações
+                                    </span>
+                                </div>
+                                {getLineDescription(line) ? (
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{getLineDescription(line)}</p>
+                                ) : (
+                                    <p className="text-sm text-gray-400 italic mt-1">Sem descrição</p>
                                 )}
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 ml-4">
+                                <button
+                                    onClick={() => startEditing(line)}
+                                    className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
+                                    title="Editar Linha"
+                                >
+                                    <PencilIcon className="w-5 h-5" />
+                                </button>
                                 <button
                                     onClick={() => loadStations(line.id)}
                                     className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"

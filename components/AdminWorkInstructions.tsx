@@ -7,6 +7,11 @@ import ProductionLineEditor from './ProductionLineEditor';
 import { cacheUrl, hasCache, putBlob } from '../services/offlineCache';
 import { usePDFStorage } from '../hooks/usePDFStorage';
 import { useI18n } from '../contexts/I18nContext';
+import { useLine } from '../contexts/LineContext';
+import StationSelector from './common/StationSelector';
+import { WorkStation, StationInstruction, getInstructionsByStation, getInstructionsByLine, getStationsByLine } from '../services/stationService';
+import { addStationInstruction } from '../services/stationService';
+import { useAuth } from '../contexts/AuthContext';
 
 interface WorkInstructionRowProps {
     doc: Document;
@@ -64,11 +69,60 @@ const WorkInstructionRow = React.memo(({ doc, isCached, onEdit, onDelete, onCach
 
 const AdminWorkInstructions: React.FC = () => {
     const { docs, addDocument, updateDocument, deleteDocument } = useData();
+    const { selectedLine } = useLine();
     const { t } = useI18n();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Document | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+    const [supabaseInstructions, setSupabaseInstructions] = useState<StationInstruction[]>([]);
+    const [selectedStationForFilter, setSelectedStationForFilter] = useState<string>('');
+    const [stations, setStations] = useState<WorkStation[]>([]);
+
+    // Buscar estações da linha selecionada
+    useEffect(() => {
+        if (!selectedLine) {
+            setStations([]);
+            return;
+        }
+
+        const fetchStations = async () => {
+            try {
+                const stationsData = await getStationsByLine(selectedLine.id);
+                setStations(stationsData);
+            } catch (error) {
+                console.error('Error fetching stations:', error);
+                setStations([]);
+            }
+        };
+
+        fetchStations();
+    }, [selectedLine]);
+
+    // Buscar instruções do Supabase quando linha/estação mudar
+    useEffect(() => {
+        if (!selectedLine) {
+            setSupabaseInstructions([]);
+            return;
+        }
+
+        const fetchInstructions = async () => {
+            try {
+                if (selectedStationForFilter) {
+                    const instructions = await getInstructionsByStation(selectedStationForFilter);
+                    setSupabaseInstructions(instructions);
+                } else {
+                    const instructions = await getInstructionsByLine(selectedLine.id);
+                    setSupabaseInstructions(instructions);
+                }
+            } catch (error) {
+                console.error('Error fetching instructions:', error);
+                setSupabaseInstructions([]);
+            }
+        };
+
+        fetchInstructions();
+    }, [selectedLine, selectedStationForFilter]);
 
     const openModal = (item: Document | null = null) => {
         setEditingItem(item);
@@ -99,7 +153,27 @@ const AdminWorkInstructions: React.FC = () => {
     }
 
     const DocumentList: React.FC = () => {
-        const categoryDocs = docs.filter(doc => doc.category === DocumentCategory.WorkInstruction);
+        // Filtrar docs locais por categoria (compatibilidade)
+        const localDocs = docs.filter(doc => doc.category === DocumentCategory.WorkInstruction);
+
+        // Converter instruções do Supabase em Documents para exibição
+        const supabaseDocs: Document[] = supabaseInstructions.map(inst => ({
+            id: inst.id,
+            title: inst.title,
+            url: inst.document_id, // document_id é a URL/ID do IndexedDB
+            category: DocumentCategory.WorkInstruction,
+            version: inst.version || '1',
+            lastUpdated: inst.uploaded_at
+        }));
+
+        // Combinar docs locais com docs do Supabase (evitar duplicatas por ID)
+        const allDocs = [...localDocs];
+        supabaseDocs.forEach(sDoc => {
+            if (!allDocs.find(d => d.id === sDoc.id)) {
+                allDocs.push(sDoc);
+            }
+        });
+
         const [cachedMap, setCachedMap] = useState<Record<string, boolean>>({});
         const [visibleCount, setVisibleCount] = useState(20);
         const [isLoading, setIsLoading] = useState(false);
@@ -107,17 +181,17 @@ const AdminWorkInstructions: React.FC = () => {
 
         useEffect(() => {
             let mounted = true;
-            Promise.all(categoryDocs.map(async d => [d.id, await hasCache(d.url)] as const)).then(entries => {
+            Promise.all(allDocs.map(async d => [d.id, await hasCache(d.url)] as const)).then(entries => {
                 if (mounted) setCachedMap(Object.fromEntries(entries));
             });
             return () => { mounted = false; };
-        }, [categoryDocs.map(d => d.url).join('|')]);
+        }, [allDocs.map(d => d.url).join('|')]);
 
         const loadMore = async () => {
             if (isLoading) return;
             setIsLoading(true);
             await new Promise(r => setTimeout(r, 150));
-            setVisibleCount(v => Math.min(v + 20, categoryDocs.length));
+            setVisibleCount(v => Math.min(v + 20, allDocs.length));
             setIsLoading(false);
         };
 
@@ -126,16 +200,16 @@ const AdminWorkInstructions: React.FC = () => {
             if (!el) return;
             const io = new IntersectionObserver((entries) => {
                 for (const entry of entries) {
-                    if (entry.isIntersecting && visibleCount < categoryDocs.length) {
+                    if (entry.isIntersecting && visibleCount < allDocs.length) {
                         loadMore();
                     }
                 }
             }, { rootMargin: '200px' });
             io.observe(el);
             return () => io.disconnect();
-        }, [visibleCount, categoryDocs.length]);
+        }, [visibleCount, allDocs.length]);
 
-        const rows = categoryDocs.slice(0, visibleCount);
+        const rows = allDocs.slice(0, visibleCount);
 
         return (
             <div className="overflow-x-auto mt-6">
@@ -179,6 +253,9 @@ const AdminWorkInstructions: React.FC = () => {
     };
 
     const FormModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+        const { selectedLine } = useLine();
+        const { currentUser } = useAuth();
+        const [selectedStation, setSelectedStation] = useState<WorkStation | null>(null);
         const [formData, setFormData] = useState<Partial<Document>>(editingItem || {});
         const [uploadMode, setUploadMode] = useState<'url' | 'upload'>('url');
         const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -212,6 +289,16 @@ const AdminWorkInstructions: React.FC = () => {
         const handleSubmit = async (e: React.FormEvent) => {
             e.preventDefault();
 
+            // Validar linha e estação
+            if (!selectedLine) {
+                alert('Por favor, selecione uma linha de produção primeiro.');
+                return;
+            }
+            if (!selectedStation) {
+                alert('Por favor, selecione uma estação de trabalho.');
+                return;
+            }
+
             if (uploadMode === 'upload' && selectedFile) {
                 try {
                     setUploadProgress(t('admin.uploading'));
@@ -229,7 +316,25 @@ const AdminWorkInstructions: React.FC = () => {
             if (editingItem) {
                 updateDocument(formData as Document);
             } else {
+                // Adicionar documento ao DataContext (compatibilidade)
                 addDocument({ ...(formData as any), category: DocumentCategory.WorkInstruction });
+
+                // Salvar vínculo no Supabase
+                if (currentUser && formData.url && formData.title) {
+                    try {
+                        await addStationInstruction(
+                            selectedStation.id,
+                            formData.url,
+                            formData.title,
+                            currentUser.id,
+                            formData.version,
+                            { line_id: selectedLine.id, line_name: selectedLine.name, station_name: selectedStation.name }
+                        );
+                        console.log('Instrução vinculada à estação com sucesso');
+                    } catch (error) {
+                        console.error('Erro ao vincular instrução:', error);
+                    }
+                }
             }
             onClose();
         }
@@ -237,6 +342,12 @@ const AdminWorkInstructions: React.FC = () => {
         return (
             <Modal isOpen={true} onClose={onClose} title={editingItem ? t('admin.editInstruction') : t('admin.addInstruction')}>
                 <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Station Selector */}
+                    <StationSelector
+                        selectedStation={selectedStation}
+                        onStationChange={setSelectedStation}
+                    />
+
                     <label className="text-xl block text-gray-900 dark:text-white">{t('common.title')} <input name="title" value={formData.title || ''} onChange={handleChange} className="w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-3 rounded-lg text-lg border-2 border-gray-300 dark:border-gray-600 focus:border-cyan-500 focus:outline-none transition-colors" required /></label>
 
                     <div className="flex gap-3 mb-4">
@@ -309,11 +420,44 @@ const AdminWorkInstructions: React.FC = () => {
     return (
         <div className="h-full flex flex-col">
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-bold text-cyan-600 dark:text-cyan-400">{t('workInstructions.title')} (P1)</h2>
+                <div>
+                    <h2 className="text-3xl font-bold text-cyan-600 dark:text-cyan-400">{t('workInstructions.title')} (IT)</h2>
+                    {selectedLine && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            📍 Linha: <span className="font-semibold">{selectedLine.name}</span>
+                            {supabaseInstructions.length > 0 && (
+                                <span className="ml-3 px-2 py-0.5 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs font-medium">
+                                    {supabaseInstructions.length} {supabaseInstructions.length === 1 ? 'instrução' : 'instruções'} cadastrada(s)
+                                </span>
+                            )}
+                        </p>
+                    )}
+                </div>
                 <button onClick={() => openModal()} className="px-6 py-3 bg-cyan-600 rounded-lg text-xl font-bold text-white hover:bg-cyan-500 shadow-lg transition-transform transform hover:scale-105">
                     + {t('admin.newInstruction')}
                 </button>
             </div>
+
+            {/* Filtro por Estação */}
+            {selectedLine && (
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Filtrar por Estação (opcional)
+                    </label>
+                    <select
+                        value={selectedStationForFilter}
+                        onChange={(e) => setSelectedStationForFilter(e.target.value)}
+                        className="px-4 py-2 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                    >
+                        <option value="">Todas as estações da linha</option>
+                        {stations.map(station => (
+                            <option key={station.id} value={station.id}>
+                                {station.position}. {station.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            )}
 
             <ProductionLineEditor />
 

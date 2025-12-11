@@ -1,12 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useData } from '../contexts/DataContext';
-import { PowerBiReport } from '../types';
+import { PowerBiReport, Document } from '../types';
 import Modal from './common/Modal';
 import { PencilSquareIcon, TrashIcon } from './common/Icons';
 import { useI18n } from '../contexts/I18nContext';
+import { useLine } from '../contexts/LineContext';
+import { addLineDocument } from '../services/lineService';
+import { useAuth } from '../contexts/AuthContext';
 
 const AdminPowerBI: React.FC = () => {
-    const { biReports, addBiReport, updateBiReport, deleteBiReport } = useData();
+    const { biReports, addBiReport, updateBiReport, deleteBiReport, addDocument, updateDocument } = useData();
     const { t } = useI18n();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<PowerBiReport | null>(null);
@@ -103,19 +106,43 @@ const AdminPowerBI: React.FC = () => {
     };
 
     const FormModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-        const [formData, setFormData] = useState<Partial<PowerBiReport>>(editingItem || {});
+        const { selectedLine } = useLine();
+        const { currentUser } = useAuth();
+        const [formData, setFormData] = useState<Partial<Document>>(editingItem || {});
 
         const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             const { name, value } = e.target;
             setFormData(prev => ({ ...prev, [name]: value }));
         };
 
-        const handleSubmit = (e: React.FormEvent) => {
+        const handleSubmit = async (e: React.FormEvent) => {
             e.preventDefault();
+
+            if (!selectedLine) {
+                alert('Por favor, selecione uma linha de produção primeiro.');
+                return;
+            }
             if (editingItem) {
-                updateBiReport(formData as PowerBiReport);
+                updateDocument(formData as Document);
             } else {
-                addBiReport(formData as any);
+                addDocument({ ...(formData as any), category: `PowerBI` });
+
+                if (currentUser && formData.embedUrl && formData.name) { // Changed formData.url to formData.embedUrl and formData.title to formData.name
+                    try {
+                        await addLineDocument(
+                            selectedLine.id,
+                            'report',
+                            formData.embedUrl, // Changed formData.url to formData.embedUrl
+                            formData.name, // Changed formData.title to formData.name
+                            currentUser.id,
+                            formData.version,
+                            { line_name: selectedLine.name }
+                        );
+                        console.log('Relatório vinculado à linha');
+                    } catch (error) {
+                        console.error('Erro ao vincular:', error);
+                    }
+                }
             }
             onClose();
         }
@@ -125,6 +152,13 @@ const AdminPowerBI: React.FC = () => {
         return (
             <Modal isOpen={true} onClose={onClose} title={editingItem ? t('admin.editReport') : t('admin.addReport')}>
                 <form onSubmit={handleSubmit} className="space-y-6">
+                    {!selectedLine && (
+                        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                            <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                                ⚠️ Selecione uma linha no seletor acima.
+                            </p>
+                        </div>
+                    )}
                     <label className="text-xl block text-gray-900 dark:text-white">{t('common.name')} <input name="name" value={formData.name || ''} onChange={handleChange} className={commonClass} required /></label>
                     <label className="text-xl block text-gray-900 dark:text-white">Embed URL <input name="embedUrl" type="url" value={formData.embedUrl || ''} onChange={handleChange} className={commonClass} required /></label>
 

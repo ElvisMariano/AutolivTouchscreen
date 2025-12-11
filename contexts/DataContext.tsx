@@ -13,7 +13,6 @@ import {
     ChangeLog,
     ChangeEntity
 } from '../types';
-import { MOCK_LINES, MOCK_DOCS, MOCK_ALERTS, MOCK_BI_REPORTS, MOCK_PRESENTATIONS, MOCK_USERS } from '../data/mockData';
 
 interface DataContextType {
     lines: ProductionLine[];
@@ -92,12 +91,12 @@ const useLocalStorage = <T,>(key: string, initialValue: T): [T, React.Dispatch<R
 };
 
 export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [lines, setLines] = useLocalStorage<ProductionLine[]>('lines', MOCK_LINES);
-    const [docs, setDocs] = useLocalStorage<Document[]>('docs', MOCK_DOCS);
-    const [alerts, setAlerts] = useLocalStorage<QualityAlert[]>('alerts', MOCK_ALERTS);
-    const [biReports, setBiReports] = useLocalStorage<PowerBiReport[]>('biReports', MOCK_BI_REPORTS);
-    const [presentations, setPresentations] = useLocalStorage<Presentation[]>('presentations', MOCK_PRESENTATIONS);
-    const [users, setUsers] = useLocalStorage<User[]>('users', MOCK_USERS);
+    const [lines, setLines] = useLocalStorage<ProductionLine[]>('lines', []);
+    const [docs, setDocs] = useLocalStorage<Document[]>('docs', []);
+    const [alerts, setAlerts] = useLocalStorage<QualityAlert[]>('alerts', []);
+    const [biReports, setBiReports] = useLocalStorage<PowerBiReport[]>('biReports', []);
+    const [presentations, setPresentations] = useLocalStorage<Presentation[]>('presentations', []);
+    const [users, setUsers] = useLocalStorage<User[]>('users', []);
     const [settings, setSettings] = useLocalStorage<SystemSettings>('settings', {
         inactivityTimeout: 300, // 5 minutes
         notificationDuration: 7, // 7 days
@@ -123,7 +122,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const selectedLine = lines.find(l => l.id === selectedLineId);
 
-    const generateId = () => `id_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+    const generateId = () => `id_${Date.now()}_${Math.random().toString(36).slice(2, 11)} `;
 
     const getMachineById = (id: string): Machine | undefined => {
         for (const line of lines) {
@@ -142,7 +141,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             alert.id === id ? { ...alert, isRead } : alert
         ));
         const alert = alerts.find(a => a.id === id);
-        if (alert) addLog('alert', 'update', id, `${alert.title} marcado como ${isRead ? 'lido' : 'não lido'}`);
+        if (alert) addLog('alert', 'update', id, `${alert.title} marcado como ${isRead ? 'lido' : 'não lido'} `);
     };
 
     const updateSetting = <K extends keyof SystemSettings>(key: K, value: SystemSettings[K]) => {
@@ -315,7 +314,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
             return line;
         }));
-        addLog('machine', 'update', machineId, `pos(${position.x.toFixed(1)}%,${position.y.toFixed(1)}%)`);
+        addLog('machine', 'update', machineId, `pos(${position.x.toFixed(1)} %, ${position.y.toFixed(1)} %)`);
     };
 
     const { currentUser } = useAuth();

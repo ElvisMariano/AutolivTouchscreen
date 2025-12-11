@@ -188,3 +188,39 @@ export async function deleteStationInstruction(instructionId: string): Promise<b
 
     return true;
 }
+
+/**
+ * Buscar instruções de uma estação específica
+ */
+export async function getInstructionsByStation(stationId: string): Promise<StationInstruction[]> {
+    const { data, error } = await supabase
+        .from('station_instructions')
+        .select('*')
+        .eq('station_id', stationId)
+        .order('uploaded_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching instructions by station:', error);
+        throw error;
+    }
+
+    return data || [];
+}
+
+/**
+ * Buscar todas as instruções de uma linha (de todas as estações)
+ */
+export async function getInstructionsByLine(lineId: string): Promise<StationInstruction[]> {
+    const { data, error } = await supabase
+        .from('station_instructions')
+        .select('*, work_stations!inner(line_id)')
+        .eq('work_stations.line_id', lineId)
+        .order('uploaded_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching instructions by line:', error);
+        throw error;
+    }
+
+    return data || [];
+}

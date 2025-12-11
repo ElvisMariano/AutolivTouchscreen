@@ -16,7 +16,6 @@ export enum AdminSubPage {
     PowerBI = 'Power BI\'s (Relatórios)',
     Presentations = 'Apresentações',
     Users = 'Cadastro de Usuários',
-    ProductionLines = 'Cadastro de Linhas',
     History = 'Histórico de Ações',
     Settings = 'Configurações',
 }
