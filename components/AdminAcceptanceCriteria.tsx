@@ -7,16 +7,38 @@ import { cacheUrl, hasCache, putBlob } from '../services/offlineCache';
 import { usePDFStorage } from '../hooks/usePDFStorage';
 import { useI18n } from '../contexts/I18nContext';
 import { useLine } from '../contexts/LineContext';
-import { addLineDocument } from '../services/lineService';
+import { addLineDocument, getLineDocuments, LineDocument } from '../services/lineService';
 import { useAuth } from '../contexts/AuthContext';
 
 const AdminAcceptanceCriteria: React.FC = () => {
     const { docs, addDocument, updateDocument, deleteDocument } = useData();
+    const { selectedLine } = useLine();
     const { t } = useI18n();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Document | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+    const [supabaseDocs, setSupabaseDocs] = useState<LineDocument[]>([]);
+
+    // Buscar documentos do Supabase quando linha mudar
+    useEffect(() => {
+        if (!selectedLine) {
+            setSupabaseDocs([]);
+            return;
+        }
+
+        const fetchDocs = async () => {
+            try {
+                const docs = await getLineDocuments(selectedLine.id, 'acceptance_criteria');
+                setSupabaseDocs(docs);
+            } catch (error) {
+                console.error('Error fetching acceptance criteria:', error);
+                setSupabaseDocs([]);
+            }
+        };
+
+        fetchDocs();
+    }, [selectedLine]);
 
     const openModal = (item: Document | null = null) => {
         setEditingItem(item);
@@ -47,7 +69,27 @@ const AdminAcceptanceCriteria: React.FC = () => {
     }
 
     const DocumentList: React.FC = () => {
-        const categoryDocs = docs.filter(doc => doc.category === DocumentCategory.AcceptanceCriteria);
+        // Docs locais
+        const localDocs = docs.filter(doc => doc.category === DocumentCategory.AcceptanceCriteria);
+
+        // Converter docs do Supabase
+        const convertedDocs: Document[] = supabaseDocs.map(doc => ({
+            id: doc.id,
+            title: doc.title,
+            url: doc.document_id,
+            category: DocumentCategory.AcceptanceCriteria,
+            version: doc.version || '1',
+            lastUpdated: doc.uploaded_at
+        }));
+
+        // Mesclar
+        const allDocs = [...localDocs];
+        convertedDocs.forEach(doc => {
+            if (!allDocs.find(d => d.id === doc.id)) {
+                allDocs.push(doc);
+            }
+        });
+
         const [cachedMap, setCachedMap] = useState<Record<string, boolean>>({});
         const [visibleCount, setVisibleCount] = useState(20);
         const [isLoading, setIsLoading] = useState(false);
@@ -55,17 +97,17 @@ const AdminAcceptanceCriteria: React.FC = () => {
 
         useEffect(() => {
             let mounted = true;
-            Promise.all(categoryDocs.map(async d => [d.id, await hasCache(d.url)] as const)).then(entries => {
+            Promise.all(allDocs.map(async d => [d.id, await hasCache(d.url)] as const)).then(entries => {
                 if (mounted) setCachedMap(Object.fromEntries(entries));
             });
             return () => { mounted = false; };
-        }, [categoryDocs.map(d => d.url).join('|')]);
+        }, [allDocs.map(d => d.url).join('|')]);
 
         const loadMore = async () => {
             if (isLoading) return;
             setIsLoading(true);
             await new Promise(r => setTimeout(r, 150));
-            setVisibleCount(v => Math.min(v + 20, categoryDocs.length));
+            setVisibleCount(v => Math.min(v + 20, allDocs.length));
             setIsLoading(false);
         };
 
@@ -74,16 +116,16 @@ const AdminAcceptanceCriteria: React.FC = () => {
             if (!el) return;
             const io = new IntersectionObserver((entries) => {
                 for (const entry of entries) {
-                    if (entry.isIntersecting && visibleCount < categoryDocs.length) {
+                    if (entry.isIntersecting && visibleCount < allDocs.length) {
                         loadMore();
                     }
                 }
             }, { rootMargin: '200px' });
             io.observe(el);
             return () => io.disconnect();
-        }, [visibleCount, categoryDocs.length]);
+        }, [visibleCount, allDocs.length]);
 
-        const rows = categoryDocs.slice(0, visibleCount);
+        const rows = allDocs.slice(0, visibleCount);
 
         return (
             <div className="overflow-x-auto mt-6">

@@ -262,7 +262,7 @@ export default {
         alerts: "Alertas de Calidad",
     },
     login: {
-        title: "Autoliv TouchScreen",
+        title: "Digitals Documents",
         subtitle: "Ingrese sus credenciales",
         username: "Usuario",
         password: "Contraseña",

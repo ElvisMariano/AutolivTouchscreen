@@ -16,6 +16,18 @@ export interface CreateLineData {
     description?: string;
 }
 
+export interface LineDocument {
+    id: string;
+    line_id: string;
+    document_id: string;
+    document_type: string;
+    title: string;
+    version?: string;
+    uploaded_by?: string;
+    uploaded_at: string;
+    metadata?: any;
+}
+
 /**
  * Obter todas as linhas de produção
  */
@@ -195,7 +207,7 @@ export async function getLineDocuments(lineId: string, documentType?: string) {
         query = query.eq('document_type', documentType);
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false });
+    const { data, error } = await query.order('uploaded_at', { ascending: false });
 
     if (error) {
         console.error('Error fetching line documents:', error);
