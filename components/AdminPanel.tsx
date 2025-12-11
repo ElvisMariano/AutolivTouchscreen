@@ -28,68 +28,7 @@ interface PinLockScreenProps {
     onUnlock: () => void;
 }
 
-const PinLockScreen: React.FC<PinLockScreenProps> = ({ onUnlock }) => {
-    const [pin, setPin] = useState('');
-    const [error, setError] = useState(false);
-    const { users } = useData();
-    const { setCurrentUser } = useAuth();
-    const { t } = useI18n();
-
-    const handlePinInput = (num: string) => {
-        if (pin.length < 4) {
-            setPin(pin + num);
-        }
-    };
-
-    const handleDelete = () => {
-        setPin(pin.slice(0, -1));
-    };
-
-    const handleClear = () => {
-        setPin('');
-    }
-
-    useEffect(() => {
-        if (pin.length === 4) {
-            const user = users.find(u => u.pin === pin && u.role === 'admin');
-
-            if (user) {
-                setCurrentUser(user);
-                onUnlock();
-            } else {
-                setError(true);
-                setTimeout(() => {
-                    setError(false);
-                    setPin('');
-                }, 1000);
-            }
-        }
-    }, [pin, onUnlock, users, setCurrentUser]);
-
-    return (
-        <div className="h-full w-full flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg p-8 transition-colors duration-300">
-            <h2 className="text-4xl font-bold mb-4 text-gray-900 dark:text-white">{t('admin.accessDenied')}</h2>
-            <p className="text-xl text-gray-600 dark:text-gray-400 mb-8">{t('admin.enterPin')}</p>
-            <div className={`flex space-x-4 mb-8`}>
-                {[0, 1, 2, 3].map(i => (
-                    <div key={i} className={`w-16 h-16 rounded-full border-4 ${error ? 'border-red-500 animate-shake' : 'border-cyan-400'} flex items-center justify-center transition-transform duration-300 ${error ? 'animate-headShake' : ''}`}>
-                        {pin[i] && <div className="w-8 h-8 bg-cyan-400 rounded-full"></div>}
-                    </div>
-                ))}
-            </div>
-            <div className="grid grid-cols-3 gap-6">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-                    <button key={num} onClick={() => handlePinInput(num.toString())} className="w-24 h-24 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white text-4xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-                        {num}
-                    </button>
-                ))}
-                <button onClick={handleClear} className="w-24 h-24 rounded-full bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 text-2xl font-bold hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">{t('common.clear')}</button>
-                <button onClick={() => handlePinInput('0')} className="w-24 h-24 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white text-4xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">0</button>
-                <button onClick={handleDelete} className="w-24 h-24 rounded-full bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 text-2xl font-bold hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">⌫</button>
-            </div>
-        </div>
-    );
-};
+import LoginScreen from './common/LoginScreen';
 
 const AdminSettings: React.FC = () => {
     const { settings, updateSetting, exportAll, importAll, logEvent } = useData();
@@ -272,8 +211,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
     const panStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number }>({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
     const { t } = useI18n();
 
+    const { currentUser } = useAuth();
+
+    useEffect(() => {
+        if (currentUser && currentUser.role === 'admin' && !isAdmin) {
+            setIsAdmin(true);
+        }
+    }, [currentUser, isAdmin, setIsAdmin]);
+
     if (!isAdmin) {
-        return <PinLockScreen onUnlock={() => setIsAdmin(true)} />;
+        return <LoginScreen onUnlock={() => setIsAdmin(true)} requireRole='admin' />;
     }
 
     const renderSubPage = () => {

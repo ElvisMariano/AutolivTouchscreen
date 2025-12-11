@@ -37,8 +37,8 @@ const AdminUserManagement: React.FC = () => {
 
         const handleSubmit = (e: React.FormEvent) => {
             e.preventDefault();
-            if (!formData.name || !formData.pin || formData.pin.length !== 4) {
-                alert(t('admin.fillAllFieldsPin'));
+            if (!formData.name || !formData.username || (!editingUser && !formData.password)) {
+                alert(t('common.required'));
                 return;
             }
 
@@ -58,14 +58,27 @@ const AdminUserManagement: React.FC = () => {
                     <label className="text-xl block text-gray-900 dark:text-white">{t('common.name')}
                         <input name="name" value={formData.name || ''} onChange={handleChange} className={commonClass} required />
                     </label>
-                    <label className="text-xl block text-gray-900 dark:text-white">{t('admin.pin4Digits')}
-                        <input name="pin" type="text" pattern="\d{4}" maxLength={4} value={formData.pin || ''} onChange={handleChange} className={commonClass} required />
+                    <label className="text-xl block text-gray-900 dark:text-white">{t('common.user')}
+                        <input name="username" value={formData.username || ''} onChange={handleChange} className={commonClass} required placeholder="Ex: admin" />
+                    </label>
+                    <label className="text-xl block text-gray-900 dark:text-white">{t('common.password')}
+                        <input name="password" type="password" value={formData.password || ''} onChange={handleChange} className={commonClass} required={!editingUser} placeholder={editingUser ? "Deixe em branco para manter" : ""} />
                     </label>
                     <label className="text-xl block text-gray-900 dark:text-white">{t('admin.role')}
                         <select name="role" value={formData.role || 'operator'} onChange={handleChange} className={commonClass} required>
                             <option value="operator">{t('admin.operator')}</option>
                             <option value="admin">{t('admin.admin')}</option>
                         </select>
+                    </label>
+                    <label className="flex items-center gap-3 p-3 bg-white dark:bg-gray-900 rounded-lg border-2 border-gray-300 dark:border-gray-600 cursor-pointer hover:border-cyan-500 transition-colors">
+                        <input
+                            type="checkbox"
+                            name="autoLogin"
+                            checked={formData.autoLogin || false}
+                            onChange={(e) => setFormData(prev => ({ ...prev, autoLogin: e.target.checked }))}
+                            className="w-6 h-6 accent-cyan-600"
+                        />
+                        <span className="text-xl text-gray-900 dark:text-white">{t('admin.autoLogin')}</span>
                     </label>
                     <div className="flex justify-end space-x-4 pt-4">
                         <button type="button" onClick={onClose} className="px-6 py-3 bg-gray-600 rounded-lg text-xl hover:bg-gray-500 text-white">{t('common.cancel')}</button>
@@ -88,6 +101,7 @@ const AdminUserManagement: React.FC = () => {
                     <thead className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase">
                         <tr>
                             <th className="p-4">{t('common.name')}</th>
+                            <th className="p-4">{t('common.user')}</th>
                             <th className="p-4">{t('admin.role')}</th>
                             <th className="p-4 text-right">{t('common.actions')}</th>
                         </tr>
@@ -96,6 +110,7 @@ const AdminUserManagement: React.FC = () => {
                         {users.map(user => (
                             <tr key={user.id} className="border-b border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                                 <td className="p-4 font-medium">{user.name}</td>
+                                <td className="p-4">{user.username}</td>
                                 <td className="p-4 capitalize">{user.role === 'admin' ? t('admin.admin') : t('admin.operator')}</td>
                                 <td className="p-4 flex justify-end space-x-3">
                                     <button onClick={() => openModal(user)} className="p-2 text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title={t('common.edit')}>

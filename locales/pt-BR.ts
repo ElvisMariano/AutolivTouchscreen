@@ -92,7 +92,7 @@ export default {
         zoomIn: "Aumentar zoom",
     },
     dashboard: {
-        title: "Dashboard",
+        title: "",
         workInstructions: "Instruções de Trabalho",
         acceptanceCriteria: "Critérios de Aceitação",
         standardizedWork: "Trabalho Padronizado",
@@ -157,6 +157,7 @@ export default {
         accessDenied: "Acesso Negado",
         enterPin: "Digite o PIN",
         invalidPin: "PIN Inválido",
+        invalidCredentials: "Nome de usuário ou senha inválidos",
         welcome: "Bem-vindo",
         settings: "Configurações",
         users: "Usuários",
@@ -242,6 +243,7 @@ export default {
         role: "Função",
         operator: "Operador",
         admin: "Administrador",
+        autoLogin: "Login Automático",
         exportJson: "Exportar JSON",
         exportCsv: "Exportar CSV",
         dateTime: "Data/Hora",
@@ -254,6 +256,20 @@ export default {
     },
     header: {
         alerts: "Alertas de Qualidade",
+    },
+    login: {
+        title: "Digitals Documents",
+        subtitle: "Entre com suas credenciais",
+        username: "Usuário",
+        password: "Senha",
+        submit: "Entrar",
+        loading: "Entrando...",
+        operatorNote: "Operadores são autenticados automaticamente",
+        error: {
+            userNotFound: "Usuário não encontrado",
+            invalidPassword: "Senha inválida",
+            generic: "Erro ao fazer login"
+        }
     },
     ai: {
         title: "Assistente IA",

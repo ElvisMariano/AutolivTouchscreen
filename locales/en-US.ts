@@ -92,7 +92,7 @@ export default {
         zoomIn: "Zoom In",
     },
     dashboard: {
-        title: "Dashboard",
+        title: "",
         workInstructions: "Work Instructions",
         acceptanceCriteria: "Acceptance Criteria",
         standardizedWork: "Standardized Work",
@@ -254,6 +254,20 @@ export default {
     },
     header: {
         alerts: "Quality Alerts",
+    },
+    login: {
+        title: "Digitals Documents",
+        subtitle: "Enter your credentials",
+        username: "Username",
+        password: "Password",
+        submit: "Login",
+        loading: "Logging in...",
+        operatorNote: "Operators are authenticated automatically",
+        error: {
+            userNotFound: "User not found",
+            invalidPassword: "Invalid password",
+            generic: "Login error"
+        }
     },
     ai: {
         title: "AI Assistant",

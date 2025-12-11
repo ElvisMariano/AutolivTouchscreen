@@ -31,7 +31,6 @@ interface DataContextType {
     updateAlertStatus: (id: string, isRead: boolean) => void;
     updateSetting: <K extends keyof SystemSettings>(key: K, value: SystemSettings[K]) => void;
     getUnreadAlertsCount: () => number;
-    getAdminPins: () => string[];
     changeLogs: ChangeLog[];
     addLine: (name: string) => void;
     updateLine: (line: ProductionLine) => void;
@@ -159,9 +158,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return alerts.filter(alert => !alert.isRead && new Date(alert.expiresAt) > new Date()).length;
     };
 
-    const getAdminPins = () => {
-        return users.filter(u => u.role === 'admin').map(u => u.pin);
-    }
+
 
     // --- CRUD Implementations ---
     const addDocument = (doc: Omit<Document, 'id' | 'lastUpdated' | 'version'>) => {
@@ -295,13 +292,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         addLog('machine', 'update', machineId, updates.name || machineId);
     };
     const deleteMachine = (lineId: string, machineId: string) => {
-        setLines(prevLines => prevLines.map(line => {
-            if (line.id === lineId) {
-                return { ...line, machines: line.machines.filter(m => m.id !== machineId) };
+        // Find machine name for logging before deletion
+        const line = lines.find(l => l.id === lineId);
+        const machine = line?.machines.find(m => m.id === machineId);
+
+        setLines(prevLines => prevLines.map(curLine => {
+            if (curLine.id === lineId) {
+                return {
+                    ...curLine,
+                    machines: curLine.machines.filter(m => m.id !== machineId)
+                };
             }
-            return line;
+            return curLine;
         }));
-        addLog('machine', 'delete', machineId, machineId);
+        addLog('machine', 'delete', machineId, machine?.name || machineId);
     };
     const updateMachinePosition = (lineId: string, machineId: string, position: { x: number; y: number }) => {
         setLines(prevLines => prevLines.map(line => {
@@ -362,7 +366,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         lines, docs, alerts, settings, biReports, presentations, users,
         selectedLineId, selectedLine, setSelectedLineId,
         getMachineById, getDocumentById, updateAlertStatus, updateSetting,
-        getUnreadAlertsCount, getAdminPins,
+        getUnreadAlertsCount,
         changeLogs,
         addLine, updateLine, deleteLine,
         logEvent,

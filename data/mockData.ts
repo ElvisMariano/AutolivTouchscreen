@@ -17,10 +17,10 @@ export const MOCK_LINES: ProductionLine[] = [
         id: 'line-a',
         name: 'Linha de Montagem A',
         machines: [
-            { id: 'ma-01', name: 'Prensa Hidráulica', instructionId: 'doc-001', position: { x: 15, y: 20 } },
-            { id: 'ma-02', name: 'Torno CNC', instructionId: 'doc-006', position: { x: 40, y: 45 } },
-            { id: 'ma-03', name: 'Estação de Solda', instructionId: 'doc-003', position: { x: 65, y: 25 } },
-            { id: 'ma-04', name: 'Cabine de Pintura', instructionId: 'doc-002', position: { x: 85, y: 55 } },
+            { id: 'ma-01', name: 'Prensa Hidráulica', instructionId: 'doc-001', position: { x: 15, y: 20 }, status: 'offline' },
+            { id: 'ma-02', name: 'Torno CNC', instructionId: 'doc-006', position: { x: 40, y: 45 }, status: 'offline' },
+            { id: 'ma-03', name: 'Estação de Solda', instructionId: 'doc-003', position: { x: 65, y: 25 }, status: 'offline' },
+            { id: 'ma-04', name: 'Cabine de Pintura', instructionId: 'doc-002', position: { x: 85, y: 55 }, status: 'offline' },
         ]
     }
 ];
@@ -88,6 +88,6 @@ export const MOCK_PRESENTATIONS: Presentation[] = [
 ];
 
 export const MOCK_USERS: User[] = [
-    { id: 'user-01', name: 'Admin', role: 'admin', pin: '1234' },
-    { id: 'user-02', name: 'Operador 1', role: 'operator', pin: '0000' },
+    { id: 'user-01', name: 'Admin', role: 'admin', username: 'admin', password: '123' },
+    { id: 'user-02', name: 'Operador 1', role: 'operator', username: 'operador', password: '123' },
 ];

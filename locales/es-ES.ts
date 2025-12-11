@@ -92,7 +92,7 @@ export default {
         zoomIn: "Aumentar zoom",
     },
     dashboard: {
-        title: "Tablero",
+        title: "",
         workInstructions: "Instrucciones de Trabajo",
         acceptanceCriteria: "Criterios de Aceptación",
         standardizedWork: "Trabajo Estandarizado",
@@ -254,6 +254,20 @@ export default {
     },
     header: {
         alerts: "Alertas de Calidad",
+    },
+    login: {
+        title: "Autoliv TouchScreen",
+        subtitle: "Ingrese sus credenciales",
+        username: "Usuario",
+        password: "Contraseña",
+        submit: "Ingresar",
+        loading: "Ingresando...",
+        operatorNote: "Los operadores se autentican automáticamente",
+        error: {
+            userNotFound: "Usuario no encontrado",
+            invalidPassword: "Contraseña inválida",
+            generic: "Error al iniciar sesión"
+        }
     },
     ai: {
         title: "Asistente IA",

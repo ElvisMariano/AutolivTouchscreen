@@ -5,15 +5,12 @@ import StationCard from './common/StationCard';
 import { XMarkIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import { AnimatePresence, motion } from 'framer-motion';
 import PdfViewer from './common/PdfViewer';
-import AiAssistant from './AiAssistant';
-import { ChatBubbleOvalLeftEllipsisIcon } from './common/Icons';
 import { useI18n } from '../contexts/I18nContext';
 
 const WorkInstructions: React.FC = () => {
     const { selectedLine, lines, setSelectedLineId, getDocumentById } = useData();
     const { t } = useI18n();
     const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
-    const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false);
 
     const instructionDoc = selectedMachine ? getDocumentById(selectedMachine.instructionId) : null;
 
@@ -109,13 +106,6 @@ const WorkInstructions: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            {/* AI Assistant Modal */}
-            <AiAssistant
-                isOpen={isAiAssistantOpen}
-                onClose={() => setIsAiAssistantOpen(false)}
-                machineName={selectedMachine?.name || ''}
-                context={instructionDoc ? `${t('common.document')}: ${instructionDoc.title}` : t('workInstructions.noDocument')}
-            />
         </div>
     );
 };

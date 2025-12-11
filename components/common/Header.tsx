@@ -56,8 +56,12 @@ const Header: React.FC<HeaderProps> = ({ currentPage, navigateTo }) => {
     return (
         <header className="bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white p-4 flex justify-between items-center shadow-lg border-b border-gray-300 dark:border-gray-700 transition-colors">
             <div className="flex items-center space-x-6">
-                <div className="flex items-center justify-center w-16 h-16 bg-blue-600 rounded-xl shadow-lg">
-                    <span className="text-2xl font-bold text-white">ALV</span>
+                <div className="flex items-center justify-center w-16 h-16 bg-white dark:bg-gray-900 rounded-xl shadow-lg p-2">
+                    <img
+                        src="/AutolivLogo.svg"
+                        alt="Autoliv"
+                        className="w-full h-full object-contain dark:invert"
+                    />
                 </div>
 
                 <div className="h-12 w-px bg-gray-400 dark:bg-gray-600 mx-2"></div>

@@ -50,7 +50,7 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
     }
 
     return (
-        <div className="h-full flex flex-col gap-6">
+        <div className="h-full flex p-4 flex-col gap-6">
             <div className="grid grid-cols-3 gap-6 flex-1">
                 {mainNavItems.map(item => (
                     <Ripple

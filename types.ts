@@ -16,6 +16,7 @@ export enum AdminSubPage {
     PowerBI = 'Power BI\'s (Relatórios)',
     Presentations = 'Apresentações',
     Users = 'Cadastro de Usuários',
+    ProductionLines = 'Cadastro de Linhas',
     History = 'Histórico de Ações',
     Settings = 'Configurações',
 }
@@ -125,7 +126,9 @@ export interface User {
     id: string;
     name: string;
     role: UserRole;
-    pin: string; // 4-digit string
+    username: string;
+    password?: string; // Optional for existing users or purely auto-login users (though highly recommended)
+    autoLogin?: boolean;
 }
 
 export type ChangeEntity = 'document' | 'alert' | 'user' | 'machine' | 'bi' | 'presentation' | 'settings' | 'navigation';
@@ -139,4 +142,12 @@ export interface ChangeLog {
     timestamp: string;
     userId?: string; // ID do usuário que fez a ação
     userName?: string; // Nome do usuário para facilitar exibição
+}
+
+declare global {
+    interface Window {
+        electron?: {
+            getOsUsername: () => string | null;
+        };
+    }
 }
