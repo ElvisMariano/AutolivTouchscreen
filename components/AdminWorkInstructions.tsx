@@ -3,7 +3,7 @@ import { useData } from '../contexts/DataContext';
 import { Document, DocumentCategory } from '../types';
 import Modal from './common/Modal';
 import { PencilSquareIcon, TrashIcon } from './common/Icons';
-import ProductionLineEditor from './ProductionLineEditor';
+
 import { cacheUrl, hasCache, putBlob } from '../services/offlineCache';
 import { usePDFStorage } from '../hooks/usePDFStorage';
 import { useI18n } from '../contexts/I18nContext';
@@ -14,7 +14,7 @@ import { addStationInstruction } from '../services/stationService';
 import { useAuth } from '../contexts/AuthContext';
 
 interface WorkInstructionRowProps {
-    doc: Document;
+    doc: Document & { stationName?: string };
     isCached: boolean;
     onEdit: (doc: Document) => void;
     onDelete: (id: string) => void;
@@ -27,15 +27,9 @@ const WorkInstructionRow = React.memo(({ doc, isCached, onEdit, onDelete, onCach
     return (
         <tr className="border-b border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
             <td className="p-4 font-medium text-gray-900 dark:text-white">{doc.title}</td>
+            <td className="p-4 text-gray-600 dark:text-gray-300">{doc.stationName || '-'}</td>
             <td className="p-4 truncate max-w-xs text-gray-600 dark:text-gray-300">{doc.url}</td>
             <td className="p-4 text-gray-600 dark:text-gray-300">{doc.version}</td>
-            <td className="p-4">
-                {isCached ? (
-                    <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-md text-sm border border-green-200 dark:border-green-700">{t('common.available')}</span>
-                ) : (
-                    <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-md text-sm border border-gray-200 dark:border-gray-600">{t('common.unavailable')}</span>
-                )}
-            </td>
             <td className="p-4 flex justify-end space-x-3">
                 <button onClick={() => onEdit(doc)} className="p-2 text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title={t('common.edit')}>
                     <PencilSquareIcon className="h-6 w-6" />
@@ -43,25 +37,6 @@ const WorkInstructionRow = React.memo(({ doc, isCached, onEdit, onDelete, onCach
                 <button onClick={() => onDelete(doc.id)} className="p-2 text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title={t('common.delete')}>
                     <TrashIcon className="h-6 w-6" />
                 </button>
-                <button
-                    onClick={() => onCache(doc)}
-                    className="px-3 py-1 bg-green-600 dark:bg-green-700 text-white rounded-md hover:bg-green-500 dark:hover:bg-green-600 text-sm transition-colors shadow-sm"
-                >
-                    {t('admin.saveOffline')}
-                </button>
-                <label className="px-3 py-1 bg-gray-600 dark:bg-gray-700 text-white rounded-md hover:bg-gray-500 dark:hover:bg-gray-600 cursor-pointer text-sm transition-colors shadow-sm">
-                    {t('admin.uploadLocal')}
-                    <input
-                        type="file"
-                        accept="application/pdf"
-                        onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) onUploadLocal(doc, f);
-                            e.currentTarget.value = '';
-                        }}
-                        className="hidden"
-                    />
-                </label>
             </td>
         </tr>
     );
@@ -153,24 +128,36 @@ const AdminWorkInstructions: React.FC = () => {
     }
 
     const DocumentList: React.FC = () => {
-        // Filtrar docs locais por categoria (compatibilidade)
-        const localDocs = docs.filter(doc => doc.category === DocumentCategory.WorkInstruction);
+        // Filtrar docs locais por categoria (compatibilidade) e pela linha selecionada
+        const localDocs = docs.filter(doc => 
+            doc.category === DocumentCategory.WorkInstruction &&
+            // Se o documento tiver lineId, ele deve corresponder à linha selecionada.
+            // Se não tiver (legado), mantemos o comportamento atual (aparece em todas), 
+            // ou poderíamos ocultar. Para evitar perda de dados offline, mantemos se for indefinido,
+            // mas o ideal é que todos tenham lineId.
+            (!doc.lineId || (selectedLine && doc.lineId === selectedLine.id))
+        );
 
         // Converter instruções do Supabase em Documents para exibição
-        const supabaseDocs: Document[] = supabaseInstructions.map(inst => ({
+        const supabaseDocs: (Document & { stationName?: string })[] = supabaseInstructions.map(inst => ({
             id: inst.id,
             title: inst.title,
             url: inst.document_id, // document_id é a URL/ID do IndexedDB
             category: DocumentCategory.WorkInstruction,
             version: inst.version || '1',
-            lastUpdated: inst.uploaded_at
+            lastUpdated: inst.uploaded_at,
+            stationName: inst.work_stations?.name
         }));
 
-        // Combinar docs locais com docs do Supabase (evitar duplicatas por ID)
-        const allDocs = [...localDocs];
-        supabaseDocs.forEach(sDoc => {
-            if (!allDocs.find(d => d.id === sDoc.id)) {
-                allDocs.push(sDoc);
+        // Combinar docs locais com docs do Supabase (priorizando Supabase e evitando duplicatas por ID ou URL)
+        const allDocs: (Document & { stationName?: string })[] = [...supabaseDocs];
+        
+        localDocs.forEach(lDoc => {
+            // Verifica se o documento já existe na lista vinda do Supabase (por ID ou por URL)
+            // Se a URL for a mesma, assumimos que é o mesmo documento já sincronizado/vinculado
+            const exists = allDocs.some(d => d.id === lDoc.id || (d.url && d.url === lDoc.url));
+            if (!exists) {
+                allDocs.push(lDoc);
             }
         });
 
@@ -217,9 +204,9 @@ const AdminWorkInstructions: React.FC = () => {
                     <thead className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase">
                         <tr>
                             <th className="p-4">{t('common.title')}</th>
+                            <th className="p-4">Estação</th>
                             <th className="p-4">{t('common.url')}</th>
                             <th className="p-4">{t('common.version')}</th>
-                            <th className="p-4">Offline</th>
                             <th className="p-4 text-right">{t('common.actions')}</th>
                         </tr>
                     </thead>
@@ -317,7 +304,12 @@ const AdminWorkInstructions: React.FC = () => {
                 updateDocument(formData as Document);
             } else {
                 // Adicionar documento ao DataContext (compatibilidade)
-                addDocument({ ...(formData as any), category: DocumentCategory.WorkInstruction });
+                addDocument({ 
+                    ...(formData as any), 
+                    category: DocumentCategory.WorkInstruction,
+                    lineId: selectedLine.id,
+                    stationId: selectedStation.id
+                });
 
                 // Salvar vínculo no Supabase
                 if (currentUser && formData.url && formData.title) {
@@ -459,7 +451,7 @@ const AdminWorkInstructions: React.FC = () => {
                 </div>
             )}
 
-            <ProductionLineEditor />
+
 
             <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-300 mt-8 border-t border-gray-300 dark:border-gray-700 pt-6">{t('admin.documents')}</h3>
             <DocumentList />

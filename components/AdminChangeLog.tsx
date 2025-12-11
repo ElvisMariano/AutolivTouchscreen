@@ -26,17 +26,42 @@ const AdminChangeLog: React.FC = () => {
     const entities: (ChangeEntity | 'all')[] = ['all', 'document', 'alert', 'user', 'machine', 'bi', 'presentation', 'settings'];
     const actions: ('all' | 'create' | 'update' | 'delete' | 'view')[] = ['all', 'create', 'update', 'delete', 'view'];
 
+    const getEntityLabel = (entity: string) => {
+        switch (entity) {
+            case 'all': return t('common.all');
+            case 'document': return t('common.document');
+            case 'alert': return t('common.alert');
+            case 'user': return t('common.user');
+            case 'machine': return t('common.machine');
+            case 'bi': return t('common.bi');
+            case 'presentation': return t('common.presentation');
+            case 'settings': return t('common.settings');
+            default: return entity;
+        }
+    };
+
+    const getActionLabel = (action: string) => {
+        switch (action) {
+            case 'all': return t('common.all');
+            case 'create': return t('common.create');
+            case 'update': return t('common.update');
+            case 'delete': return t('common.delete');
+            case 'view': return t('common.view');
+            default: return action;
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-wrap gap-4 items-center">
                 <div className="bg-gray-200 dark:bg-gray-800 p-2 rounded-lg">
                     {entities.map(e => (
-                        <button key={e} onClick={() => setEntityFilter(e as any)} className={`px-4 py-2 rounded-md text-lg transition-colors ${entityFilter === e ? 'bg-cyan-600 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'}`}>{e === 'all' ? t('common.all') : e}</button>
+                        <button key={e} onClick={() => setEntityFilter(e as any)} className={`px-4 py-2 rounded-md text-lg transition-colors ${entityFilter === e ? 'bg-cyan-600 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'}`}>{getEntityLabel(e)}</button>
                     ))}
                 </div>
                 <div className="bg-gray-200 dark:bg-gray-800 p-2 rounded-lg">
                     {actions.map(a => (
-                        <button key={a} onClick={() => setActionFilter(a)} className={`px-4 py-2 rounded-md text-lg transition-colors ${actionFilter === a ? 'bg-purple-600 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'}`}>{a === 'all' ? t('common.all') : a}</button>
+                        <button key={a} onClick={() => setActionFilter(a)} className={`px-4 py-2 rounded-md text-lg transition-colors ${actionFilter === a ? 'bg-purple-600 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'}`}>{getActionLabel(a)}</button>
                     ))}
                 </div>
                 <div className="flex items-center gap-3 bg-gray-200 dark:bg-gray-800 p-2 rounded-lg">

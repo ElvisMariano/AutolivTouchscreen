@@ -27,6 +27,9 @@ export interface StationInstruction {
     uploaded_by?: string;
     uploaded_at: string;
     metadata?: any;
+    work_stations?: {
+        name: string;
+    };
 }
 
 /**
@@ -213,7 +216,7 @@ export async function getInstructionsByStation(stationId: string): Promise<Stati
 export async function getInstructionsByLine(lineId: string): Promise<StationInstruction[]> {
     const { data, error } = await supabase
         .from('station_instructions')
-        .select('*, work_stations!inner(line_id)')
+        .select('*, work_stations!inner(line_id, name)')
         .eq('work_stations.line_id', lineId)
         .order('uploaded_at', { ascending: false });
 
