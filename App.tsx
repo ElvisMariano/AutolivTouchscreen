@@ -1,6 +1,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { DataProvider, useData } from './contexts/DataContext';
+import { LineProvider } from './contexts/LineContext';
 import { Page, AdminSubPage } from './types';
 import useInactivityTimer from './hooks/useInactivityTimer';
 import { useKioskMode } from './hooks/useKioskMode';
@@ -171,7 +172,9 @@ const App: React.FC = () => {
         <AuthProvider>
             <DataProvider>
                 <I18nProvider>
-                    <AppContent />
+                    <LineProvider>
+                        <AppContent />
+                    </LineProvider>
                 </I18nProvider>
             </DataProvider>
         </AuthProvider>

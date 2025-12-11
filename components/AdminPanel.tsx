@@ -11,6 +11,8 @@ import AdminPresentations from './AdminPresentations';
 import AdminUserManagement from './AdminUserManagement';
 import AdminChangeLog from './AdminChangeLog';
 import AdminAlertsManagement from './AdminAlertsManagement';
+import AdminLineManagement from './AdminLineManagement';
+import LineSelector from './common/LineSelector';
 import { getLatestBackup } from '../services/backup';
 import { useI18n } from '../contexts/I18nContext';
 import {
@@ -20,7 +22,8 @@ import {
     PresentationChartBarIcon,
     UsersIcon,
     ClockIcon,
-    CogIcon
+    CogIcon,
+    BuildingOfficeIcon
 } from './common/Icons';
 
 
@@ -214,12 +217,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
     const { currentUser } = useAuth();
 
     useEffect(() => {
-        if (currentUser && currentUser.role === 'admin' && !isAdmin) {
+        if (currentUser && currentUser.role.name === 'Admin' && !isAdmin) {
             setIsAdmin(true);
         }
     }, [currentUser, isAdmin, setIsAdmin]);
 
-    if (!isAdmin) {
+    // Se o usuário já está logado como admin, permitir acesso direto
+    if (!isAdmin && !(currentUser && currentUser.role.name === 'Admin')) {
         return <LoginScreen onUnlock={() => setIsAdmin(true)} requireRole='admin' />;
     }
 
@@ -243,6 +247,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
                 return <AdminChangeLog />;
             case AdminSubPage.QualityAlerts:
                 return <AdminAlertsManagement />;
+            case AdminSubPage.ProductionLines:
+                return <AdminLineManagement />;
             default:
                 return <AdminSettings />;
         }
@@ -284,6 +290,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
             case AdminSubPage.PowerBI: return t('common.report');
             case AdminSubPage.Presentations: return t('common.presentation');
             case AdminSubPage.Users: return t('admin.users');
+            case AdminSubPage.ProductionLines: return 'Linhas de Produção';
             case AdminSubPage.History: return t('admin.logs');
             case AdminSubPage.Settings: return t('admin.settings');
             default: return page;
@@ -292,6 +299,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
 
     // Menu items com ícones na ordem especificada
     const menuItems = [
+        { page: AdminSubPage.ProductionLines, icon: BuildingOfficeIcon },
         { page: AdminSubPage.WorkInstructions, icon: DocumentTextIcon },
         { page: AdminSubPage.AcceptanceCriteria, icon: DocumentTextIcon },
         { page: AdminSubPage.StandardizedWork, icon: DocumentTextIcon },
@@ -307,6 +315,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
         <div className="h-full flex flex-col md:flex-row gap-8">
             <div className="md:w-1/3 lg:w-1/4 bg-white dark:bg-gray-800 p-4 rounded-lg flex-shrink-0 transition-colors duration-300 shadow-lg">
                 <h3 className="text-2xl font-bold text-cyan-600 dark:text-cyan-400 mb-4">{t('admin.title')}</h3>
+
+                {/* Line Selector */}
+                <LineSelector />
+
                 <ul className="space-y-2">
                     {menuItems.map(({ page, icon: Icon }) => (
                         <li key={page}>

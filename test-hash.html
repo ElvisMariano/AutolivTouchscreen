@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Test Password Hash</title>
+</head>
+
+<body>
+    <h1>Test Admin Password Hash</h1>
+    <div id="result"></div>
+    <script>
+        async function testHash() {
+            const password = 'admin123';
+            const salt = 'salt1234567890ab';
+
+            // Função igual ao authService.ts
+            const encoder = new TextEncoder();
+            const data = encoder.encode(password + salt);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+            document.getElementById('result').innerHTML = `
+                <p><strong>Password:</strong> ${password}</p>
+                <p><strong>Salt:</strong> ${salt}</p>
+                <p><strong>Hash:</strong> ${hash}</p>
+                <p><strong>Hash Length:</strong> ${hash.length} chars</p>
+            `;
+
+            console.log('Hash gerado:', hash);
+            console.log('Tamanho:', hash.length);
+        }
+
+        testHash();
+    </script>
+</body>
+
+</html>
