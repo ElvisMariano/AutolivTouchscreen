@@ -15,6 +15,7 @@ import AdminLineManagement from './AdminLineManagement';
 import LineSelector from './common/LineSelector';
 import { getLatestBackup } from '../services/backup';
 import { useI18n } from '../contexts/I18nContext';
+import { isAlertActive, AlertSeverity } from '../types';
 import {
     DocumentTextIcon,
     ExclamationTriangleIcon,
@@ -36,6 +37,8 @@ import LoginScreen from './common/LoginScreen';
 const AdminSettings: React.FC = () => {
     const { settings, updateSetting, exportAll, importAll, logEvent } = useData();
     const { t } = useI18n();
+    const [testResults, setTestResults] = useState<string[]>([]);
+    const [testsDone, setTestsDone] = useState(false);
     const restoreSettingsBackup = async () => {
         const data = await getLatestBackup('settings');
         if (data) {
@@ -79,17 +82,6 @@ const AdminSettings: React.FC = () => {
                     id="inactivity"
                     value={settings.inactivityTimeout}
                     onChange={(e) => updateSetting('inactivityTimeout', parseInt(e.target.value, 10) || 0)}
-                    className="w-full md:w-1/2 bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-4 rounded-lg text-2xl border-2 border-gray-300 dark:border-gray-600 focus:border-cyan-500 focus:outline-none transition-colors"
-                />
-            </div>
-            <div>
-                <label htmlFor="notification" className="text-2xl font-semibold text-gray-800 dark:text-gray-300">{t('admin.notificationDuration')}</label>
-                <p className="text-gray-600 dark:text-gray-400 mb-2">{t('admin.notificationDescription')}</p>
-                <input
-                    type="number"
-                    id="notification"
-                    value={settings.notificationDuration}
-                    onChange={(e) => updateSetting('notificationDuration', parseInt(e.target.value, 10) || 0)}
                     className="w-full md:w-1/2 bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-4 rounded-lg text-2xl border-2 border-gray-300 dark:border-gray-600 focus:border-cyan-500 focus:outline-none transition-colors"
                 />
             </div>
@@ -195,6 +187,36 @@ const AdminSettings: React.FC = () => {
                         <input type="file" accept="application/json" onChange={handleImport} className="hidden" />
                     </label>
                     <button onClick={restoreSettingsBackup} className="px-6 py-3 bg-gray-600 rounded-lg text-xl hover:bg-gray-500 text-white">{t('admin.restore')}</button>
+                </div>
+            </div>
+            <div className="mt-10 border-t border-gray-300 dark:border-gray-700 pt-6">
+                <h3 className="text-2xl font-bold text-gray-700 dark:text-gray-300 mb-4">Testes</h3>
+                <div className="flex items-center gap-4 flex-wrap">
+                    <button
+                        onClick={() => {
+                            const results: string[] = [];
+                            const now = Date.now();
+                            const samples = [
+                                { id: '1', title: 'ok', description: '', severity: AlertSeverity.C, documentId: '', createdAt: new Date().toISOString(), expiresAt: new Date(now + 600000).toISOString(), isRead: false } as any,
+                                { id: '2', title: 'exp', description: '', severity: AlertSeverity.C, documentId: '', createdAt: new Date().toISOString(), expiresAt: new Date(now - 600000).toISOString(), isRead: false } as any,
+                                { id: '3', title: 'flag', description: '', severity: AlertSeverity.C, documentId: '', createdAt: new Date().toISOString(), expiresAt: new Date(now + 600000).toISOString(), isRead: false, isExpired: true } as any,
+                            ];
+                            const a1 = isAlertActive(samples[0]) === true;
+                            const a2 = isAlertActive(samples[1]) === false;
+                            const a3 = isAlertActive(samples[2]) === false;
+                            results.push(a1 && a2 && a3 ? 'OK: isAlertActive' : 'FALHA: isAlertActive');
+                            setTestResults(results);
+                            setTestsDone(true);
+                        }}
+                        className="px-6 py-3 bg-cyan-600 rounded-lg text-xl hover:bg-cyan-500 text-white"
+                    >
+                        Executar Testes
+                    </button>
+                    {testsDone && (
+                        <span className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-md text-gray-900 dark:text-gray-300">
+                            {testResults.join(' | ')}
+                        </span>
+                    )}
                 </div>
             </div>
         </div>

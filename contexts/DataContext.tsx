@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useAuth } from './AuthContext';
 import { getAllUsers, addUserToDB, updateUserInDB, deleteUserInDB, restoreUserInDB } from '../services/authService';
 import { saveBackup } from '../services/backup';
-import { getActiveLines, getAllLineDocumentsFromDB } from '../services/lineService';
+import { getActiveLines, getAllLineDocumentsFromDB, addLineDocument, updateLineDocument, deleteLineDocument } from '../services/lineService';
 import {
     ProductionLine,
     Machine,
@@ -103,7 +103,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [users, setUsers] = useLocalStorage<User[]>('users', []);
     const [settings, setSettings] = useLocalStorage<SystemSettings>('settings', {
         inactivityTimeout: 300, // 5 minutes
-        notificationDuration: 7, // 7 days
         language: 'pt-BR',
         theme: 'dark',
         fontSize: 'medium',
@@ -149,6 +148,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 if (dbDocs.length > 0) {
                     const reports: PowerBiReport[] = [];
                     const presentations: Presentation[] = [];
+                    const dbAlerts: QualityAlert[] = [];
                     const otherDocs: Document[] = [];
 
                     dbDocs.forEach((d: any) => {
@@ -171,34 +171,51 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                             // Standardized Work, Acceptance Criteria, etc.
                             let category = d.document_type as DocumentCategory;
 
-                            // Map technical DB types to Enum values if needed
-                            if (d.document_type === 'acceptance_criteria') category = DocumentCategory.AcceptanceCriteria;
-                            else if (d.document_type === 'work_instructions') category = DocumentCategory.WorkInstruction;
-                            else if (d.document_type === 'standardized_work') category = DocumentCategory.StandardizedWork;
-                            else if (d.document_type === 'quality_alerts') category = DocumentCategory.QualityAlert;
+                            if (d.document_type === 'alert') {
+                                // Parse Quality Alert keys from metadata
+                                const alert: QualityAlert = {
+                                    id: d.id,
+                                    title: d.title,
+                                    severity: d.metadata?.severity || 'C',
+                                    description: d.metadata?.description || '',
+                                    expiresAt: d.metadata?.expiresAt || new Date().toISOString(),
+                                    isRead: d.metadata?.isRead || false,
+                                    documentId: d.document_id,
+                                    createdAt: d.uploaded_at,
 
-                            otherDocs.push({
-                                id: d.id,
-                                title: d.title,
-                                url: d.document_id,
-                                category: category,
-                                version: d.version,
-                                lineId: d.line_id,
-                                lastUpdated: d.uploaded_at
-                            });
+                                    pdfUrl: d.document_id.startsWith('http') ? d.document_id : undefined,
+                                    pdfName: d.metadata?.pdfName, // recover filename
+                                    lineId: d.line_id
+                                };
+                                dbAlerts.push(alert);
+                            } else {
+                                // ...
+                                // ...
+
+                                // Map technical DB types to Enum values if needed
+                                if (d.document_type === 'acceptance_criteria') category = DocumentCategory.AcceptanceCriteria;
+                                else if (d.document_type === 'work_instructions') category = DocumentCategory.WorkInstruction;
+                                else if (d.document_type === 'standardized_work') category = DocumentCategory.StandardizedWork;
+
+                                otherDocs.push({
+                                    id: d.id,
+                                    title: d.title,
+                                    url: d.document_id,
+                                    category: category,
+                                    version: d.version,
+                                    lineId: d.line_id,
+                                    lastUpdated: d.uploaded_at
+                                });
+                            }
                         }
                     });
 
                     setBiReports(reports);
                     setPresentations(presentations);
+                    setAlerts(dbAlerts); // Set alerts from DB
 
                     // Merge otherDocs with existing non-line docs (or just update line docs)
-                    // Strategy: Remove any existing docs with lineId using setDocs functional update?
-                    // But here we are in mount. We can read 'docs' from state? No, closure.
-                    // We can use setDocs(prev => ...)
                     setDocs(prev => {
-                        // Keep docs that don't have lineId (local global docs) OR are not in the new set?
-                        // Safest: Remove all docs that seem to be "Line Documents" (have lineId) and replace with DB ones.
                         const localDocs = prev.filter(p => !p.lineId);
                         return [...localDocs, ...otherDocs];
                     });
@@ -253,8 +270,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const getUnreadAlertsCount = () => {
         return alerts.filter(alert => !alert.isRead && new Date(alert.expiresAt) > new Date()).length;
     };
-
-
 
     // --- CRUD Implementations ---
     const addDocument = (doc: Omit<Document, 'id' | 'lastUpdated' | 'version'>) => {
@@ -316,7 +331,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } else {
             console.error('Error adding user to DB:', error);
             // Fallback: Add locally with generated ID (not ideal but keeps UI working if offline? No, we need DB auth)
-            // For now, simple console error. The UI currently doesn't show loading/error for this action.
         }
     };
     const updateUser = async (updatedUser: User) => {
@@ -359,24 +373,68 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    const addAlert = (alert: Omit<QualityAlert, 'id' | 'createdAt' | 'isRead'>) => {
+    const addAlert = async (alert: Omit<QualityAlert, 'id' | 'createdAt' | 'isRead'>) => {
+        const id = generateId();
+        const targetLineId = selectedLineId || (lines.length > 0 ? lines[0].id : null);
         const newAlert: QualityAlert = {
             ...alert,
-            id: generateId(),
+            id,
             createdAt: new Date().toISOString(),
             isRead: false,
+            lineId: targetLineId || undefined
         };
         setAlerts(prev => [...prev, newAlert]);
         addLog('alert', 'create', newAlert.id, newAlert.title);
+
+        if (targetLineId) {
+            const success = await addLineDocument(
+                targetLineId,
+                'alert',
+                alert.pdfUrl || alert.documentId || '',
+                alert.title,
+                currentUser?.id || null,
+                '1',
+                {
+                    description: alert.description,
+                    severity: alert.severity,
+                    expiresAt: alert.expiresAt,
+                    isRead: false,
+                    pdfName: alert.pdfName
+                }
+            );
+            if (!success) console.error('Failed to persist alert to DB');
+        } else {
+            console.warn('No line selected to persist alert');
+        }
     };
-    const updateAlert = (updatedAlert: QualityAlert) => {
+
+    const updateAlert = async (updatedAlert: QualityAlert) => {
+        // Optimistic update
         setAlerts(prev => prev.map(a => a.id === updatedAlert.id ? updatedAlert : a));
         addLog('alert', 'update', updatedAlert.id, updatedAlert.title);
+
+        // Persist to DB
+        const success = await updateLineDocument(updatedAlert.id, {
+            title: updatedAlert.title,
+            document_id: updatedAlert.pdfUrl || updatedAlert.documentId,
+            metadata: {
+                description: updatedAlert.description,
+                severity: updatedAlert.severity,
+                expiresAt: updatedAlert.expiresAt,
+                isRead: updatedAlert.isRead,
+                pdfName: updatedAlert.pdfName
+            }
+        });
+        if (!success) console.error('Failed to update alert in DB');
     };
-    const deleteAlert = (id: string) => {
+
+    const deleteAlert = async (id: string) => {
         const alert = alerts.find(a => a.id === id);
         setAlerts(prev => prev.filter(a => a.id !== id));
         if (alert) addLog('alert', 'delete', id, alert.title);
+
+        // Persist to DB
+        await deleteLineDocument(id);
     };
 
     // --- Machine Management ---

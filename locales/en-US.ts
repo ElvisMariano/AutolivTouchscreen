@@ -200,8 +200,6 @@ export default {
         saveOffline: "Save Offline",
         inactivityTimeout: "Inactivity Timeout (seconds)",
         inactivityDescription: "Returns to dashboard after this time without activity.",
-        notificationDuration: "Notification Duration (days)",
-        notificationDescription: "Time quality alerts remain visible.",
         fontSize: "Font Size",
         autoRefresh: "Auto-Refresh (seconds)",
         enableSound: "Notification Sounds",

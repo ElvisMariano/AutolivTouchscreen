@@ -7,7 +7,7 @@ import PdfViewer from './common/PdfViewer';
 import { hasCache } from '../services/offlineCache';
 
 const AcceptanceCriteria: React.FC = () => {
-    const { docs, settings, logEvent, selectedLineId } = useData();
+    const { docs, logEvent, selectedLineId } = useData();
     const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
     const criteriaDocs = useMemo(() => docs.filter(doc =>
         doc.category === DocumentCategory.AcceptanceCriteria &&
@@ -39,9 +39,7 @@ const AcceptanceCriteria: React.FC = () => {
                     >
                         <p className="text-2xl font-bold text-gray-600 dark:text-gray-400 flex items-center justify-between gap-3">
                             {doc.title}
-                            {new Date(doc.lastUpdated).getTime() + settings.notificationDuration * 24 * 60 * 60 * 1000 > Date.now() && (
-                                <span className="px-2 py-1 bg-yellow-500 text-gray-900 text-sm rounded-md">Atualizado</span>
-                            )}
+                            
                             {offlineMap[doc.id] && (
                                 <span className="px-2 py-1 bg-green-600 text-white text-sm rounded-md">Offline</span>
                             )}

@@ -1,18 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useData } from '../contexts/DataContext';
-import { QualityAlert, Document, AlertSeverity } from '../types';
+import { QualityAlert, AlertSeverity } from '../types';
 import Modal from './common/Modal';
 import { PencilSquareIcon, TrashIcon } from './common/Icons';
 import { usePDFStorage } from '../hooks/usePDFStorage';
 import { useI18n } from '../contexts/I18nContext';
 
 const AdminAlertsManagement: React.FC = () => {
-  const { alerts, addAlert, updateAlert, deleteAlert, docs } = useData();
+  const { alerts, addAlert, updateAlert, deleteAlert, selectedLineId } = useData();
   const { t, locale } = useI18n();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<QualityAlert | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+
+  // Filter alerts for the selected line
+  const filteredAlerts = alerts.filter(a => a.lineId === selectedLineId);
 
   const openModal = (item: QualityAlert | null = null) => {
     setEditingItem(item);
@@ -47,13 +50,13 @@ const AdminAlertsManagement: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-    useEffect(() => { setVisibleCount(20); }, [alerts.length]);
+    useEffect(() => { setVisibleCount(20); }, [filteredAlerts.length]);
 
     const loadMore = async () => {
       if (isLoading) return;
       setIsLoading(true);
       await new Promise(r => setTimeout(r, 150));
-      setVisibleCount(v => Math.min(v + 20, alerts.length));
+      setVisibleCount(v => Math.min(v + 20, filteredAlerts.length));
       setIsLoading(false);
     };
 
@@ -62,12 +65,12 @@ const AdminAlertsManagement: React.FC = () => {
       if (!el) return;
       const io = new IntersectionObserver((entries) => {
         for (const entry of entries) {
-          if (entry.isIntersecting && visibleCount < alerts.length) loadMore();
+          if (entry.isIntersecting && visibleCount < filteredAlerts.length) loadMore();
         }
       }, { rootMargin: '200px' });
       io.observe(el);
       return () => io.disconnect();
-    }, [visibleCount, alerts.length]);
+    }, [visibleCount, filteredAlerts.length]);
 
     return (
       <div className="overflow-x-auto mt-6">
@@ -81,7 +84,7 @@ const AdminAlertsManagement: React.FC = () => {
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-            {alerts.slice(0, visibleCount).map(item => (
+            {filteredAlerts.slice(0, visibleCount).map(item => (
               <tr key={item.id} className="border-b border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                 <td className="p-4 font-medium">{item.title}</td>
                 <td className="p-4">
@@ -107,6 +110,7 @@ const AdminAlertsManagement: React.FC = () => {
         </table>
         <div ref={sentinelRef} className="p-4 text-center space-y-2">
           {isLoading && <span className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-md text-gray-700 dark:text-gray-300">{t('common.loading')}</span>}
+          {filteredAlerts.length === 0 && !isLoading && <div className="text-gray-500">{t('admin.noAlerts')}</div>}
         </div>
       </div>
     );
@@ -257,16 +261,16 @@ const AdminAlertsManagement: React.FC = () => {
                     />
                   </div>
                 </label>
+                {formData.pdfUrl && (
+                  <div className="mt-2 text-sm text-green-600 dark:text-green-400">
+                    ✅ {t('admin.pdfLinked')}: {formData.pdfName || t('admin.fileAttached')}
+                  </div>
+                )}
                 {uploadProgress && (
                   <div className="p-3 bg-cyan-100 dark:bg-cyan-900/30 border border-cyan-300 dark:border-cyan-500/30 rounded-lg text-cyan-800 dark:text-cyan-300 text-sm">
                     {uploadProgress}
                   </div>
                 )}
-              </div>
-            )}
-            {formData.pdfUrl && (
-              <div className="mt-2 text-sm text-green-600 dark:text-green-400">
-                ✅ {t('admin.pdfLinked')}: {formData.pdfName || t('admin.fileAttached')}
               </div>
             )}
           </div>
@@ -284,7 +288,12 @@ const AdminAlertsManagement: React.FC = () => {
     <div className="h-full flex flex-col">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-bold text-cyan-600 dark:text-cyan-400">{t('header.alerts')}</h2>
-        <button onClick={() => openModal()} className="px-6 py-3 bg-cyan-600 rounded-lg text-xl font-bold text-white hover:bg-cyan-500 shadow-lg transition-transform transform hover:scale-105">
+        <button
+          onClick={() => openModal()}
+          disabled={!selectedLineId}
+          className={`px-6 py-3 rounded-lg text-xl font-bold text-white shadow-lg transition-transform transform hover:scale-105 ${!selectedLineId ? 'bg-gray-400 cursor-not-allowed' : 'bg-cyan-600 hover:bg-cyan-500'}`}
+          title={!selectedLineId ? 'Selecione uma linha para adicionar' : ''}
+        >
           + {t('admin.newAlert')}
         </button>
       </div>

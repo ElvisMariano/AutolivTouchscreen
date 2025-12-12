@@ -1,5 +1,5 @@
 import React from 'react';
-import { Page } from '../../types';
+import { Page, isAlertActive } from '../../types';
 import { useData } from '../../contexts/DataContext';
 import { HomeIcon, Cog6ToothIcon, ExclamationTriangleIcon } from './Icons';
 import useUpdateCheck from '../../hooks/useUpdateCheck';
@@ -11,15 +11,16 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ currentPage, navigateTo }) => {
-    const { alerts, settings } = useData();
+    const { alerts, selectedLineId } = useData();
     const { hasUpdate } = useUpdateCheck(60000);
     const { t, locale } = useI18n();
 
     const activeAlertsCount = React.useMemo(() => {
-        const now = new Date();
-        const maxAgeMs = settings.notificationDuration * 24 * 60 * 60 * 1000;
-        return alerts.filter(alert => new Date(alert.createdAt).getTime() + maxAgeMs > now.getTime()).length;
-    }, [alerts, settings.notificationDuration]);
+        return alerts
+            .filter(alert => (!selectedLineId || alert.lineId === selectedLineId))
+            .filter(isAlertActive)
+            .length;
+    }, [alerts, selectedLineId]);
 
     const getPageTitle = (page: Page) => {
         switch (page) {

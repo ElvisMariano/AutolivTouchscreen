@@ -438,7 +438,7 @@ const AdminWorkInstructions: React.FC = () => {
         <div className="h-full flex flex-col">
             <div className="flex justify-between items-center mb-6">
                 <div>
-                    <h2 className="text-3xl font-bold text-cyan-600 dark:text-cyan-400">{t('workInstructions.title')} (IT)</h2>
+                    <h2 className="text-3xl font-bold text-cyan-600 dark:text-cyan-400">{t('workInstructions.title')} (P1)</h2>
                     {selectedLine && (
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                             📍 Linha: <span className="font-semibold">{selectedLine.name}</span>

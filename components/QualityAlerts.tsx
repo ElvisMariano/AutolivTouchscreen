@@ -2,38 +2,25 @@
 
 import React, { useState, useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
-import { QualityAlert, Document, AlertSeverity, getSeverityColorClass, DocumentCategory } from '../types';
+import { QualityAlert, Document, AlertSeverity, getSeverityColorClass, DocumentCategory, isAlertActive } from '../types';
 import Modal from './common/Modal';
 import PdfViewer from './common/PdfViewer';
 import { useI18n } from '../contexts/I18nContext';
 
 
 const QualityAlerts: React.FC = () => {
-    const { alerts, settings, getDocumentById, updateAlertStatus } = useData();
+    const { alerts, getDocumentById, updateAlertStatus, selectedLineId } = useData();
     const { t, locale } = useI18n();
     const [selectedAlert, setSelectedAlert] = useState<QualityAlert | null>(null);
     const [filterMode, setFilterMode] = useState<'newest' | 'oldest' | 'expiration'>('newest');
     const [severityFilter, setSeverityFilter] = useState<AlertSeverity | 'all'>('all');
 
     const filteredAlerts = useMemo(() => {
-        const now = new Date();
-        const maxAgeMs = settings.notificationDuration * 24 * 60 * 60 * 1000;
-
-        let result = alerts;
-
-        // Filter Logic
-        if (filterMode === 'newest' || filterMode === 'expiration') {
-            // Show only recent alerts (last 7 days)
-            result = result.filter(alert => new Date(alert.createdAt).getTime() + maxAgeMs > now.getTime());
-        }
-        // 'oldest' shows all history (no time filter)
-
-        // Severity Filter
+        let result = alerts.filter(a => !selectedLineId || a.lineId === selectedLineId);
+        result = result.filter(isAlertActive);
         if (severityFilter !== 'all') {
             result = result.filter(alert => alert.severity === severityFilter);
         }
-
-        // Sorting Logic
         return result.sort((a, b) => {
             if (filterMode === 'newest') {
                 return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -44,7 +31,7 @@ const QualityAlerts: React.FC = () => {
             }
             return 0;
         });
-    }, [alerts, filterMode, severityFilter, settings.notificationDuration]);
+    }, [alerts, filterMode, severityFilter, selectedLineId]);
 
     const handleAlertClick = (alert: QualityAlert) => {
         setSelectedAlert(alert);
@@ -144,8 +131,8 @@ const QualityAlerts: React.FC = () => {
             </div>
 
             <Modal isOpen={!!selectedAlert} onClose={() => setSelectedAlert(null)} title={selectedAlert?.title || ''} size="full">
-                <div className="h-full flex flex-col gap-4">
-                    <div className="bg-gray-200 dark:bg-gray-700 p-4 rounded-lg flex justify-between items-center">
+                <div className="h-full flex flex-col gap-2">
+                    <div className="bg-gray-200 dark:bg-gray-700 p-3 rounded-lg flex justify-between items-center">
                         <div>
                             <p className="text-lg text-gray-900 dark:text-white"><span className="font-bold">{t('common.description')}: </span>{selectedAlert?.description}</p>
                             <p>

@@ -28,19 +28,19 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
             page: Page.WorkInstructions,
             label: t('dashboard.workInstructions'),
             icon: PencilSquareIcon,
-            style: 'bg-gradient-to-br from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800'
+            style: 'bg-gradient-to-br from-green-500 to-green-700 hover:from-green-600 hover:to-green-800'
         },
         {
             page: Page.AcceptanceCriteria,
             label: t('dashboard.acceptanceCriteria'),
             icon: ClipboardDocumentCheckIcon,
-            style: 'bg-gradient-to-br from-green-500 to-green-700 hover:from-green-600 hover:to-green-800'
+            style: 'bg-gradient-to-br from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700'
         },
         {
             page: Page.StandardizedWork,
             label: t('dashboard.standardizedWork'),
             icon: DocumentTextIcon,
-            style: 'bg-gradient-to-br from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800'
+            style: 'bg-gradient-to-br from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800'
         },
     ];
 

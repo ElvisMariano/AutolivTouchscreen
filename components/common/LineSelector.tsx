@@ -1,10 +1,12 @@
 import React from 'react';
 import { useLine } from '../../contexts/LineContext';
+import { useData } from '../../contexts/DataContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
 
 const LineSelector: React.FC = () => {
     const { lines, selectedLine, setSelectedLineId, isLoading } = useLine();
+    const { setSelectedLineId: setDataSelectedLineId } = useData();
     const { t } = useI18n();
 
     if (isLoading || lines.length === 0) {
@@ -19,7 +21,11 @@ const LineSelector: React.FC = () => {
             <div className="relative">
                 <select
                     value={selectedLine?.id || ''}
-                    onChange={(e) => setSelectedLineId(e.target.value || null)}
+                    onChange={(e) => {
+                        const value = e.target.value || '';
+                        setSelectedLineId(value || null);
+                        setDataSelectedLineId(value);
+                    }}
                     className="w-full px-4 py-3 pr-10 rounded-lg border-2 border-blue-500 dark:border-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none cursor-pointer transition-all"
                 >
                     <option value="">{t('admin.selectLinePlaceholder', 'Nenhuma linha selecionada')}</option>

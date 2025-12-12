@@ -106,13 +106,14 @@ export interface QualityAlert {
     createdAt: string;
     expiresAt: string;
     isRead: boolean;
+    isExpired?: boolean;
     pdfUrl?: string; // URL do PDF específico do alerta (opcional)
     pdfName?: string; // Nome do arquivo PDF
+    lineId?: string; // ID da linha de produção associada
 }
 
 export interface SystemSettings {
     inactivityTimeout: number; // in seconds
-    notificationDuration: number; // in days
     language: 'pt-BR' | 'en-US' | 'es-ES';
     theme: 'dark' | 'light';
     fontSize: 'small' | 'medium' | 'large';
@@ -123,6 +124,13 @@ export interface SystemSettings {
     compactMode: boolean; // UI density
     kioskMode: boolean; // Prevent exit/gestures
 }
+
+export const isAlertActive = (alert: QualityAlert): boolean => {
+    const now = Date.now();
+    const exp = new Date(alert.expiresAt).getTime();
+    const flagExpired = alert.isExpired === true;
+    return exp > now && !flagExpired;
+};
 
 export type UserRole = 'admin' | 'operator' | 'processo' | 'qualidade' | 'aps';
 

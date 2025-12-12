@@ -167,10 +167,10 @@ export async function getLineById(lineId: string): Promise<ProductionLine | null
  */
 export async function addLineDocument(
     lineId: string,
-    documentType: 'acceptance_criteria' | 'standardized_work' | 'presentation' | 'report',
+    documentType: 'acceptance_criteria' | 'standardized_work' | 'presentation' | 'report' | 'alert',
     documentId: string,
     title: string,
-    uploadedBy: string,
+    uploadedBy: string | null, // Allow null for system-created documents
     version?: string,
     metadata?: Record<string, any>
 ): Promise<boolean> {
@@ -246,6 +246,23 @@ export async function getLineDocuments(lineId: string, documentType?: string) {
 }
 
 
+
+/**
+ * Deletar documento da linha
+ */
+export async function deleteLineDocument(documentId: string): Promise<boolean> {
+    const { error } = await supabase
+        .from('line_documents')
+        .delete()
+        .eq('id', documentId);
+
+    if (error) {
+        console.error('Error deleting line document:', error);
+        return false;
+    }
+
+    return true;
+}
 
 /**
  * Buscar todos os documentos de linha cadastrados (todos os tipos)

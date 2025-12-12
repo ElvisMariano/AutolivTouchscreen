@@ -6,7 +6,7 @@ import PdfViewer from './common/PdfViewer';
 import { hasCache } from '../services/offlineCache';
 
 const StandardizedWork: React.FC = () => {
-    const { docs, settings, logEvent, selectedLineId } = useData();
+    const { docs, logEvent, selectedLineId } = useData();
     const normativeDocs = useMemo(() => docs.filter(doc =>
         doc.category === DocumentCategory.StandardizedWork &&
         (!doc.lineId || doc.lineId === selectedLineId)
@@ -43,9 +43,7 @@ const StandardizedWork: React.FC = () => {
                             >
                                 <span className="flex items-center gap-3">
                                     {doc.title}
-                                    {new Date(doc.lastUpdated).getTime() + settings.notificationDuration * 24 * 60 * 60 * 1000 > Date.now() && (
-                                        <span className="px-2 py-1 bg-yellow-500 text-gray-900 text-sm rounded-md">Atualizado</span>
-                                    )}
+                                    
                                     {offlineMap[doc.id] && (
                                         <span className="px-2 py-1 bg-green-600 text-white text-sm rounded-md">Offline</span>
                                     )}

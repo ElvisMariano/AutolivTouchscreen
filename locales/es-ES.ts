@@ -200,8 +200,6 @@ export default {
         saveOffline: "Guardar sin conexión",
         inactivityTimeout: "Tiempo de Inactividad (segundos)",
         inactivityDescription: "Vuelve al tablero después de este tiempo sin actividad.",
-        notificationDuration: "Duración de Notificaciones (días)",
-        notificationDescription: "Tiempo que las alertas de calidad permanecen visibles.",
         fontSize: "Tamaño de Fuente",
         autoRefresh: "Auto-Actualización (segundos)",
         enableSound: "Sonidos de Notificación",
