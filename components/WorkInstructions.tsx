@@ -8,17 +8,21 @@ import { XMarkIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import { AnimatePresence, motion } from 'framer-motion';
 import PdfViewer from './common/PdfViewer';
 import { useI18n } from '../contexts/I18nContext';
+import { usePDFStorage } from '../hooks/usePDFStorage';
 
 const WorkInstructions: React.FC = () => {
     const { getDocumentById, setSelectedLineId: setContextSelectedLineId } = useData();
     const { t } = useI18n();
-    
+
     // Local state for DB data
     const [dbLines, setDbLines] = useState<ProductionLine[]>([]);
     const [selectedLineId, setSelectedLineId] = useState<string>('');
     const [machines, setMachines] = useState<Machine[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
+    const [fetchedInstructions, setFetchedInstructions] = useState<StationInstruction[]>([]);
+    const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
+    const { getPDF } = usePDFStorage();
 
     // Fetch lines on mount
     useEffect(() => {
@@ -54,7 +58,7 @@ const WorkInstructions: React.FC = () => {
                 const mappedMachines: Machine[] = stations.map((station, index) => {
                     // Find latest instruction for this station
                     const stationInstruction = instructions.find(i => i.station_id === station.id);
-                    
+
                     return {
                         id: station.id,
                         name: station.name,
@@ -66,7 +70,8 @@ const WorkInstructions: React.FC = () => {
                 });
 
                 setMachines(mappedMachines);
-                
+                setFetchedInstructions(instructions);
+
                 // Update context if needed (optional, depending on app logic)
                 setContextSelectedLineId(selectedLineId);
             } catch (error) {
@@ -77,9 +82,47 @@ const WorkInstructions: React.FC = () => {
         fetchStationsAndInstructions();
     }, [selectedLineId]);
 
-    const instructionDoc = selectedMachine && selectedMachine.instructionId 
-        ? getDocumentById(selectedMachine.instructionId) 
+    const activeInstruction = selectedMachine
+        ? fetchedInstructions.find(i => i.station_id === selectedMachine.id)
         : null;
+
+    useEffect(() => {
+        const resolveUrl = async () => {
+            if (!activeInstruction?.document_id) {
+                setResolvedUrl(null);
+                return;
+            }
+            const url = activeInstruction.document_id;
+            if (url.startsWith('http') || url.startsWith('blob:') || url.startsWith('data:')) {
+                setResolvedUrl(url);
+            } else {
+                try {
+                    const blob = await getPDF(url);
+                    if (blob) {
+                        setResolvedUrl(URL.createObjectURL(blob));
+                    } else {
+                        console.warn('PDF not found in local storage:', url);
+                        setResolvedUrl(null);
+                    }
+                } catch (e) {
+                    console.error('Error resolving PDF:', e);
+                    setResolvedUrl(null);
+                }
+            }
+        };
+        resolveUrl();
+    }, [activeInstruction?.document_id]);
+
+    const instructionDoc = (activeInstruction && resolvedUrl) ? {
+        id: activeInstruction.id,
+        title: activeInstruction.title,
+        url: resolvedUrl,
+        category: 'work_instruction',
+        version: activeInstruction.version || '1',
+        lastUpdated: activeInstruction.uploaded_at
+    } as any : (selectedMachine && selectedMachine.instructionId
+        ? getDocumentById(selectedMachine.instructionId)
+        : null);
 
     if (isLoading) {
         return (
@@ -92,7 +135,7 @@ const WorkInstructions: React.FC = () => {
     const selectedLine = dbLines.find(l => l.id === selectedLineId);
 
     if (!selectedLine) {
-         return (
+        return (
             <div className="flex items-center justify-center h-full text-gray-900 dark:text-white">
                 <p className="text-xl">{t('workInstructions.selectLine')}</p>
             </div>

@@ -9,7 +9,7 @@ import { usePDFStorage } from '../hooks/usePDFStorage';
 import { useI18n } from '../contexts/I18nContext';
 import { useLine } from '../contexts/LineContext';
 import StationSelector from './common/StationSelector';
-import { WorkStation, StationInstruction, getInstructionsByStation, getInstructionsByLine, getStationsByLine } from '../services/stationService';
+import { WorkStation, StationInstruction, getInstructionsByStation, getInstructionsByLine, getStationsByLine, updateStationInstruction } from '../services/stationService';
 import { addStationInstruction } from '../services/stationService';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -53,6 +53,7 @@ const AdminWorkInstructions: React.FC = () => {
     const [supabaseInstructions, setSupabaseInstructions] = useState<StationInstruction[]>([]);
     const [selectedStationForFilter, setSelectedStationForFilter] = useState<string>('');
     const [stations, setStations] = useState<WorkStation[]>([]);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     // Buscar estações da linha selecionada
     useEffect(() => {
@@ -97,7 +98,7 @@ const AdminWorkInstructions: React.FC = () => {
         };
 
         fetchInstructions();
-    }, [selectedLine, selectedStationForFilter]);
+    }, [selectedLine, selectedStationForFilter, refreshTrigger]);
 
     const openModal = (item: Document | null = null) => {
         setEditingItem(item);
@@ -129,7 +130,7 @@ const AdminWorkInstructions: React.FC = () => {
 
     const DocumentList: React.FC = () => {
         // Filtrar docs locais por categoria (compatibilidade) e pela linha selecionada
-        const localDocs = docs.filter(doc => 
+        const localDocs = docs.filter(doc =>
             doc.category === DocumentCategory.WorkInstruction &&
             // Se o documento tiver lineId, ele deve corresponder à linha selecionada.
             // Se não tiver (legado), mantemos o comportamento atual (aparece em todas), 
@@ -146,12 +147,13 @@ const AdminWorkInstructions: React.FC = () => {
             category: DocumentCategory.WorkInstruction,
             version: inst.version || '1',
             lastUpdated: inst.uploaded_at,
-            stationName: inst.work_stations?.name
+            stationName: inst.work_stations?.name,
+            stationId: inst.station_id
         }));
 
         // Combinar docs locais com docs do Supabase (priorizando Supabase e evitando duplicatas por ID ou URL)
         const allDocs: (Document & { stationName?: string })[] = [...supabaseDocs];
-        
+
         localDocs.forEach(lDoc => {
             // Verifica se o documento já existe na lista vinda do Supabase (por ID ou por URL)
             // Se a URL for a mesma, assumimos que é o mesmo documento já sincronizado/vinculado
@@ -249,6 +251,14 @@ const AdminWorkInstructions: React.FC = () => {
         const [uploadProgress, setUploadProgress] = useState<string>('');
         const { savePDF } = usePDFStorage();
 
+        useEffect(() => {
+            if (editingItem && (editingItem as any).stationId) {
+                const sId = (editingItem as any).stationId;
+                const found = stations.find(s => s.id === sId);
+                if (found) setSelectedStation(found);
+            }
+        }, []);
+
         const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             const { name, value } = e.target;
             setFormData(prev => ({ ...prev, [name]: value }));
@@ -302,10 +312,24 @@ const AdminWorkInstructions: React.FC = () => {
 
             if (editingItem) {
                 updateDocument(formData as Document);
+                if (formData.url) {
+                    try {
+                        await updateStationInstruction(
+                            editingItem.id,
+                            {
+                                title: formData.title,
+                                document_id: formData.url,
+                                version: formData.version,
+                                station_id: selectedStation?.id
+                            }
+                        );
+                        setRefreshTrigger(prev => prev + 1);
+                    } catch (e) { console.error(e); }
+                }
             } else {
                 // Adicionar documento ao DataContext (compatibilidade)
-                addDocument({ 
-                    ...(formData as any), 
+                addDocument({
+                    ...(formData as any),
                     category: DocumentCategory.WorkInstruction,
                     lineId: selectedLine.id,
                     stationId: selectedStation.id
@@ -323,6 +347,7 @@ const AdminWorkInstructions: React.FC = () => {
                             { line_id: selectedLine.id, line_name: selectedLine.name, station_name: selectedStation.name }
                         );
                         console.log('Instrução vinculada à estação com sucesso');
+                        setRefreshTrigger(prev => prev + 1);
                     } catch (error) {
                         console.error('Erro ao vincular instrução:', error);
                     }

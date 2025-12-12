@@ -227,3 +227,29 @@ export async function getInstructionsByLine(lineId: string): Promise<StationInst
 
     return data || [];
 }
+/**
+ * Atualizar instrução existente
+ */
+export async function updateStationInstruction(
+    instructionId: string,
+    updates: {
+        title?: string;
+        document_id?: string;
+        version?: string;
+        station_id?: string;
+    }
+): Promise<StationInstruction | null> {
+    const { data, error } = await supabase
+        .from('station_instructions')
+        .update(updates)
+        .eq('id', instructionId)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating instruction:', error);
+        throw error;
+    }
+
+    return data;
+}

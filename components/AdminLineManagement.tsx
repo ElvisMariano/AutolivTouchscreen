@@ -3,7 +3,7 @@ import { useLine } from '../contexts/LineContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { createLine, updateLine, deleteLine, getAllLines } from '../services/lineService';
-import { getStationsByLine, createStation, deleteStation, WorkStation } from '../services/stationService';
+import { getStationsByLine, createStation, deleteStation, updateStation, WorkStation } from '../services/stationService';
 import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 const getLineName = (name: string) => {
@@ -50,6 +50,7 @@ const AdminLineManagement: React.FC = () => {
     const [selectedLineForStations, setSelectedLineForStations] = useState<string | null>(null);
     const [stations, setStations] = useState<WorkStation[]>([]);
     const [isLoadingStations, setIsLoadingStations] = useState(false);
+    const [editingStationId, setEditingStationId] = useState<string | null>(null);
 
     // Form states
     const [lineName, setLineName] = useState('');
@@ -132,21 +133,45 @@ const AdminLineManagement: React.FC = () => {
         if (!currentUser || !selectedLineForStations || !stationName.trim()) return;
 
         try {
-            const nextPosition = stations.length + 1;
-            await createStation({
-                line_id: selectedLineForStations,
-                name: stationName,
-                position: nextPosition,
-                description: stationDescription
-            }, currentUser.id);
+            if (editingStationId) {
+                // Update existing station
+                await updateStation(editingStationId, {
+                    line_id: selectedLineForStations,
+                    name: stationName,
+                    position: stations.find(s => s.id === editingStationId)?.position || stations.length + 1,
+                    description: stationDescription
+                });
+                setEditingStationId(null);
+            } else {
+                // Create new station
+                const nextPosition = stations.length + 1;
+                await createStation({
+                    line_id: selectedLineForStations,
+                    name: stationName,
+                    position: nextPosition,
+                    description: stationDescription
+                }, currentUser.id);
+            }
 
             await loadStations(selectedLineForStations);
             setStationName('');
             setStationDescription('');
         } catch (error) {
-            console.error('Error creating station:', error);
-            alert('Erro ao criar estação');
+            console.error('Error saving station:', error);
+            alert('Erro ao salvar estação');
         }
+    };
+
+    const startEditingStation = (station: WorkStation) => {
+        setEditingStationId(station.id);
+        setStationName(station.name);
+        setStationDescription(station.description || '');
+    };
+
+    const cancelEditingStation = () => {
+        setEditingStationId(null);
+        setStationName('');
+        setStationDescription('');
     };
 
     const handleDeleteStation = async (stationId: string) => {
@@ -299,10 +324,30 @@ const AdminLineManagement: React.FC = () => {
                                             className="px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                                         />
                                     </div>
-                                    <button type="submit" className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700">
-                                        <PlusIcon className="w-4 h-4 inline mr-1" />
-                                        Adicionar Estação
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button type="submit" className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 flex items-center">
+                                            {editingStationId ? (
+                                                <>
+                                                    <PencilIcon className="w-4 h-4 mr-1" />
+                                                    Salvar Alterações
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <PlusIcon className="w-4 h-4 mr-1" />
+                                                    Adicionar Estação
+                                                </>
+                                            )}
+                                        </button>
+                                        {editingStationId && (
+                                            <button
+                                                type="button"
+                                                onClick={cancelEditingStation}
+                                                className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600"
+                                            >
+                                                Cancelar
+                                            </button>
+                                        )}
+                                    </div>
                                 </form>
 
                                 {/* Lista de Estações */}
@@ -324,12 +369,22 @@ const AdminLineManagement: React.FC = () => {
                                                         </span>
                                                     )}
                                                 </div>
-                                                <button
-                                                    onClick={() => handleDeleteStation(station.id)}
-                                                    className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                                                >
-                                                    <TrashIcon className="w-4 h-4" />
-                                                </button>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => startEditingStation(station)}
+                                                        className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
+                                                        title="Editar Estação"
+                                                    >
+                                                        <PencilIcon className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteStation(station.id)}
+                                                        className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                                                        title="Excluir Estação"
+                                                    >
+                                                        <TrashIcon className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>

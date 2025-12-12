@@ -22,6 +22,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ url: urlProp, document, cl
     const [scale, setScale] = useState(1.5);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [useFallback, setUseFallback] = useState(false);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { getPDF } = usePDFStorage();
     const { t } = useI18n();
@@ -33,6 +34,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ url: urlProp, document, cl
 
             setLoading(true);
             setError(null);
+            setUseFallback(false);
 
             try {
                 let pdfData: ArrayBuffer | string;
@@ -57,9 +59,20 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ url: urlProp, document, cl
                 setPdfDoc(pdf);
                 setTotalPages(pdf.numPages);
                 setCurrentPage(1);
-            } catch (err) {
-                console.error('Error loading PDF:', err);
-                setError(t('common.errorLoadingPdf'));
+            } catch (err: any) {
+                // Check for common fetch/CORS errors
+                const isFetchError = err?.name === 'UnknownErrorException' ||
+                    err?.message === 'Failed to fetch' ||
+                    err?.message?.includes('NetworkError');
+
+                if (isFetchError) {
+                    console.warn('Could not fetch PDF directly (likely CORS), switching to iframe fallback.');
+                } else {
+                    console.error('Error loading PDF:', err);
+                }
+
+                // Fallback to iframe for external links (CORS) or other errors
+                setUseFallback(true);
             } finally {
                 setLoading(false);
             }
@@ -116,6 +129,18 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ url: urlProp, document, cl
     const handleZoomOut = () => setScale(prev => Math.max(prev - 0.25, 0.5));
     const handlePrevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
     const handleNextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
+
+    if (useFallback) {
+        return (
+            <div className={`w-full h-full bg-gray-900 flex flex-col ${className}`}>
+                <iframe
+                    src={url}
+                    className="flex-1 w-full h-full border-0"
+                    title="PDF Viewer"
+                />
+            </div>
+        );
+    }
 
     if (loading) {
         return (
