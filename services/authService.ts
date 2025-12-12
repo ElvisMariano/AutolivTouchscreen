@@ -49,6 +49,7 @@ export async function checkUserPermission(username: string): Promise<{ exists: b
         role:permissions(name)
       `)
             .eq('username', username.toLowerCase())
+            .is('deleted_at', null)
             .single();
 
         if (error || !data) {
@@ -88,6 +89,7 @@ export async function login(username: string, password: string): Promise<AuthRes
         )
       `)
             .eq('username', username.toLowerCase())
+            .is('deleted_at', null)
             .single();
 
         if (userError || !userData) {
@@ -136,6 +138,7 @@ export async function autoLoginOperator(username: string): Promise<AuthResult> {
         )
       `)
             .eq('username', username.toLowerCase())
+            .is('deleted_at', null)
             .single();
 
         if (userError || !userData) {
@@ -257,6 +260,7 @@ export async function syncMsalUser(username: string, name: string): Promise<User
                 )
             `)
             .eq('username', username.toLowerCase())
+            .is('deleted_at', null)
             .single();
 
         if (existingUser && !checkError) {
@@ -276,5 +280,285 @@ export async function syncMsalUser(username: string, name: string): Promise<User
     } catch (error) {
         console.error('Error verifying MSAL user:', error);
         return null;
+    }
+}
+/**
+ * Get all users with their roles
+ */
+export async function getAllUsers(): Promise<User[]> {
+    try {
+        const { data, error } = await supabase
+            .from('users')
+            .select(`
+                id,
+                username,
+                name,
+                role:permissions(
+                    id,
+                    name,
+                    allowed_resources
+                )
+            `)
+            .is('deleted_at', null)
+            .order('username');
+
+        if (error) {
+            console.error('Error fetching users:', error);
+            return [];
+        }
+
+        return data.map((u: any) => ({
+            id: u.id,
+            username: u.username,
+            name: u.name || u.username, // Fallback to username if name is null
+            role: Array.isArray(u.role) ? u.role[0] : u.role
+        }));
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        return [];
+    }
+}
+
+
+/**
+ * Add a new user to the database
+ */
+export async function addUserToDB(user: any): Promise<{ success: boolean; error?: string; data?: any }> {
+    try {
+        // First resolve role_id from role name or ID
+        // The frontend passes 'admin' or 'operator' string usually.
+        // We need to find the corresponding permission/role ID.
+
+        let roleId = '';
+        const { data: roles } = await supabase.from('permissions').select('id, name');
+
+        let targetRole: any = null;
+
+        if (roles) {
+            const lowerRole = user.role.toLowerCase();
+            targetRole = roles.find(r => r.name.toLowerCase() === lowerRole);
+            if (targetRole) roleId = targetRole.id;
+            // Fallback for 'operator' if not found exactly
+            if (!roleId && lowerRole === 'operator') {
+                const opRole = roles.find(r => r.name.toLowerCase() === 'operador');
+                if (opRole) {
+                    roleId = opRole.id;
+                    targetRole = opRole;
+                }
+            }
+            // Fallback for 'admin'
+            if (!roleId && lowerRole === 'admin') {
+                const admRole = roles.find(r => r.name.toLowerCase() === 'administrador');
+                if (admRole) {
+                    roleId = admRole.id;
+                    targetRole = admRole;
+                }
+            }
+        }
+
+        if (!roleId) return { success: false, error: 'Role not found' };
+
+        const salt = generateSalt();
+        const passwordHash = await hashPassword(user.password || '123456', salt); // Default password if empty
+
+        // 1. Tenta usar RPC (Secure Store Procedure)
+        const { data: rpcData, error: rpcError } = await supabase.rpc('create_user_admin', {
+            new_username: user.username.toLowerCase(),
+            new_name: user.name,
+            new_password_hash: passwordHash,
+            new_salt: salt,
+            new_role_id: roleId
+        });
+
+        if (!rpcError) {
+            console.log('Usuário criado via RPC com sucesso.');
+            // RPC pode retornar o ID se configurado, mas assumimos sucesso
+            return { success: true, data: { ...user, role: targetRole, id: rpcData || 'new-id' } };
+        }
+
+        console.warn('RPC de criação falhou, tentando insert direto...', rpcError.message);
+
+        // 2. Fallback Insert Direto
+        const { data, error } = await supabase.from('users').insert({
+            username: user.username.toLowerCase(),
+            name: user.name,
+            password_hash: passwordHash,
+            salt,
+            role_id: roleId
+        }).select().single();
+
+        if (error) throw error;
+
+        return { success: true, data };
+    } catch (error: any) {
+        console.error('Error adding user:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Update user in database
+ */
+export async function updateUserInDB(user: any): Promise<{ success: boolean; error?: string }> {
+    try {
+        // Resolve role again if needed.
+        let roleId = '';
+        // For update, if user.role is a string (name) we need ID. If it is object (from DB load) we might have ID.
+        // But DataContext usually keeps 'role' as string 'admin' | 'operator'.
+
+        const { data: roles } = await supabase.from('permissions').select('id, name');
+        if (roles) {
+            const lowerRole = (typeof user.role === 'string' ? user.role : user.role.name).toLowerCase();
+            const targetRole = roles.find(r => r.name.toLowerCase() === lowerRole);
+            if (targetRole) roleId = targetRole.id;
+            if (!roleId && lowerRole === 'operator') {
+                const opRole = roles.find(r => r.name.toLowerCase() === 'operador');
+                if (opRole) roleId = opRole.id;
+            }
+            if (!roleId && lowerRole === 'admin') {
+                const admRole = roles.find(r => r.name.toLowerCase() === 'administrador');
+                if (admRole) roleId = admRole.id;
+            }
+        }
+
+        const updates: any = {
+            username: user.username.toLowerCase(),
+            name: user.name
+        };
+
+        if (roleId) updates.role_id = roleId;
+
+        // If password provided
+        if (user.password) {
+            const salt = generateSalt();
+            updates.password_hash = await hashPassword(user.password, salt);
+            updates.salt = salt;
+        }
+
+        // 1. Tenta usar RPC (Secure Store Procedure that bypasses RLS)
+        const { error: rpcError } = await supabase.rpc('update_user_admin', {
+            target_user_id: user.id,
+            new_username: updates.username,
+            new_name: updates.name,
+            new_role_id: updates.role_id || null,
+            new_password_hash: updates.password_hash || null,
+            new_salt: updates.salt || null
+        });
+
+        if (!rpcError) {
+            console.log('Usuário atualizado via RPC com sucesso.');
+            return { success: true };
+        }
+
+        console.warn('RPC de atualização falhou ou não existe, tentando update direto...', rpcError.message);
+
+        const { error } = await supabase
+            .from('users')
+            .update(updates)
+            .eq('id', user.id);
+
+        if (error) throw error;
+
+        return { success: true };
+
+    } catch (error: any) {
+        console.error('Error updating user:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Delete user from database (Soft Delete)
+ */
+export async function deleteUserInDB(id: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        console.log(`Tentando excluir (soft delete) usuário ${id}...`);
+        // 1. Tenta usar RPC (Secure Store Procedure that bypasses RLS)
+        const { error: rpcError } = await supabase.rpc('soft_delete_user', { target_user_id: id });
+
+        if (!rpcError) {
+            console.log('Usuário excluído via RPC com sucesso.');
+            return { success: true };
+        }
+
+        console.warn('RPC falhou ou não existe, tentando update direto...', rpcError?.message);
+
+        // 2. Fallback para Update Direto (pode falhar por RLS)
+        const { data, error, status, statusText } = await supabase
+            .from('users')
+            .update({ deleted_at: new Date().toISOString() })
+            .eq('id', id)
+            .select();
+
+        if (error) {
+            console.error('Supabase Error deleting user:', error);
+            console.error('Status:', status, statusText);
+            throw error;
+        }
+
+        console.log('Update direto realizado. Dados:', data);
+        if (!data || data.length === 0) {
+            console.warn('ATENÇÃO: Nenhum registro atualizado via Update direto via RLS.');
+        }
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('Exception deleting user:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Get all deleted users
+ */
+export async function getDeletedUsers(): Promise<User[]> {
+    try {
+        const { data, error } = await supabase
+            .from('users')
+            .select(`
+                id,
+                username,
+                name,
+                role:permissions(
+                    id,
+                    name,
+                    allowed_resources
+                )
+            `)
+            .not('deleted_at', 'is', null) // Filter where deleted_at IS NOT NULL
+            .order('username');
+
+        if (error) {
+            console.error('Error fetching deleted users:', error);
+            return [];
+        }
+
+        return data.map((u: any) => ({
+            id: u.id,
+            username: u.username,
+            name: u.name || u.username,
+            role: Array.isArray(u.role) ? u.role[0] : u.role
+        }));
+    } catch (error) {
+        console.error('Error fetching deleted users:', error);
+        return [];
+    }
+}
+
+/**
+ * Restore user in database
+ */
+export async function restoreUserInDB(id: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('users')
+            .update({ deleted_at: null })
+            .eq('id', id);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error: any) {
+        console.error('Error restoring user:', error);
+        return { success: false, error: error.message };
     }
 }

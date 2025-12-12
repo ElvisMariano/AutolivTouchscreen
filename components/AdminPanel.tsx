@@ -321,7 +321,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
 
                 <ul className="space-y-2">
                     {menuItems.map(({ page, icon: Icon }) => (
-                        <li key={page}>
+                        <li key={`menu-item-${page}`}>
                             <button
                                 onClick={() => setSubPage(page)}
                                 className={`w-full flex items-center gap-3 p-4 rounded-md transition-colors text-lg ${subPage === page

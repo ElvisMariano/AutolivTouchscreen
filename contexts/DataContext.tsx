@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
+import { getAllUsers, addUserToDB, updateUserInDB, deleteUserInDB, restoreUserInDB } from '../services/authService';
 import { saveBackup } from '../services/backup';
 import { getActiveLines, getAllLineDocumentsFromDB } from '../services/lineService';
 import {
@@ -55,6 +56,7 @@ interface DataContextType {
     addUser: (user: Omit<User, 'id'>) => void;
     updateUser: (user: User) => void;
     deleteUser: (id: string) => void;
+    restoreUser: (id: string, user: User) => void;
     // CRUD Alerts
     addAlert: (alert: Omit<QualityAlert, 'id' | 'createdAt' | 'isRead'>) => void;
     updateAlert: (alert: QualityAlert) => void;
@@ -119,10 +121,23 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [dbLines, dbDocs] = await Promise.all([
+                const [dbLines, dbDocs, dbUsers] = await Promise.all([
                     getActiveLines(),
-                    getAllLineDocumentsFromDB()
+                    getAllLineDocumentsFromDB(),
+                    getAllUsers()
                 ]);
+
+                if (dbUsers && dbUsers.length > 0) {
+                    // Map DB users to app User type
+                    const mappedUsers: User[] = dbUsers.map(u => ({
+                        id: u.id,
+                        name: (u as any).name || u.username,
+                        username: u.username,
+                        role: (u.role as any)?.name?.toLowerCase() === 'administrador' ? 'admin' : 'operator', // Simple mapping
+                        autoLogin: false // default, or fetch from preferences if we store it
+                    }));
+                    setUsers(mappedUsers);
+                }
 
                 if (dbLines.length > 0) {
                     setLines(dbLines);
@@ -287,19 +302,61 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (pres) addLog('presentation', 'delete', id, pres.title);
     };
 
-    const addUser = (user: Omit<User, 'id'>) => {
-        const newUser = { ...user, id: generateId() };
-        setUsers(prev => [...prev, newUser]);
-        addLog('user', 'create', newUser.id, newUser.name);
+    const addUser = async (user: Omit<User, 'id'>) => {
+        // Optimistic update or wait? Let's wait for ID creation from DB
+        const { success, data, error } = await addUserToDB(user);
+        if (success && data) {
+            const newUser: User = {
+                ...user,
+                id: data.id,
+                // Ensure role matches what we sent, or refine if needed
+            };
+            setUsers(prev => [...prev, newUser]);
+            addLog('user', 'create', newUser.id, newUser.name);
+        } else {
+            console.error('Error adding user to DB:', error);
+            // Fallback: Add locally with generated ID (not ideal but keeps UI working if offline? No, we need DB auth)
+            // For now, simple console error. The UI currently doesn't show loading/error for this action.
+        }
     };
-    const updateUser = (updatedUser: User) => {
+    const updateUser = async (updatedUser: User) => {
+        // Optimistic update
         setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
-        addLog('user', 'update', updatedUser.id, updatedUser.name);
+
+        const { success, error } = await updateUserInDB(updatedUser);
+        if (!success) {
+            console.error('Error updating user in DB:', error);
+            // Revert?
+        } else {
+            addLog('user', 'update', updatedUser.id, updatedUser.name);
+        }
     };
-    const deleteUser = (id: string) => {
+    const deleteUser = async (id: string) => {
         const user = users.find(u => u.id === id);
+        // Optimistic delete
         setUsers(prev => prev.filter(u => u.id !== id));
-        if (user) addLog('user', 'delete', id, user.name);
+
+        const { success, error } = await deleteUserInDB(id);
+        if (!success) {
+            console.error('Error deleting user in DB:', error);
+            // Revert?
+        } else {
+            if (user) addLog('user', 'delete', id, user.name);
+        }
+    };
+
+    const restoreUser = async (id: string, user: User) => {
+        // Optimistic restore
+        setUsers(prev => [...prev, user]);
+
+        const { success, error } = await restoreUserInDB(id);
+        if (!success) {
+            console.error('Error restoring user in DB:', error);
+            // Revert
+            setUsers(prev => prev.filter(u => u.id !== id));
+        } else {
+            addLog('user', 'create', id, `Restaurado: ${user.name}`);
+        }
     };
 
     const addAlert = (alert: Omit<QualityAlert, 'id' | 'createdAt' | 'isRead'>) => {
@@ -465,7 +522,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         addDocument, updateDocument, deleteDocument,
         addBiReport, updateBiReport, deleteBiReport,
         addPresentation, updatePresentation, deletePresentation,
-        addUser, updateUser, deleteUser,
+        addUser, updateUser, deleteUser, restoreUser,
         addAlert, updateAlert, deleteAlert,
         addMachine, updateMachine, deleteMachine, moveMachine, updateMachinePosition
     };
