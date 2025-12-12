@@ -99,6 +99,7 @@ export default {
         qualityAlerts: "Quality Alerts",
         adminPanel: "Admin Panel",
         selectLine: "Select a Line",
+        selectLineSubtitle: "Select a line to filter content",
         selectLinePlaceholder: "Select...",
         noLineSelected: "No line selected",
         online: "Online",
@@ -113,6 +114,7 @@ export default {
     },
     workInstructions: {
         title: "Work Instructions",
+        selectLine: "Select a Line",
         selectStation: "Select a Station",
         noInstructions: "No instructions available",
         viewInstruction: "View Instruction",

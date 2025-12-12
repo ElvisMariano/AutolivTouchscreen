@@ -6,8 +6,11 @@ import PdfViewer from './common/PdfViewer';
 import { hasCache } from '../services/offlineCache';
 
 const StandardizedWork: React.FC = () => {
-    const { docs, settings, logEvent } = useData();
-    const normativeDocs = useMemo(() => docs.filter(doc => doc.category === DocumentCategory.StandardizedWork), [docs]);
+    const { docs, settings, logEvent, selectedLineId } = useData();
+    const normativeDocs = useMemo(() => docs.filter(doc =>
+        doc.category === DocumentCategory.StandardizedWork &&
+        (!doc.lineId || doc.lineId === selectedLineId)
+    ), [docs, selectedLineId]);
     const [offlineMap, setOfflineMap] = useState<Record<string, boolean>>({});
     useEffect(() => {
         let mounted = true;
@@ -27,15 +30,15 @@ const StandardizedWork: React.FC = () => {
     return (
         <div className="h-full flex flex-col md:flex-row gap-6">
             <div className="md:w-1/3 lg:w-1/4 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg flex-shrink-0">
-                <h3 className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-4">Índice de Documentos</h3>
+                <h3 className="text-2xl font-bold text-gray-700 dark:text-gray-400 mb-4">Familía / Operadores</h3>
                 <ul className="space-y-2">
                     {normativeDocs.map(doc => (
                         <li key={doc.id}>
                             <button
                                 onClick={() => setSelectedDoc(doc)}
                                 className={`w-full text-left p-4 rounded-md transition-colors text-lg ${selectedDoc?.id === doc.id
-                                        ? 'bg-purple-600 text-white font-bold'
-                                        : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'
+                                    ? 'bg-orange-600 text-white font-bold'
+                                    : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'
                                     }`}
                             >
                                 <span className="flex items-center gap-3">

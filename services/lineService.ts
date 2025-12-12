@@ -195,6 +195,34 @@ export async function addLineDocument(
 }
 
 /**
+ * Atualizar documento da linha
+ */
+export async function updateLineDocument(
+    documentId: string, // ID no banco (não o ID local se forem diferentes, mas aqui assumimos que usamos o ID do banco)
+    updates: {
+        title?: string;
+        document_id?: string; // URL
+        version?: string;
+        metadata?: any;
+    }
+): Promise<boolean> {
+    const { error } = await supabase
+        .from('line_documents')
+        .update({
+            ...updates,
+            // não atualizamos line_id ou document_type normalmente
+        })
+        .eq('id', documentId); // Importante: O ID do documento local deve corresponder ao ID da tabela line_documents se foi carregado do banco.
+
+    if (error) {
+        console.error('Error updating line document:', error);
+        return false;
+    }
+
+    return true;
+}
+
+/**
  * Buscar documentos de uma linha
  */
 export async function getLineDocuments(lineId: string, documentType?: string) {
@@ -211,6 +239,25 @@ export async function getLineDocuments(lineId: string, documentType?: string) {
 
     if (error) {
         console.error('Error fetching line documents:', error);
+        return [];
+    }
+
+    return data || [];
+}
+
+
+
+/**
+ * Buscar todos os documentos de linha cadastrados (todos os tipos)
+ */
+export async function getAllLineDocumentsFromDB() {
+    const { data, error } = await supabase
+        .from('line_documents')
+        .select('*')
+        .order('uploaded_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching all line documents:', error);
         return [];
     }
 

@@ -5,12 +5,13 @@ import Modal from './common/Modal';
 import { PencilSquareIcon, TrashIcon } from './common/Icons';
 import { useI18n } from '../contexts/I18nContext';
 import { useLine } from '../contexts/LineContext';
-import { addLineDocument } from '../services/lineService';
+import { addLineDocument, updateLineDocument } from '../services/lineService';
 import { useAuth } from '../contexts/AuthContext';
 
 const AdminPowerBI: React.FC = () => {
-    const { biReports, addBiReport, updateBiReport, deleteBiReport, addDocument, updateDocument } = useData();
+    const { biReports, addBiReport, updateBiReport, deleteBiReport } = useData();
     const { t } = useI18n();
+    const { selectedLine } = useLine(); // Retrieve selectedLine
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<PowerBiReport | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -49,13 +50,16 @@ const AdminPowerBI: React.FC = () => {
         const [isLoading, setIsLoading] = useState(false);
         const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-        useEffect(() => { setVisibleCount(20); }, [biReports.length]);
+        // Filter reports by selected line
+        const filteredReports = biReports.filter(r => !r.lineId || (selectedLine && r.lineId === selectedLine.id));
+
+        useEffect(() => { setVisibleCount(20); }, [biReports.length, selectedLine]);
 
         const loadMore = async () => {
             if (isLoading) return;
             setIsLoading(true);
             await new Promise(r => setTimeout(r, 150));
-            setVisibleCount(v => Math.min(v + 20, biReports.length));
+            setVisibleCount(v => Math.min(v + 20, filteredReports.length));
             setIsLoading(false);
         };
 
@@ -64,12 +68,12 @@ const AdminPowerBI: React.FC = () => {
             if (!el) return;
             const io = new IntersectionObserver((entries) => {
                 for (const entry of entries) {
-                    if (entry.isIntersecting && visibleCount < biReports.length) loadMore();
+                    if (entry.isIntersecting && visibleCount < filteredReports.length) loadMore();
                 }
             }, { rootMargin: '200px' });
             io.observe(el);
             return () => io.disconnect();
-        }, [visibleCount, biReports.length]);
+        }, [visibleCount, filteredReports.length]);
 
         return (
             <div className="overflow-x-auto mt-6">
@@ -82,7 +86,7 @@ const AdminPowerBI: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-                        {biReports.slice(0, visibleCount).map(item => (
+                        {filteredReports.slice(0, visibleCount).map(item => (
                             <tr key={item.id} className="border-b border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                                 <td className="p-4 font-medium">{item.name}</td>
                                 <td className="p-4 truncate max-w-xs text-gray-600 dark:text-gray-300">{item.embedUrl}</td>
@@ -123,19 +127,39 @@ const AdminPowerBI: React.FC = () => {
                 return;
             }
             if (editingItem) {
-                updateDocument(formData as Document);
-            } else {
-                addDocument({ ...(formData as any), category: `PowerBI` });
+                updateBiReport({ ...editingItem, ...formData } as PowerBiReport);
 
-                if (currentUser && formData.embedUrl && formData.name) { // Changed formData.url to formData.embedUrl and formData.title to formData.name
+                try {
+                    await updateLineDocument(editingItem.id, {
+                        title: formData.name,
+                        document_id: formData.embedUrl,
+                        version: '1'
+                    });
+                    console.log('Relatório atualizado no banco.');
+                } catch (error) {
+                    console.error('Erro ao atualizar relatório:', error);
+                }
+            } else {
+
+                if (currentUser && formData.embedUrl && formData.name) {
                     try {
+                        const newReport: any = {
+                            id: Date.now().toString(), // Temporary ID until refresh
+                            name: formData.name,
+                            embedUrl: formData.embedUrl,
+                            lineId: selectedLine.id
+                        };
+
+                        // Update local state immediately
+                        addBiReport(newReport);
+
                         await addLineDocument(
                             selectedLine.id,
                             'report',
-                            formData.embedUrl, // Changed formData.url to formData.embedUrl
-                            formData.name, // Changed formData.title to formData.name
+                            formData.embedUrl,
+                            formData.name,
                             currentUser.id,
-                            formData.version,
+                            '1',
                             { line_name: selectedLine.name }
                         );
                         console.log('Relatório vinculado à linha');

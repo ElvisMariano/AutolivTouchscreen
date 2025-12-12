@@ -7,12 +7,13 @@ import { cacheUrl, hasCache, putBlob } from '../services/offlineCache';
 import { usePDFStorage } from '../hooks/usePDFStorage';
 import { useI18n } from '../contexts/I18nContext';
 import { useLine } from '../contexts/LineContext';
-import { addLineDocument } from '../services/lineService';
+import { addLineDocument, updateLineDocument } from '../services/lineService';
 import { useAuth } from '../contexts/AuthContext';
 
 const AdminPresentations: React.FC = () => {
     const { presentations, addPresentation, updatePresentation, deletePresentation } = useData();
     const { t } = useI18n();
+    const { selectedLine } = useLine();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Document | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -52,19 +53,22 @@ const AdminPresentations: React.FC = () => {
         const [isLoading, setIsLoading] = useState(false);
         const sentinelRef = useRef<HTMLDivElement | null>(null);
 
+        // Filter presentations by selected line (or show all if no lineId assigned - though admin usually assigns one)
+        const filteredPresentations = presentations.filter(p => !p.lineId || (selectedLine && p.lineId === selectedLine.id));
+
         useEffect(() => {
             let mounted = true;
-            Promise.all(presentations.map(async d => [d.id, await hasCache(d.url)] as const)).then(entries => {
+            Promise.all(filteredPresentations.map(async d => [d.id, await hasCache(d.url)] as const)).then(entries => {
                 if (mounted) setCachedMap(Object.fromEntries(entries));
             });
             return () => { mounted = false; };
-        }, [presentations.map(d => d.url).join('|')]);
+        }, [filteredPresentations.map(d => d.url).join('|')]);
 
         const loadMore = async () => {
             if (isLoading) return;
             setIsLoading(true);
             await new Promise(r => setTimeout(r, 150));
-            setVisibleCount(v => Math.min(v + 20, presentations.length));
+            setVisibleCount(v => Math.min(v + 20, filteredPresentations.length));
             setIsLoading(false);
         };
 
@@ -73,16 +77,16 @@ const AdminPresentations: React.FC = () => {
             if (!el) return;
             const io = new IntersectionObserver((entries) => {
                 for (const entry of entries) {
-                    if (entry.isIntersecting && visibleCount < presentations.length) {
+                    if (entry.isIntersecting && visibleCount < filteredPresentations.length) {
                         loadMore();
                     }
                 }
             }, { rootMargin: '200px' });
             io.observe(el);
             return () => io.disconnect();
-        }, [visibleCount, presentations.length]);
+        }, [visibleCount, filteredPresentations.length]);
 
-        const rows = presentations.slice(0, visibleCount);
+        const rows = filteredPresentations.slice(0, visibleCount);
 
         return (
             <div className="overflow-x-auto mt-6">
@@ -91,7 +95,6 @@ const AdminPresentations: React.FC = () => {
                         <tr>
                             <th className="p-4">{t('common.title')}</th>
                             <th className="p-4">{t('common.url')}</th>
-                            <th className="p-4">Offline</th>
                             <th className="p-4 text-right">{t('common.actions')}</th>
                         </tr>
                     </thead>
@@ -100,13 +103,6 @@ const AdminPresentations: React.FC = () => {
                             <tr key={doc.id} className="border-b border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                                 <td className="p-4 font-medium">{doc.title}</td>
                                 <td className="p-4 truncate max-w-xs text-gray-600 dark:text-gray-300">{doc.url}</td>
-                                <td className="p-4">
-                                    {cachedMap[doc.id] ? (
-                                        <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-md text-sm border border-green-200 dark:border-green-700">{t('common.available')}</span>
-                                    ) : (
-                                        <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-md text-sm border border-gray-200 dark:border-gray-600">{t('common.unavailable')}</span>
-                                    )}
-                                </td>
                                 <td className="p-4 flex justify-end space-x-3">
                                     <button onClick={() => openModal(doc)} className="p-2 text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title={t('common.edit')}>
                                         <PencilSquareIcon className="h-6 w-6" />
@@ -193,8 +189,19 @@ const AdminPresentations: React.FC = () => {
 
             if (editingItem) {
                 updatePresentation(formData as Document);
+
+                try {
+                    await updateLineDocument(editingItem.id, {
+                        title: formData.title,
+                        document_id: formData.url,
+                        version: formData.version?.toString()
+                    });
+                    console.log('Apresentação atualizada no banco.');
+                } catch (error) {
+                    console.error('Erro ao atualizar apresentação:', error);
+                }
             } else {
-                addPresentation({ ...(formData as any), category: `Apresentação` });
+                addPresentation({ ...(formData as any), category: `Apresentação`, lineId: selectedLine.id });
 
                 if (currentUser && formData.url && formData.title) {
                     try {

@@ -154,7 +154,6 @@ const AdminDocumentManagement: React.FC = () => {
                             <th className="p-4">Título</th>
                             <th className="p-4">URL</th>
                             <th className="p-4">Versão</th>
-                            <th className="p-4">Offline</th>
                             <th className="p-4 text-right">Ações</th>
                         </tr>
                     </thead>
@@ -164,21 +163,9 @@ const AdminDocumentManagement: React.FC = () => {
                                 <td className="p-4">{doc.title}</td>
                                 <td className="p-4 truncate max-w-xs">{doc.url}</td>
                                 <td className="p-4">{doc.version}</td>
-                                <td className="p-4">
-                                    {cachedMap[doc.id] ? (
-                                        <span className="px-2 py-1 bg-green-700 rounded-md text-sm">Disponível</span>
-                                    ) : (
-                                        <span className="px-2 py-1 bg-gray-700 rounded-md text-sm">Indisponível</span>
-                                    )}
-                                </td>
                                 <td className="p-4 flex justify-end space-x-4">
                                     <button onClick={() => openModal(doc)} className="text-blue-400 hover:text-blue-300"><PencilSquareIcon className="h-7 w-7" /></button>
                                     <button onClick={() => handleDelete(doc.id)} className="text-red-500 hover:text-red-400"><TrashIcon className="h-7 w-7" /></button>
-                                    <button onClick={async () => { await cacheUrl(doc.url).catch(() => { }); const v = await hasCache(doc.url); setCachedMap(prev => ({ ...prev, [doc.id]: v })); }} className="px-3 py-1 bg-green-600 rounded-md hover:bg-green-500">Salvar Offline</button>
-                                    <label className="px-3 py-1 bg-gray-700 rounded-md hover:bg-gray-600 cursor-pointer">
-                                        Carregar Local
-                                        <input type="file" accept="application/pdf" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; await putBlob(doc.url, f); const v = await hasCache(doc.url); setCachedMap(prev => ({ ...prev, [doc.id]: v })); e.currentTarget.value = ''; }} className="hidden" />
-                                    </label>
                                 </td>
                             </tr>
                         ))}

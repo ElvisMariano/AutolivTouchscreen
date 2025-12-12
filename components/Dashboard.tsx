@@ -19,7 +19,7 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
-    const { biReports, logEvent } = useData();
+    const { biReports, logEvent, lines, selectedLineId, setSelectedLineId } = useData();
     const { t } = useI18n();
     const [selectedReport, setSelectedReport] = useState<PowerBiReportType | null>(null);
 
@@ -49,8 +49,33 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
         logEvent('bi', 'view', report.id, report.name);
     }
 
+    const filteredReports = React.useMemo(() =>
+        biReports.filter(report => !report.lineId || report.lineId === selectedLineId),
+        [biReports, selectedLineId]);
+
     return (
         <div className="h-full flex p-4 flex-col gap-6">
+            {/* Line Global Selector */}
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <div>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('workInstructions.selectLine')}</h2>
+                    <p className="text-gray-500 text-sm">{t('dashboard.selectLineSubtitle') || 'Selecione a linha para filtrar o conteúdo'}</p>
+                </div>
+                <div className="w-1/3">
+                    <select
+                        value={selectedLineId}
+                        onChange={(e) => setSelectedLineId(e.target.value)}
+                        className="w-full p-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-lg font-medium"
+                    >
+                        {lines.map(line => (
+                            <option key={line.id} value={line.id}>
+                                {line.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
             <div className="grid grid-cols-3 gap-6 flex-1">
                 {mainNavItems.map(item => (
                     <Ripple
@@ -64,9 +89,9 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
                 ))}
             </div>
 
-            {biReports.length > 0 && (
+            {filteredReports.length > 0 && (
                 <div className="grid grid-cols-4 gap-6 h-1/3">
-                    {biReports.map((report) => (
+                    {filteredReports.map((report) => (
                         <Ripple
                             key={report.id}
                             onClick={() => handleReportClick(report)}

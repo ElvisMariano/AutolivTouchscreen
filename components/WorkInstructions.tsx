@@ -11,12 +11,10 @@ import { useI18n } from '../contexts/I18nContext';
 import { usePDFStorage } from '../hooks/usePDFStorage';
 
 const WorkInstructions: React.FC = () => {
-    const { getDocumentById, setSelectedLineId: setContextSelectedLineId } = useData();
+    const { getDocumentById, setSelectedLineId, selectedLineId, lines } = useData();
     const { t } = useI18n();
 
-    // Local state for DB data
-    const [dbLines, setDbLines] = useState<ProductionLine[]>([]);
-    const [selectedLineId, setSelectedLineId] = useState<string>('');
+    // Local state for Machines/Instructions (still specific to this view's data fetching)
     const [machines, setMachines] = useState<Machine[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
@@ -24,30 +22,14 @@ const WorkInstructions: React.FC = () => {
     const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
     const { getPDF } = usePDFStorage();
 
-    // Fetch lines on mount
-    useEffect(() => {
-        const fetchLines = async () => {
-            try {
-                const lines = await getActiveLines();
-                setDbLines(lines);
-                if (lines.length > 0) {
-                    setSelectedLineId(lines[0].id);
-                }
-            } catch (error) {
-                console.error('Error fetching lines:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchLines();
-    }, []);
+    // Line fetching is now done in DataContext globally
 
     // Fetch stations and instructions when line changes
     useEffect(() => {
         const fetchStationsAndInstructions = async () => {
             if (!selectedLineId) return;
 
+            setIsLoading(true);
             try {
                 const [stations, instructions] = await Promise.all([
                     getStationsByLine(selectedLineId),
@@ -71,11 +53,10 @@ const WorkInstructions: React.FC = () => {
 
                 setMachines(mappedMachines);
                 setFetchedInstructions(instructions);
-
-                // Update context if needed (optional, depending on app logic)
-                setContextSelectedLineId(selectedLineId);
             } catch (error) {
                 console.error('Error fetching stations:', error);
+            } finally {
+                setIsLoading(false);
             }
         };
 
@@ -132,7 +113,7 @@ const WorkInstructions: React.FC = () => {
         );
     }
 
-    const selectedLine = dbLines.find(l => l.id === selectedLineId);
+    const selectedLine = lines.find(l => l.id === selectedLineId);
 
     if (!selectedLine) {
         return (
@@ -144,26 +125,7 @@ const WorkInstructions: React.FC = () => {
 
     return (
         <div className="relative w-full h-full bg-gray-100 dark:bg-gray-900 overflow-hidden flex flex-col transition-colors">
-            {/* Header */}
-            <div className="p-6 pb-2 flex-shrink-0 flex justify-between items-end">
-                <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-3">
-                        <select
-                            value={selectedLineId}
-                            onChange={(e) => setSelectedLineId(e.target.value)}
-                            className="bg-transparent border-b border-gray-400 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:border-cyan-500 cursor-pointer hover:text-cyan-400 transition-colors"
-                        >
-                            {dbLines.map(line => (
-                                <option key={line.id} value={line.id} className="bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white">
-                                    {line.name}
-                                </option>
-                            ))}
-                        </select>
-                        <span className="text-gray-600 dark:text-gray-500 text-lg font-normal">| {t('workInstructions.workStations')}</span>
-                    </h2>
-                    <p className="text-gray-600 dark:text-gray-400">{t('workInstructions.selectStation')}</p>
-                </div>
-            </div>
+
 
             {/* Scrollable Grid Area */}
             <div className="flex-1 overflow-y-auto p-6">

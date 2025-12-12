@@ -28,13 +28,13 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
         // If clicking outside should close the modal, this line needs to be re-added.
         >
             <div
-                className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+                className="bg-white dark:bg-gray-800 p-10 w-full max-w-6xl h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-gray-300 dark:border-gray-700 relative"
                 onClick={(e) => e.stopPropagation()} // Keep stopPropagation for the inner modal
             >
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{title}</h2>
-                    <button onClick={onClose} className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-                        <XMarkIcon className="h-6 w-6" />
+                <div className="flex p-2 justify-between items-center mb-2">
+                    <h2 className="text-2xl ml-4 font-bold text-gray-900 dark:text-white">{title}</h2>
+                    <button onClick={onClose} className="text-gray-600 mr-4 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                        <XMarkIcon className="h-10 w-10" />
                     </button>
                 </div>
                 {children}

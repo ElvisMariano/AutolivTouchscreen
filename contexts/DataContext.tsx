@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { saveBackup } from '../services/backup';
+import { getActiveLines, getAllLineDocumentsFromDB } from '../services/lineService';
 import {
     ProductionLine,
     Machine,
@@ -11,7 +12,8 @@ import {
     Presentation,
     User,
     ChangeLog,
-    ChangeEntity
+    ChangeEntity,
+    DocumentCategory
 } from '../types';
 
 interface DataContextType {
@@ -113,7 +115,87 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [changeLogs, setChangeLogs] = useLocalStorage<ChangeLog[]>('changeLogs', []);
     const [selectedLineId, setSelectedLineId] = useState<string>('');
 
-    // Set default selected line if available and none selected
+    // Fetch lines and reports from DB on mount
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [dbLines, dbDocs] = await Promise.all([
+                    getActiveLines(),
+                    getAllLineDocumentsFromDB()
+                ]);
+
+                if (dbLines.length > 0) {
+                    setLines(dbLines);
+                    if (!selectedLineId) {
+                        setSelectedLineId(dbLines[0].id);
+                    }
+                }
+
+                if (dbDocs.length > 0) {
+                    const reports: PowerBiReport[] = [];
+                    const presentations: Presentation[] = [];
+                    const otherDocs: Document[] = [];
+
+                    dbDocs.forEach((d: any) => {
+                        if (d.document_type === 'report') {
+                            reports.push({
+                                id: d.id,
+                                name: d.title,
+                                embedUrl: d.document_id,
+                                lineId: d.line_id
+                            });
+                        } else if (d.document_type === 'presentation') {
+                            presentations.push({
+                                id: d.id,
+                                title: d.title,
+                                url: d.document_id,
+                                version: d.version,
+                                lineId: d.line_id
+                            });
+                        } else {
+                            // Standardized Work, Acceptance Criteria, etc.
+                            let category = d.document_type as DocumentCategory;
+
+                            // Map technical DB types to Enum values if needed
+                            if (d.document_type === 'acceptance_criteria') category = DocumentCategory.AcceptanceCriteria;
+                            else if (d.document_type === 'work_instructions') category = DocumentCategory.WorkInstruction;
+                            else if (d.document_type === 'standardized_work') category = DocumentCategory.StandardizedWork;
+                            else if (d.document_type === 'quality_alerts') category = DocumentCategory.QualityAlert;
+
+                            otherDocs.push({
+                                id: d.id,
+                                title: d.title,
+                                url: d.document_id,
+                                category: category,
+                                version: d.version,
+                                lineId: d.line_id,
+                                lastUpdated: d.uploaded_at
+                            });
+                        }
+                    });
+
+                    setBiReports(reports);
+                    setPresentations(presentations);
+
+                    // Merge otherDocs with existing non-line docs (or just update line docs)
+                    // Strategy: Remove any existing docs with lineId using setDocs functional update?
+                    // But here we are in mount. We can read 'docs' from state? No, closure.
+                    // We can use setDocs(prev => ...)
+                    setDocs(prev => {
+                        // Keep docs that don't have lineId (local global docs) OR are not in the new set?
+                        // Safest: Remove all docs that seem to be "Line Documents" (have lineId) and replace with DB ones.
+                        const localDocs = prev.filter(p => !p.lineId);
+                        return [...localDocs, ...otherDocs];
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching initial data:', error);
+            }
+        };
+        fetchData();
+    }, []); // Run once on mount
+
+    // Fallback: If lines exist in local storage but not selected, select first (already handled above partially, but good to keep safe)
     useEffect(() => {
         if (lines.length > 0 && !selectedLineId) {
             setSelectedLineId(lines[0].id);
@@ -193,16 +275,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const addPresentation = (presentation: Omit<Presentation, 'id'>) => {
         const newPres = { ...presentation, id: generateId() };
         setPresentations(prev => [...prev, newPres]);
-        addLog('presentation', 'create', newPres.id, newPres.name);
+        addLog('presentation', 'create', newPres.id, newPres.title);
     };
     const updatePresentation = (updatedPresentation: Presentation) => {
         setPresentations(prev => prev.map(p => p.id === updatedPresentation.id ? updatedPresentation : p));
-        addLog('presentation', 'update', updatedPresentation.id, updatedPresentation.name);
+        addLog('presentation', 'update', updatedPresentation.id, updatedPresentation.title);
     };
     const deletePresentation = (id: string) => {
         const pres = presentations.find(p => p.id === id);
         setPresentations(prev => prev.filter(p => p.id !== id));
-        if (pres) addLog('presentation', 'delete', id, pres.name);
+        if (pres) addLog('presentation', 'delete', id, pres.title);
     };
 
     const addUser = (user: Omit<User, 'id'>) => {

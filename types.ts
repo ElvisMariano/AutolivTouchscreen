@@ -59,12 +59,15 @@ export interface PowerBiReport {
     id: string;
     name: string;
     embedUrl: string;
+    lineId?: string;
 }
 
 export interface Presentation {
     id: string;
-    name: string;
-    slides: string[]; // URLs to slide images
+    title: string;
+    url: string; // URL to the presentation file (PDF or similar)
+    version?: number;
+    lineId?: string;
 }
 
 

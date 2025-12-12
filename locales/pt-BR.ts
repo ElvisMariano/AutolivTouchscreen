@@ -101,6 +101,7 @@ export default {
         qualityAlerts: "Alertas de Qualidade",
         adminPanel: "Painel Administrativo",
         selectLine: "Selecione uma Linha",
+        selectLineSubtitle: "Selecione a linha para filtrar o conteúdo",
         selectLinePlaceholder: "Selecione...",
         noLineSelected: "Nenhuma linha selecionada",
         online: "Online",
@@ -115,6 +116,7 @@ export default {
     },
     workInstructions: {
         title: "Instruções de Trabalho",
+        selectLine: "Selecione uma Linha",
         selectStation: "Selecione uma Estação",
         noInstructions: "Nenhuma instrução disponível",
         viewInstruction: "Ver Instrução",

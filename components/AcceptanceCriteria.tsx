@@ -7,9 +7,12 @@ import PdfViewer from './common/PdfViewer';
 import { hasCache } from '../services/offlineCache';
 
 const AcceptanceCriteria: React.FC = () => {
-    const { docs, settings, logEvent } = useData();
+    const { docs, settings, logEvent, selectedLineId } = useData();
     const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
-    const criteriaDocs = useMemo(() => docs.filter(doc => doc.category === DocumentCategory.AcceptanceCriteria), [docs]);
+    const criteriaDocs = useMemo(() => docs.filter(doc =>
+        doc.category === DocumentCategory.AcceptanceCriteria &&
+        (!doc.lineId || doc.lineId === selectedLineId)
+    ), [docs, selectedLineId]);
     const [offlineMap, setOfflineMap] = useState<Record<string, boolean>>({});
     useEffect(() => {
         let mounted = true;
@@ -32,9 +35,9 @@ const AcceptanceCriteria: React.FC = () => {
                     <button
                         key={doc.id}
                         onClick={() => setSelectedDoc(doc)}
-                        className="w-full text-left bg-gray-100 dark:bg-gray-800 p-6 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105 transform transition-all focus:outline-none focus:ring-2 focus:ring-green-500"
+                        className="w-full text-left bg-yellow-100 dark:bg-gray-800 p-6 rounded-lg hover:bg-yellow-200 dark:hover:bg-yellow-700 hover:scale-105 transform transition-all focus:outline-none focus:ring-2 focus:ring-yellow-500"
                     >
-                        <p className="text-2xl font-bold text-green-600 dark:text-green-400 flex items-center gap-3">
+                        <p className="text-2xl font-bold text-gray-600 dark:text-gray-400 flex items-center justify-between gap-3">
                             {doc.title}
                             {new Date(doc.lastUpdated).getTime() + settings.notificationDuration * 24 * 60 * 60 * 1000 > Date.now() && (
                                 <span className="px-2 py-1 bg-yellow-500 text-gray-900 text-sm rounded-md">Atualizado</span>
