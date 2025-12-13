@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useLine } from '../contexts/LineContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { createLine, updateLine, deleteLine, getAllLines } from '../services/lineService';
 import { getStationsByLine, createStation, deleteStation, updateStation, WorkStation } from '../services/stationService';
 import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { useData } from '../contexts/DataContext';
 
 const getLineName = (name: string) => {
     try {
@@ -44,6 +45,7 @@ const AdminLineManagement: React.FC = () => {
     const { lines, refreshLines } = useLine();
     const { currentUser } = useAuth();
     const { t } = useI18n();
+    const { selectedPlantId } = useData();
 
     const [isCreatingLine, setIsCreatingLine] = useState(false);
     const [editingLine, setEditingLine] = useState<string | null>(null);
@@ -57,6 +59,11 @@ const AdminLineManagement: React.FC = () => {
     const [lineDescription, setLineDescription] = useState('');
     const [stationName, setStationName] = useState('');
     const [stationDescription, setStationDescription] = useState('');
+
+    const filteredLines = useMemo(() => {
+        if (!selectedPlantId) return lines;
+        return lines.filter(l => l.plantId === selectedPlantId);
+    }, [lines, selectedPlantId]);
 
     const handleUpdateLine = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -90,9 +97,13 @@ const AdminLineManagement: React.FC = () => {
     const handleCreateLine = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!currentUser || !lineName.trim()) return;
+        if (!selectedPlantId) {
+            alert('Selecione uma planta antes de criar a linha.');
+            return;
+        }
 
         try {
-            await createLine(lineName, lineDescription, currentUser.id);
+            await createLine(lineName, lineDescription, currentUser.id, selectedPlantId);
             await refreshLines();
             setLineName('');
             setLineDescription('');
@@ -260,7 +271,7 @@ const AdminLineManagement: React.FC = () => {
 
             {/* Lista de Linhas */}
             <div className="grid gap-4">
-                {lines.map(line => (
+                {filteredLines.map(line => (
                     <div key={line.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-300 dark:border-gray-700">
                         <div className="flex justify-between items-start mb-2">
                             <div className="flex-1">
