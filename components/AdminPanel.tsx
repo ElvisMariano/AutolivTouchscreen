@@ -340,8 +340,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
     ];
 
     return (
-        <div className="h-full flex flex-col md:flex-row gap-8">
-            <div className="md:w-1/3 lg:w-1/4 bg-white dark:bg-gray-800 p-4 rounded-lg flex-shrink-0 transition-colors duration-300 shadow-lg">
+        <div className="flex flex-col md:flex-row gap-4">
+            <div className="md:w-1/3 lg:w-1/5 bg-white dark:bg-gray-800 p-4 rounded-lg flex-shrink-0 transition-colors duration-300 shadow-lg">
                 <h3 className="text-2xl font-bold text-cyan-600 dark:text-cyan-400 mb-4">{t('admin.title')}</h3>
 
                 {/* Plant Selector */}
