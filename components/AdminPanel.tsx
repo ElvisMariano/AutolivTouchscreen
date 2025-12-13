@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { AdminSubPage } from '../types';
+import { AdminSubPage, AVAILABLE_RESOURCES } from '../types';
 import AdminWorkInstructions from './AdminWorkInstructions';
 import AdminAcceptanceCriteria from './AdminAcceptanceCriteria';
 import AdminStandardizedWork from './AdminStandardizedWork';
 import AdminPowerBI from './AdminPowerBI';
 import AdminPresentations from './AdminPresentations';
 import AdminUserManagement from './AdminUserManagement';
+import AdminRoleManagement from './AdminRoleManagement';
 import AdminChangeLog from './AdminChangeLog';
 import AdminAlertsManagement from './AdminAlertsManagement';
 import AdminLineManagement from './AdminLineManagement';
@@ -26,7 +27,8 @@ import {
     ClockIcon,
     CogIcon,
     BuildingOfficeIcon,
-    ArrowRightOnRectangleIcon
+    ArrowRightOnRectangleIcon,
+    UserGroupIcon
 } from './common/Icons';
 
 
@@ -267,6 +269,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
                 return <AdminPresentations />;
             case AdminSubPage.Users:
                 return <AdminUserManagement />;
+            case AdminSubPage.Roles:
+                return <AdminRoleManagement />;
             case AdminSubPage.History:
                 return <AdminChangeLog />;
             case AdminSubPage.QualityAlerts:
@@ -316,6 +320,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
             case AdminSubPage.PowerBI: return t('common.report');
             case AdminSubPage.Presentations: return t('common.presentation');
             case AdminSubPage.Users: return t('admin.users');
+            case AdminSubPage.Roles: return 'Gerenciamento de Roles';
             case AdminSubPage.ProductionLines: return 'Linhas de Produção';
             case AdminSubPage.Plants: return 'Cadastro de Plantas';
             case AdminSubPage.History: return t('admin.logs');
@@ -326,18 +331,26 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
 
     // Menu items com ícones na ordem especificada
     const menuItems = [
-        { page: AdminSubPage.Plants, icon: BuildingOfficeIcon },
-        { page: AdminSubPage.ProductionLines, icon: BuildingOfficeIcon },
-        { page: AdminSubPage.WorkInstructions, icon: DocumentTextIcon },
-        { page: AdminSubPage.AcceptanceCriteria, icon: DocumentTextIcon },
-        { page: AdminSubPage.StandardizedWork, icon: DocumentTextIcon },
-        { page: AdminSubPage.QualityAlerts, icon: ExclamationTriangleIcon },
-        { page: AdminSubPage.PowerBI, icon: ChartBarIcon },
-        { page: AdminSubPage.Presentations, icon: PresentationChartBarIcon },
-        { page: AdminSubPage.Users, icon: UsersIcon },
-        { page: AdminSubPage.History, icon: ClockIcon },
-        { page: AdminSubPage.Settings, icon: CogIcon },
+        { page: AdminSubPage.Plants, icon: BuildingOfficeIcon, permission: 'admin:view_plants' },
+        { page: AdminSubPage.ProductionLines, icon: BuildingOfficeIcon, permission: 'admin:view_lines' },
+        { page: AdminSubPage.WorkInstructions, icon: DocumentTextIcon, permission: 'admin:view_work_instructions' },
+        { page: AdminSubPage.AcceptanceCriteria, icon: DocumentTextIcon, permission: 'admin:view_acceptance_criteria' },
+        { page: AdminSubPage.StandardizedWork, icon: DocumentTextIcon, permission: 'admin:view_standardized_work' },
+        { page: AdminSubPage.QualityAlerts, icon: ExclamationTriangleIcon, permission: 'admin:view_quality_alerts' },
+        { page: AdminSubPage.PowerBI, icon: ChartBarIcon, permission: 'admin:view_powerbi' },
+        { page: AdminSubPage.Presentations, icon: PresentationChartBarIcon, permission: 'admin:view_presentations' },
+        { page: AdminSubPage.Users, icon: UsersIcon, permission: 'admin:view_users' },
+        { page: AdminSubPage.Roles, icon: UserGroupIcon, permission: 'admin:view_roles' },
+        { page: AdminSubPage.History, icon: ClockIcon, permission: 'admin:view_history' },
+        { page: AdminSubPage.Settings, icon: CogIcon, permission: 'admin:view_settings' },
     ];
+
+    // Filter menu items based on user permissions
+    const filteredMenuItems = menuItems.filter(item => {
+        if (!item.permission) return true; // Se não tem permissão definida, é público dentro do admin
+        const userResources = currentUser?.role.allowed_resources || [];
+        return userResources.includes(item.permission) || currentUser?.role.name === 'Admin'; // Admin sempre vê tudo (fallback)
+    });
 
     return (
         <div className="flex flex-col md:flex-row gap-4">
@@ -351,7 +364,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
                 <LineSelector />
 
                 <ul className="space-y-2">
-                    {menuItems.map(({ page, icon: Icon }) => (
+                    {filteredMenuItems.map(({ page, icon: Icon }) => (
                         <li key={`menu-item-${page}`}>
                             <button
                                 onClick={() => setSubPage(page)}

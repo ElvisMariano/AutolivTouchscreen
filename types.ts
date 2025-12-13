@@ -10,6 +10,7 @@ export enum Page {
 
 
 
+
 export enum AdminSubPage {
     WorkInstructions = 'P1 Instrução de Trabalho',
     AcceptanceCriteria = 'P2 Critérios de Aceitação',
@@ -18,7 +19,9 @@ export enum AdminSubPage {
     PowerBI = 'Power BI\'s (Relatórios)',
     Presentations = 'Apresentações',
     Plants = 'Cadastro de Plantas',
+    ProductionLines = 'Linhas de Produção',
     Users = 'Cadastro de Usuários',
+    Roles = 'Gerenciamento de Roles',
     History = 'Histórico de Ações',
     Settings = 'Configurações',
 }
@@ -147,19 +150,42 @@ export const isAlertActive = (alert: QualityAlert): boolean => {
     return exp > now && !flagExpired;
 };
 
-export type UserRole = 'admin' | 'operator' | 'processo' | 'qualidade' | 'aps';
+// Role & Permissions Types
+export interface Role {
+    id: string;
+    name: string;
+    allowed_resources: string[];
+    created_at?: string;
+}
+
+export interface RoleAuditLog {
+    id: string;
+    actor_id: string;
+    role_id: string;
+    action: string;
+    details: string;
+    timestamp: string;
+    actor_name?: string; // Joined field
+    role_name?: string; // Joined field
+}
+
+export type UserRole = 'admin' | 'operator' | 'processo' | 'qualidade' | 'aps'; // Deprecated type usage, prefer Role interface
 
 export interface User {
     id: string;
     name: string;
-    role: UserRole;
+    role: {
+        id: string;
+        name: string;
+        allowed_resources: string[];
+    };
     username: string;
     password?: string; // Optional for existing users or purely auto-login users (though highly recommended)
     autoLogin?: boolean;
     plant_ids?: string[]; // IDs das plantas que o usuário tem acesso
 }
 
-export type ChangeEntity = 'document' | 'alert' | 'user' | 'machine' | 'bi' | 'presentation' | 'settings' | 'navigation' | 'plant';
+export type ChangeEntity = 'document' | 'alert' | 'user' | 'machine' | 'bi' | 'presentation' | 'settings' | 'navigation' | 'plant' | 'role';
 
 export interface ChangeLog {
     id: string;
@@ -171,6 +197,52 @@ export interface ChangeLog {
     userId?: string; // ID do usuário que fez a ação
     userName?: string; // Nome do usuário para facilitar exibição
 }
+
+export const AVAILABLE_RESOURCES = {
+    // Acesso Geral
+    'view:dashboard': 'Visualizar Dashboard Principal',
+    'view:admin_panel': 'Acessar Painel Administrativo',
+    'view:admin_access_button': 'Visualizar Botão de Admin no Cabeçalho',
+
+    // Módulos Administrativos (Menu)
+    'admin:view_plants': 'Ver Plantas',
+    'admin:manage_plants': 'Gerenciar Plantas',
+    'admin:view_lines': 'Ver Linhas de Produção',
+    'admin:manage_lines': 'Gerenciar Linhas de Produção',
+    'admin:manage_stations': 'Gerenciar Estações de Trabalho',
+
+    // Gestão de Documentos
+    'admin:view_work_instructions': 'Ver Instruções de Trabalho',
+    'admin:manage_work_instructions': 'Gerenciar Instruções de Trabalho',
+    'admin:view_acceptance_criteria': 'Ver Critérios de Aceitação',
+    'admin:manage_acceptance_criteria': 'Gerenciar Critérios de Aceitação',
+    'admin:view_standardized_work': 'Ver Trabalho Padronizado',
+    'admin:manage_standardized_work': 'Gerenciar Trabalho Padronizado',
+    'admin:view_presentations': 'Ver Apresentações',
+    'admin:manage_presentations': 'Gerenciar Apresentações',
+    'admin:view_powerbi': 'Ver Relatórios PowerBI',
+    'admin:manage_powerbi': 'Gerenciar Relatórios PowerBI',
+
+    // Qualidade e Alertas
+    'view:quality_alerts': 'Visualizar Alertas (Dashboard)',
+    'admin:view_quality_alerts': 'Ver Gestão de Alertas',
+    'admin:manage_quality_alerts': 'Gerenciar Alertas',
+
+    // Usuários e Acesso
+    'admin:view_users': 'Ver Usuários',
+    'admin:manage_users': 'Gerenciar Usuários',
+    'admin:view_roles': 'Ver Roles',
+    'admin:manage_roles': 'Gerenciar Roles e Permissões',
+
+    // Configurações e Sistema
+    'admin:view_settings': 'Ver Configurações',
+    'admin:manage_settings': 'Alterar Configurações',
+    'admin:view_history': 'Ver Histórico de Ações',
+    'admin:backup_view': 'Acessar Área de Backup',
+    'admin:backup_create': 'Criar Backup',
+    'admin:backup_restore': 'Restaurar Backup',
+    'system:debug_tools': 'Ferramentas de Debug',
+};
 
 declare global {
     interface Window {
