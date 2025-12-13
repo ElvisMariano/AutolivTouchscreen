@@ -25,7 +25,8 @@ import {
     UsersIcon,
     ClockIcon,
     CogIcon,
-    BuildingOfficeIcon
+    BuildingOfficeIcon,
+    ArrowRightOnRectangleIcon
 } from './common/Icons';
 
 
@@ -237,7 +238,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
     const panStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number }>({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
     const { t } = useI18n();
 
-    const { currentUser } = useAuth();
+    const { currentUser, logout } = useAuth();
 
     useEffect(() => {
         if (currentUser && currentUser.role.name === 'Admin' && !isAdmin) {
@@ -365,6 +366,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
                         </li>
                     ))}
                 </ul>
+
+                <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <button
+                        onClick={() => {
+                            if (logout) {
+                                logout();
+                                setIsAdmin(false); // Make sure to exit admin mode locally too
+                            } else {
+                                window.location.reload();
+                            }
+                        }}
+                        className="w-full flex items-center gap-3 p-4 rounded-md transition-colors text-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    >
+                        <ArrowRightOnRectangleIcon className="h-6 w-6 flex-shrink-0" />
+                        <span className="text-left">{t('common.logout') || 'Sair'}</span>
+                    </button>
+                </div>
             </div>
             <div
                 ref={contentRef}
@@ -376,7 +394,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
             >
                 {renderSubPage()}
             </div>
-        </div>
+        </div >
     );
 };
 

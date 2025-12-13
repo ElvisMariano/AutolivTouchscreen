@@ -616,6 +616,27 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return new Date(alert.expiresAt) > new Date();
     }
 
+    // --- Effect for Session Cleanup (Permission Isolation) ---
+    useEffect(() => {
+        if (!currentUser && !isAdmin) {
+            // User logged out or no session active - Clean up sensitive cached data
+            // This prevents a new user from seeing the previous user's data
+            setDocs([]);
+            setAlerts([]);
+            setBiReports([]);
+            setPresentations([]);
+            setUsers([]);
+            setChangeLogs([]);
+            // setLines([]); // Optional: depends if lines are public or not. keeping them might be better for UX on login screen if needed, but safe to clear.
+
+            // Force clear sensitive localStorage keys to ensure strict isolation
+            const keysToClear = ['docs', 'alerts', 'biReports', 'presentations', 'users', 'changeLogs'];
+            keysToClear.forEach(key => localStorage.removeItem(key));
+
+            console.log('🔒 Session ended - Sensitive local data cleared.');
+        }
+    }, [currentUser, isAdmin]);
+
     const value = {
         lines, plants, docs, alerts, settings, biReports, presentations, users,
         selectedLineId, selectedLine, selectedPlantId,
