@@ -9,6 +9,8 @@ export interface ProductionLine {
     created_by?: string;
     updated_at: string;
     station_count?: number;
+    plant_id?: string;
+    plantName?: string;
 }
 
 export interface CreateLineData {
@@ -29,13 +31,19 @@ export interface LineDocument {
 }
 
 /**
- * Obter todas as linhas de produção
+ * Obter todas as linhas de produção (com filtro opcional por planta)
  */
-export async function getAllLines(): Promise<ProductionLine[]> {
-    const { data, error } = await supabase
+export async function getAllLines(plantId?: string): Promise<ProductionLine[]> {
+    let query = supabase
         .from('production_lines')
-        .select('*, work_stations(id)')
+        .select('*, work_stations(id), plants(name)')
         .order('name');
+
+    if (plantId) {
+        query = query.eq('plant_id', plantId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
         console.error('Error fetching lines:', error);
@@ -45,19 +53,26 @@ export async function getAllLines(): Promise<ProductionLine[]> {
     return (data || []).map((line: any) => ({
         ...line,
         station_count: line.work_stations?.length || 0,
-        work_stations: undefined
+        work_stations: undefined,
+        plantName: line.plants?.name
     }));
 }
 
 /**
- * Obter apenas linhas ativas
+ * Obter apenas linhas ativas (com filtro opcional por planta)
  */
-export async function getActiveLines(): Promise<ProductionLine[]> {
-    const { data, error } = await supabase
+export async function getActiveLines(plantId?: string): Promise<ProductionLine[]> {
+    let query = supabase
         .from('production_lines')
-        .select('*, work_stations(id)')
+        .select('*, work_stations(id), plants(name)')
         .eq('status', 'active')
         .order('name');
+
+    if (plantId) {
+        query = query.eq('plant_id', plantId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
         console.error('Error fetching active lines:', error);
@@ -67,8 +82,17 @@ export async function getActiveLines(): Promise<ProductionLine[]> {
     return (data || []).map((line: any) => ({
         ...line,
         station_count: line.work_stations?.length || 0,
-        work_stations: undefined
+        work_stations: undefined,
+        plantId: line.plant_id,
+        plantName: line.plants?.name
     }));
+}
+
+/**
+ * Buscar linhas de uma planta específica (atalho)
+ */
+export async function getLinesByPlant(plantId: string): Promise<ProductionLine[]> {
+    return getActiveLines(plantId);
 }
 
 /**
@@ -77,9 +101,10 @@ export async function getActiveLines(): Promise<ProductionLine[]> {
 export async function createLine(
     name: string,
     description: string,
-    createdBy: string
+    createdBy: string,
+    plantId?: string // Opcional por enquanto para compatibilidade
 ): Promise<ProductionLine | null> {
-    console.log('🔍 Creating line with:', { name, description, createdBy });
+    console.log('🔍 Creating line with:', { name, description, createdBy, plantId });
     console.log('🔑 Supabase client configured:', {
         url: import.meta.env.VITE_SUPABASE_URL,
         hasAnonKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -91,7 +116,8 @@ export async function createLine(
             name,
             description,
             status: 'active',
-            created_by: createdBy
+            created_by: createdBy,
+            plant_id: plantId
         })
         .select('*')
         .single();
@@ -244,8 +270,6 @@ export async function getLineDocuments(lineId: string, documentType?: string) {
 
     return data || [];
 }
-
-
 
 /**
  * Deletar documento da linha

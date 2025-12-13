@@ -15,6 +15,7 @@ import { useI18n } from '../contexts/I18nContext';
 const ProductionLineEditor: React.FC = () => {
     const {
         lines,
+        selectedPlantId,
         addMachine,
         updateMachine,
         deleteMachine,
@@ -23,7 +24,13 @@ const ProductionLineEditor: React.FC = () => {
     } = useData();
     const { t } = useI18n();
 
-    const [selectedLineId, setSelectedLineId] = useState<string>(lines[0]?.id || '');
+    // Filter lines based on selectedPlantId
+    const filteredLines = useMemo(() => {
+        if (!selectedPlantId) return lines;
+        return lines.filter(l => l.plantId === selectedPlantId);
+    }, [lines, selectedPlantId]);
+
+    const [selectedLineId, setSelectedLineId] = useState<string>(filteredLines[0]?.id || '');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -35,8 +42,21 @@ const ProductionLineEditor: React.FC = () => {
     const [machineInstructionId, setMachineInstructionId] = useState('');
 
     const selectedLine = useMemo(() => {
-        return lines.find(l => l.id === selectedLineId) || lines[0];
-    }, [lines, selectedLineId]);
+        // Look in filtered list first
+        const found = filteredLines.find(l => l.id === selectedLineId);
+        // Fallback to first filtered line if selection invalid
+        if (!found && filteredLines.length > 0) return filteredLines[0];
+        return found;
+    }, [filteredLines, selectedLineId]);
+
+    // Effect to reset selectedLineId if filteredLines changes and current selection is gone
+    // (Handled implicitly by selectedLine useMemo logic falling back, but maybe explicit set is better)
+    React.useEffect(() => {
+        if (filteredLines.length > 0 && (!selectedLineId || !filteredLines.find(l => l.id === selectedLineId))) {
+            setSelectedLineId(filteredLines[0].id);
+        }
+    }, [filteredLines, selectedLineId]);
+
 
     const handleAddMachine = () => {
         if (!selectedLine) return;
@@ -87,7 +107,8 @@ const ProductionLineEditor: React.FC = () => {
         setMachineInstructionId('');
     };
 
-    if (!selectedLine) return <div className="text-white">{t('dashboard.noLineSelected')}</div>;
+    if (!selectedLine && filteredLines.length > 0) return <div className="text-white">{t('dashboard.noLineSelected')}</div>;
+    if (filteredLines.length === 0) return <div className="text-white p-6">Nenhuma linha encontrada para esta planta.</div>;
 
     return (
         <div className="h-full flex flex-col bg-gray-900 p-6">
@@ -99,11 +120,11 @@ const ProductionLineEditor: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-4">
                     <select
-                        value={selectedLineId}
+                        value={selectedLine?.id || ''}
                         onChange={(e) => setSelectedLineId(e.target.value)}
                         className="bg-gray-800 text-white border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 outline-none"
                     >
-                        {lines.map(line => (
+                        {filteredLines.map(line => (
                             <option key={line.id} value={line.id}>{line.name}</option>
                         ))}
                     </select>
@@ -119,14 +140,14 @@ const ProductionLineEditor: React.FC = () => {
 
             {/* List Content */}
             <div className="flex-1 overflow-y-auto bg-gray-800/50 rounded-xl border border-gray-700 p-4">
-                {selectedLine.machines.length === 0 ? (
+                {selectedLine && selectedLine.machines.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-gray-500">
                         <p className="text-lg">{t('admin.noStations')}</p>
                         <p className="text-sm">{t('admin.clickToAddStation')}</p>
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        {selectedLine.machines.map((machine, index) => (
+                        {selectedLine && selectedLine.machines.map((machine, index) => (
                             <div
                                 key={machine.id}
                                 className="flex items-center justify-between bg-gray-800 p-4 rounded-lg border border-gray-700 hover:border-cyan-500/50 transition-colors group"

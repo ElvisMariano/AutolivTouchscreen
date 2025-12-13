@@ -97,7 +97,7 @@ export default {
         title: "",
         workInstructions: "P1 - Instruções de Trabalho",
         acceptanceCriteria: "P2 - Critérios de Aceitação",
-        standardizedWork: "P3 - Trabalho Padronizado",
+        standardizedWork: "P4 - Trabalho Padronizado",
         qualityAlerts: "Alertas de Qualidade",
         adminPanel: "Painel Administrativo",
         selectLine: "Selecione uma Linha",

@@ -6,8 +6,13 @@ import { ChevronDownIcon } from '@heroicons/react/24/outline';
 
 const LineSelector: React.FC = () => {
     const { lines, selectedLine, setSelectedLineId, isLoading } = useLine();
-    const { setSelectedLineId: setDataSelectedLineId } = useData();
+    const { setSelectedLineId: setDataSelectedLineId, selectedPlantId } = useData();
     const { t } = useI18n();
+
+    const filteredLines = React.useMemo(() => {
+        if (!selectedPlantId) return lines;
+        return lines.filter(l => l.plantId === selectedPlantId);
+    }, [lines, selectedPlantId]);
 
     if (isLoading || lines.length === 0) {
         return null;
@@ -29,7 +34,7 @@ const LineSelector: React.FC = () => {
                     className="w-full px-4 py-3 pr-10 rounded-lg border-2 border-blue-500 dark:border-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none cursor-pointer transition-all"
                 >
                     <option value="">{t('admin.selectLinePlaceholder', 'Nenhuma linha selecionada')}</option>
-                    {lines.map(line => (
+                    {filteredLines.map(line => (
                         <option key={line.id} value={line.id}>
                             {line.name}
                         </option>

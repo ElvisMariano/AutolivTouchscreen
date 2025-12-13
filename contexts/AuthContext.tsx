@@ -10,6 +10,8 @@ interface AuthContextType {
     isLoading: boolean;
     login: () => Promise<AuthResult>;
     logout: () => void;
+    isAdmin: boolean;
+    isOperator: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,6 +22,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [isLoading, setIsLoading] = useState(true);
     const { instance, accounts } = useMsal();
     const isAuthenticated = useIsAuthenticated();
+
+    // Derived state
+    const isAdmin = React.useMemo(() => {
+        if (!currentUser || !currentUser.role) return false;
+        const roleName = (typeof currentUser.role === 'string' ? currentUser.role : currentUser.role.name || '').toLowerCase();
+        return roleName.startsWith('admin');
+    }, [currentUser]);
+
+    const isOperator = React.useMemo(() => {
+        if (!currentUser || !currentUser.role) return false;
+        const roleName = (typeof currentUser.role === 'string' ? currentUser.role : currentUser.role.name || '').toLowerCase();
+        return roleName === 'operador' || roleName === 'operator';
+    }, [currentUser]);
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -67,7 +82,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     return (
-        <AuthContext.Provider value={{ currentUser, setCurrentUser, unauthorizedUser, isLoading, login, logout }}>
+        <AuthContext.Provider value={{ currentUser, setCurrentUser, unauthorizedUser, isLoading, login, logout, isAdmin, isOperator }}>
             {children}
         </AuthContext.Provider>
     );

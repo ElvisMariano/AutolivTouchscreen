@@ -69,7 +69,7 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
                     >
                         {lines.map(line => (
                             <option key={line.id} value={line.id}>
-                                {line.name}
+                                {line.name} {line.plantName ? `| ${line.plantName}` : ''}
                             </option>
                         ))}
                     </select>

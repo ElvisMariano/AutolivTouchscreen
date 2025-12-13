@@ -6,7 +6,7 @@ import { PencilSquareIcon, TrashIcon } from './common/Icons';
 import { useI18n } from '../contexts/I18nContext';
 
 const AdminUserManagement: React.FC = () => {
-    const { users, addUser, updateUser, deleteUser } = useData();
+    const { users, plants, addUser, updateUser, deleteUser } = useData();
     const { t } = useI18n();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -27,12 +27,23 @@ const AdminUserManagement: React.FC = () => {
         }
     };
 
+    const getPlantNames = (plantIds?: string[]) => {
+        if (!plantIds || plantIds.length === 0) return 'Todas (Admin) ou Nenhuma';
+        if (!plants || plants.length === 0) return plantIds.join(', '); // Fallback se plants não carregou
+        return plantIds.map(id => plants.find(p => p.id === id)?.name || id).join(', ');
+    };
+
     const UserFormModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-        const [formData, setFormData] = useState<Partial<User>>(editingUser || { role: 'operator' });
+        const [formData, setFormData] = useState<Partial<User>>(editingUser || { role: 'operator', plant_ids: [] });
 
         const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
             const { name, value } = e.target;
             setFormData(prev => ({ ...prev, [name]: value }));
+        };
+
+        const handlePlantChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+            const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+            setFormData(prev => ({ ...prev, plant_ids: selectedOptions }));
         };
 
         const handleSubmit = (e: React.FormEvent) => {
@@ -70,6 +81,24 @@ const AdminUserManagement: React.FC = () => {
                             <option value="admin">{t('admin.admin')}</option>
                         </select>
                     </label>
+
+                    <label className="text-xl block text-gray-900 dark:text-white">Acesso às Plantas
+                        <p className="text-sm text-gray-500 mb-1">Segure Ctrl (ou Cmd) para selecionar múltiplas.</p>
+                        <select
+                            name="plant_ids"
+                            multiple
+                            value={formData.plant_ids || []}
+                            onChange={handlePlantChange}
+                            className={`${commonClass} h-32`}
+                        >
+                            {plants.map(plant => (
+                                <option key={plant.id} value={plant.id} disabled={plant.status !== 'active'}>
+                                    {plant.name} {plant.status !== 'active' ? '(Inativa)' : ''}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+
                     <label className="flex items-center gap-3 p-3 bg-white dark:bg-gray-900 rounded-lg border-2 border-gray-300 dark:border-gray-600 cursor-pointer hover:border-cyan-500 transition-colors">
                         <input
                             type="checkbox"
@@ -103,6 +132,7 @@ const AdminUserManagement: React.FC = () => {
                             <th className="p-4">{t('common.name')}</th>
                             <th className="p-4">{t('common.user')}</th>
                             <th className="p-4">{t('admin.role')}</th>
+                            <th className="p-4">Plantas</th>
                             <th className="p-4 text-right">{t('common.actions')}</th>
                         </tr>
                     </thead>
@@ -112,6 +142,9 @@ const AdminUserManagement: React.FC = () => {
                                 <td className="p-4 font-medium">{user.name}</td>
                                 <td className="p-4">{user.username}</td>
                                 <td className="p-4 capitalize">{user.role === 'admin' ? t('admin.admin') : t('admin.operator')}</td>
+                                <td className="p-4 text-sm text-gray-500 dark:text-gray-400">
+                                    {getPlantNames(user.plant_ids)}
+                                </td>
                                 <td className="p-4 flex justify-end space-x-3">
                                     <button onClick={() => openModal(user)} className="p-2 text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title={t('common.edit')}>
                                         <PencilSquareIcon className="h-6 w-6" />

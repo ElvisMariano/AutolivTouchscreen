@@ -8,6 +8,8 @@ export enum Page {
     Admin = 'Administração'
 }
 
+
+
 export enum AdminSubPage {
     WorkInstructions = 'P1 Instrução de Trabalho',
     AcceptanceCriteria = 'P2 Critérios de Aceitação',
@@ -15,6 +17,7 @@ export enum AdminSubPage {
     QualityAlerts = 'Alertas da Qualidade',
     PowerBI = 'Power BI\'s (Relatórios)',
     Presentations = 'Apresentações',
+    Plants = 'Cadastro de Plantas',
     Users = 'Cadastro de Usuários',
     History = 'Histórico de Ações',
     Settings = 'Configurações',
@@ -42,6 +45,8 @@ export interface ProductionLine {
     id: string;
     name: string;
     machines: Machine[];
+    plantId?: string;
+    plantName?: string;
 }
 
 export interface Document {
@@ -125,6 +130,16 @@ export interface SystemSettings {
     kioskMode: boolean; // Prevent exit/gestures
 }
 
+export interface Plant {
+    id: string;
+    name: string;
+    location: string;
+    status: 'active' | 'inactive';
+    created_at: string;
+    updated_at: string;
+    created_by?: string;
+}
+
 export const isAlertActive = (alert: QualityAlert): boolean => {
     const now = Date.now();
     const exp = new Date(alert.expiresAt).getTime();
@@ -141,9 +156,10 @@ export interface User {
     username: string;
     password?: string; // Optional for existing users or purely auto-login users (though highly recommended)
     autoLogin?: boolean;
+    plant_ids?: string[]; // IDs das plantas que o usuário tem acesso
 }
 
-export type ChangeEntity = 'document' | 'alert' | 'user' | 'machine' | 'bi' | 'presentation' | 'settings' | 'navigation';
+export type ChangeEntity = 'document' | 'alert' | 'user' | 'machine' | 'bi' | 'presentation' | 'settings' | 'navigation' | 'plant';
 
 export interface ChangeLog {
     id: string;

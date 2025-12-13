@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,7 +11,9 @@ import AdminUserManagement from './AdminUserManagement';
 import AdminChangeLog from './AdminChangeLog';
 import AdminAlertsManagement from './AdminAlertsManagement';
 import AdminLineManagement from './AdminLineManagement';
+import AdminPlantManagement from './AdminPlantManagement';
 import LineSelector from './common/LineSelector';
+import PlantSelector from './common/PlantSelector';
 import { getLatestBackup } from '../services/backup';
 import { useI18n } from '../contexts/I18nContext';
 import { isAlertActive, AlertSeverity } from '../types';
@@ -271,6 +272,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
                 return <AdminAlertsManagement />;
             case AdminSubPage.ProductionLines:
                 return <AdminLineManagement />;
+            case AdminSubPage.Plants:
+                return <AdminPlantManagement />;
             default:
                 return <AdminSettings />;
         }
@@ -293,7 +296,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
         if (!el) return;
         const dx = e.clientX - panStartRef.current.x;
         const dy = e.clientY - panStartRef.current.y;
-        el.scrollLeft = panStartRef.current.scrollLeft - dx;
+        el.scrollLeft = panStartRef.current.scrollTop - dx;
         el.scrollTop = panStartRef.current.scrollTop - dy;
     };
     const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -313,6 +316,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
             case AdminSubPage.Presentations: return t('common.presentation');
             case AdminSubPage.Users: return t('admin.users');
             case AdminSubPage.ProductionLines: return 'Linhas de Produção';
+            case AdminSubPage.Plants: return 'Cadastro de Plantas';
             case AdminSubPage.History: return t('admin.logs');
             case AdminSubPage.Settings: return t('admin.settings');
             default: return page;
@@ -321,6 +325,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
 
     // Menu items com ícones na ordem especificada
     const menuItems = [
+        { page: AdminSubPage.Plants, icon: BuildingOfficeIcon },
         { page: AdminSubPage.ProductionLines, icon: BuildingOfficeIcon },
         { page: AdminSubPage.WorkInstructions, icon: DocumentTextIcon },
         { page: AdminSubPage.AcceptanceCriteria, icon: DocumentTextIcon },
@@ -337,6 +342,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
         <div className="h-full flex flex-col md:flex-row gap-8">
             <div className="md:w-1/3 lg:w-1/4 bg-white dark:bg-gray-800 p-4 rounded-lg flex-shrink-0 transition-colors duration-300 shadow-lg">
                 <h3 className="text-2xl font-bold text-cyan-600 dark:text-cyan-400 mb-4">{t('admin.title')}</h3>
+
+                {/* Plant Selector */}
+                <PlantSelector />
 
                 {/* Line Selector */}
                 <LineSelector />
