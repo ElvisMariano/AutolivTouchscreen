@@ -177,14 +177,23 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 const dbLines = linesArrays.flat();
 
                 if (dbUsers && dbUsers.length > 0) {
-                    const mappedUsers: User[] = dbUsers.map(u => ({
-                        id: u.id,
-                        name: (u as any).name || u.username,
-                        username: u.username,
-                        role: (u.role as any)?.name?.toLowerCase() === 'administrador' ? 'admin' : 'operator',
-                        autoLogin: false,
-                        plant_ids: (u as any).plant_ids // Include plant_ids
-                    }));
+                    const mappedUsers: User[] = dbUsers.map(u => {
+                        const rawRole = Array.isArray((u as any).role) ? (u as any).role[0]?.name : (u as any).role?.name;
+                        const lower = (rawRole || '').toLowerCase();
+                        const normalized = lower === 'administrador'
+                            ? 'admin'
+                            : lower === 'operador'
+                                ? 'operator'
+                                : lower as any;
+                        return {
+                            id: u.id,
+                            name: (u as any).name || u.username,
+                            username: u.username,
+                            role: normalized,
+                            autoLogin: false,
+                            plant_ids: (u as any).plant_ids
+                        };
+                    });
                     setUsers(mappedUsers);
                 }
 
@@ -386,16 +395,37 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (presentation) addLog('presentation', 'delete', id, presentation.title);
     };
 
-    const addUser = (user: Omit<User, 'id'>) => {
-        // Implementação local ou via serviço
-        // OBS: Geralmente criamos usuários via authService para ter hash de senha
-        // Aqui mantemos a assinatura compatível
+    const addUser = async (user: Omit<User, 'id'>) => {
+        const result = await addUserToDB(user as any);
+        if (result.success) {
+            const dbUsers = await getAllUsers();
+            if (dbUsers && dbUsers.length > 0) {
+                const mappedUsers: User[] = dbUsers.map(u => {
+                    const rawRole = Array.isArray((u as any).role) ? (u as any).role[0]?.name : (u as any).role?.name;
+                    const lower = (rawRole || '').toLowerCase();
+                    const normalized = lower === 'administrador'
+                        ? 'admin'
+                        : lower === 'operador'
+                            ? 'operator'
+                            : lower as any;
+                    return {
+                        id: u.id,
+                        name: (u as any).name || u.username,
+                        username: u.username,
+                        role: normalized,
+                        autoLogin: false,
+                        plant_ids: (u as any).plant_ids
+                    };
+                });
+                setUsers(mappedUsers);
+            }
+            addLog('user', 'create', result.data?.id || user.username, user.username);
+        }
     };
 
     const updateUser = (updatedUser: User) => {
-        // Local update for optimistic UI or simple implementation
         setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
-        updateUserInDB(updatedUser.id, updatedUser.username, updatedUser.plant_ids); // Sync DB
+        updateUserInDB(updatedUser);
         addLog('user', 'update', updatedUser.id, updatedUser.username);
     };
 

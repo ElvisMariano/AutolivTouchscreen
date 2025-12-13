@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { User } from '../types';
 import Modal from './common/Modal';
 import { PencilSquareIcon, TrashIcon } from './common/Icons';
 import { useI18n } from '../contexts/I18nContext';
+import { getRoles } from '../services/authService';
 
 const AdminUserManagement: React.FC = () => {
     const { users, plants, addUser, updateUser, deleteUser } = useData();
     const { t } = useI18n();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [roles, setRoles] = useState<Array<{ id: string; name: string }>>([]);
 
     const openModal = (user: User | null = null) => {
         setEditingUser(user);
@@ -20,6 +22,14 @@ const AdminUserManagement: React.FC = () => {
         setEditingUser(null);
         setIsModalOpen(false);
     };
+
+    useEffect(() => {
+        let mounted = true;
+        getRoles().then(r => {
+            if (mounted) setRoles(r);
+        }).catch(() => {});
+        return () => { mounted = false; };
+    }, []);
 
     const handleDelete = (id: string) => {
         if (window.confirm(t('admin.deleteUserConfirm'))) {
@@ -34,11 +44,12 @@ const AdminUserManagement: React.FC = () => {
     };
 
     const UserFormModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-        const [formData, setFormData] = useState<Partial<User>>(editingUser || { role: 'operator', plant_ids: [] });
+        const [formData, setFormData] = useState<Partial<User>>(editingUser || { role: (roles[0]?.name?.toLowerCase() as any) || 'operator', plant_ids: [] });
 
         const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
             const { name, value } = e.target;
-            setFormData(prev => ({ ...prev, [name]: value }));
+            const v = name === 'role' ? value.toLowerCase() : value;
+            setFormData(prev => ({ ...prev, [name]: v as any }));
         };
 
         const handlePlantChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -76,9 +87,19 @@ const AdminUserManagement: React.FC = () => {
                         <input name="password" type="password" value={formData.password || ''} onChange={handleChange} className={commonClass} required={!editingUser} placeholder={editingUser ? "Deixe em branco para manter" : ""} />
                     </label>
                     <label className="text-xl block text-gray-900 dark:text-white">{t('admin.role')}
-                        <select name="role" value={formData.role || 'operator'} onChange={handleChange} className={commonClass} required>
-                            <option value="operator">{t('admin.operator')}</option>
-                            <option value="admin">{t('admin.admin')}</option>
+                        <select name="role" value={(formData.role as any) || (roles[0]?.name?.toLowerCase() || 'operator')} onChange={handleChange} className={commonClass} required>
+                            {roles.length > 0 ? (
+                                roles.map(r => (
+                                    <option key={r.id} value={r.name.toLowerCase()}>
+                                        {r.name}
+                                    </option>
+                                ))
+                            ) : (
+                                <>
+                                    <option value="operator">{t('admin.operator')}</option>
+                                    <option value="admin">{t('admin.admin')}</option>
+                                </>
+                            )}
                         </select>
                     </label>
 
@@ -141,7 +162,7 @@ const AdminUserManagement: React.FC = () => {
                             <tr key={user.id} className="border-b border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                                 <td className="p-4 font-medium">{user.name}</td>
                                 <td className="p-4">{user.username}</td>
-                                <td className="p-4 capitalize">{user.role === 'admin' ? t('admin.admin') : t('admin.operator')}</td>
+                                <td className="p-4 capitalize">{user.role}</td>
                                 <td className="p-4 text-sm text-gray-500 dark:text-gray-400">
                                     {getPlantNames(user.plant_ids)}
                                 </td>

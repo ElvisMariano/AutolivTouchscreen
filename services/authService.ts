@@ -293,6 +293,7 @@ export async function getAllUsers(): Promise<User[]> {
                 id,
                 username,
                 name,
+                plant_ids,
                 role:permissions(
                     id,
                     name,
@@ -311,7 +312,8 @@ export async function getAllUsers(): Promise<User[]> {
             id: u.id,
             username: u.username,
             name: u.name || u.username, // Fallback to username if name is null
-            role: Array.isArray(u.role) ? u.role[0] : u.role
+            role: Array.isArray(u.role) ? u.role[0] : u.role,
+            plant_ids: u.plant_ids // Include plant_ids
         }));
     } catch (error) {
         console.error('Error fetching users:', error);
@@ -326,9 +328,6 @@ export async function getAllUsers(): Promise<User[]> {
 export async function addUserToDB(user: any): Promise<{ success: boolean; error?: string; data?: any }> {
     try {
         // First resolve role_id from role name or ID
-        // The frontend passes 'admin' or 'operator' string usually.
-        // We need to find the corresponding permission/role ID.
-
         let roleId = '';
         const { data: roles } = await supabase.from('permissions').select('id, name');
 
@@ -362,21 +361,25 @@ export async function addUserToDB(user: any): Promise<{ success: boolean; error?
         const passwordHash = await hashPassword(user.password || '123456', salt); // Default password if empty
 
         // 1. Tenta usar RPC (Secure Store Procedure)
-        const { data: rpcData, error: rpcError } = await supabase.rpc('create_user_admin', {
-            new_username: user.username.toLowerCase(),
-            new_name: user.name,
-            new_password_hash: passwordHash,
-            new_salt: salt,
-            new_role_id: roleId
-        });
+        // Tentando passar plant_ids para o RPC (se atualizado)
+        try {
+            const { data: rpcData, error: rpcError } = await supabase.rpc('create_user_admin', {
+                new_username: user.username.toLowerCase(),
+                new_name: user.name,
+                new_password_hash: passwordHash,
+                new_salt: salt,
+                new_role_id: roleId,
+                new_plant_ids: user.plant_ids || []
+            });
 
-        if (!rpcError) {
-            console.log('Usuário criado via RPC com sucesso.');
-            // RPC pode retornar o ID se configurado, mas assumimos sucesso
-            return { success: true, data: { ...user, role: targetRole, id: rpcData || 'new-id' } };
+            if (!rpcError) {
+                console.log('Usuário criado via RPC com sucesso.');
+                return { success: true, data: { ...user, role: targetRole, id: rpcData || 'new-id' } };
+            }
+            console.warn('RPC de criação falhou (possível erro de assinatura), tentando insert direto...', rpcError.message);
+        } catch (e) {
+            console.warn('Exceção ao chamar RPC (assinatura inválida?), tentando fallback...', e);
         }
-
-        console.warn('RPC de criação falhou, tentando insert direto...', rpcError.message);
 
         // 2. Fallback Insert Direto
         const { data, error } = await supabase.from('users').insert({
@@ -384,7 +387,8 @@ export async function addUserToDB(user: any): Promise<{ success: boolean; error?
             name: user.name,
             password_hash: passwordHash,
             salt,
-            role_id: roleId
+            role_id: roleId,
+            plant_ids: user.plant_ids || []
         }).select().single();
 
         if (error) throw error;
@@ -403,8 +407,6 @@ export async function updateUserInDB(user: any): Promise<{ success: boolean; err
     try {
         // Resolve role again if needed.
         let roleId = '';
-        // For update, if user.role is a string (name) we need ID. If it is object (from DB load) we might have ID.
-        // But DataContext usually keeps 'role' as string 'admin' | 'operator'.
 
         const { data: roles } = await supabase.from('permissions').select('id, name');
         if (roles) {
@@ -423,7 +425,8 @@ export async function updateUserInDB(user: any): Promise<{ success: boolean; err
 
         const updates: any = {
             username: user.username.toLowerCase(),
-            name: user.name
+            name: user.name,
+            plant_ids: user.plant_ids
         };
 
         if (roleId) updates.role_id = roleId;
@@ -436,21 +439,25 @@ export async function updateUserInDB(user: any): Promise<{ success: boolean; err
         }
 
         // 1. Tenta usar RPC (Secure Store Procedure that bypasses RLS)
-        const { error: rpcError } = await supabase.rpc('update_user_admin', {
-            target_user_id: user.id,
-            new_username: updates.username,
-            new_name: updates.name,
-            new_role_id: updates.role_id || null,
-            new_password_hash: updates.password_hash || null,
-            new_salt: updates.salt || null
-        });
+        try {
+            const { error: rpcError } = await supabase.rpc('update_user_admin', {
+                target_user_id: user.id,
+                new_username: updates.username,
+                new_name: updates.name,
+                new_role_id: updates.role_id || null,
+                new_password_hash: updates.password_hash || null,
+                new_salt: updates.salt || null,
+                new_plant_ids: updates.plant_ids || null
+            });
 
-        if (!rpcError) {
-            console.log('Usuário atualizado via RPC com sucesso.');
-            return { success: true };
+            if (!rpcError) {
+                console.log('Usuário atualizado via RPC com sucesso.');
+                return { success: true };
+            }
+            console.warn('RPC de atualização falhou, tentando update direto...', rpcError.message);
+        } catch (e) {
+            console.warn('RPC exception, falling back to direct update:', e);
         }
-
-        console.warn('RPC de atualização falhou ou não existe, tentando update direto...', rpcError.message);
 
         const { error } = await supabase
             .from('users')
