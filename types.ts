@@ -242,6 +242,7 @@ export const AVAILABLE_RESOURCES = {
     'admin:backup_create': 'Criar Backup',
     'admin:backup_restore': 'Restaurar Backup',
     'system:debug_tools': 'Ferramentas de Debug',
+    'system:kiosk_mode': 'Iniciar aplicativo em modo Kiosk',
 };
 
 declare global {

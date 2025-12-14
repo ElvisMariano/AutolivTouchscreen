@@ -30,7 +30,8 @@ const AppContent: React.FC = () => {
     const { settings, updateSetting, logEvent } = useData();
 
     // Hooks must be called unconditionally
-    useKioskMode(settings.kioskMode);
+    const isKioskEnabled = settings.kioskMode || (currentUser?.role?.allowed_resources?.includes('system:kiosk_mode') ?? false);
+    useKioskMode(isKioskEnabled);
 
     const handleTimeout = useCallback(() => {
         console.log("Inactivity timeout. Returning to dashboard.");
