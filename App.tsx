@@ -173,7 +173,7 @@ const AppContent: React.FC = () => {
             <main className="flex-1 overflow-hidden relative p-4 md:p-8">
                 <div
                     key={currentPage}
-                    className="absolute p-4 inset-0 overflow-auto"
+                    className="absolute p-4 inset-0 overflow-auto pb-5"
                 >
                     {renderPage()}
                 </div>
