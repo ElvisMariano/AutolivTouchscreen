@@ -1,15 +1,19 @@
 import { Configuration, PopupRequest } from "@azure/msal-browser";
-
+const msalClientId = process.env.MSAL_CLIENT_ID;
+const msalAuthority = process.env.MSAL_AUTHORITY;
+if (!msalClientId || !msalAuthority) {
+    throw new Error("Variáveis de ambiente MSAL não definidas: MSAL_CLIENT_ID e MSAL_AUTHORITY");
+}
 export const msalConfig: Configuration = {
     auth: {
-        clientId: "6785fdc0-9ba1-4672-90ce-4441ca893e87",
-        authority: "https://login.microsoftonline.com/740c04a7-2a76-4ce5-9344-732e09cd7927",
+        clientId: msalClientId,
+        authority: msalAuthority,
         redirectUri: "/",
         postLogoutRedirectUri: "/"
     },
     cache: {
-        cacheLocation: "sessionStorage", // This configures where your cache will be stored
-        storeAuthStateInCookie: false, // Set this to "true" if you are having issues on IE11 or Edge
+        cacheLocation: "sessionStorage",
+        storeAuthStateInCookie: false
     }
 };
 

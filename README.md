@@ -50,11 +50,14 @@ Aplicação web desenvolvida para gerenciamento de instruções de trabalho, ale
     ```
 
 3.  **Configuração de Ambiente:**
-    Crie um arquivo `.env` na raiz do projeto com as credenciais do Supabase:
+    Crie um arquivo `.env` na raiz do projeto com as credenciais do Supabase e do MSAL:
     ```env
     VITE_SUPABASE_URL=seu_supabase_url
     VITE_SUPABASE_ANON_KEY=sua_supabase_anon_key
+    MSAL_CLIENT_ID=seu_client_id_aqui
+    MSAL_AUTHORITY=seu_authority_url_aqui
     ```
+    Essas variáveis do MSAL são lidas no frontend via `process.env` (configurado em `vite.config.ts`). Para produção, utilize um arquivo específico como `.env.production` com os valores reais. O arquivo `.env` já está ignorado pelo controle de versão.
 
 4.  **Execute a aplicação:**
     ```bash

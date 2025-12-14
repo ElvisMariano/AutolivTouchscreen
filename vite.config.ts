@@ -16,6 +16,12 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
       }
+    },
+    define: {
+      'process.env': {
+        MSAL_CLIENT_ID: env.MSAL_CLIENT_ID,
+        MSAL_AUTHORITY: env.MSAL_AUTHORITY
+      }
     }
   };
 });
