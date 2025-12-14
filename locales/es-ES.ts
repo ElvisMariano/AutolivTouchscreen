@@ -254,6 +254,9 @@ export default {
         entity: "Entidad",
         action: "Acción",
         noLogsFound: "No se encontraron registros.",
+        roleManagement: "Gestión de Roles",
+        plantManagement: "Registro de Plantas",
+        productionLines: "Líneas de Producción",
     },
     modal: {
         close: "Cerrar",

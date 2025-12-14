@@ -254,6 +254,9 @@ export default {
         entity: "Entity",
         action: "Action",
         noLogsFound: "No logs found.",
+        roleManagement: "Role Management",
+        plantManagement: "Plant Registration",
+        productionLines: "Production Lines",
     },
     modal: {
         close: "Close",

@@ -322,9 +322,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
             case AdminSubPage.PowerBI: return t('common.report');
             case AdminSubPage.Presentations: return t('common.presentation');
             case AdminSubPage.Users: return t('admin.users');
-            case AdminSubPage.Roles: return 'Gerenciamento de Roles';
-            case AdminSubPage.ProductionLines: return 'Linhas de Produção';
-            case AdminSubPage.Plants: return 'Cadastro de Plantas';
+            case AdminSubPage.Roles: return t('admin.roleManagement');
+            case AdminSubPage.ProductionLines: return t('admin.productionLines');
+            case AdminSubPage.Plants: return t('admin.plantManagement');
             case AdminSubPage.History: return t('admin.logs');
             case AdminSubPage.Settings: return t('admin.settings');
             default: return page;
