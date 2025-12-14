@@ -1,8 +1,9 @@
 import { Configuration, PopupRequest } from "@azure/msal-browser";
-const msalClientId = process.env.MSAL_CLIENT_ID;
-const msalAuthority = process.env.MSAL_AUTHORITY;
+const msalClientId = import.meta.env.VITE_MSAL_CLIENT_ID;
+const msalAuthority = import.meta.env.VITE_MSAL_AUTHORITY;
+
 if (!msalClientId || !msalAuthority) {
-    throw new Error("Variáveis de ambiente MSAL não definidas: MSAL_CLIENT_ID e MSAL_AUTHORITY");
+    throw new Error("Variáveis de ambiente MSAL não definidas: VITE_MSAL_CLIENT_ID e VITE_MSAL_AUTHORITY");
 }
 export const msalConfig: Configuration = {
     auth: {
