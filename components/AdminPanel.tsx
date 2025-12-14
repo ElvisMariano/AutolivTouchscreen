@@ -243,13 +243,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
     const { currentUser, logout } = useAuth();
 
     useEffect(() => {
-        if (currentUser && currentUser.role.name === 'Admin' && !isAdmin) {
+        const hasAdminAccess = currentUser?.role.name === 'Admin' || currentUser?.role.allowed_resources?.includes('view:admin_access_button');
+        if (hasAdminAccess && !isAdmin) {
             setIsAdmin(true);
         }
     }, [currentUser, isAdmin, setIsAdmin]);
 
-    // Se o usuário já está logado como admin, permitir acesso direto
-    if (!isAdmin && !(currentUser && currentUser.role.name === 'Admin')) {
+    // Se o usuário já está logado como admin ou tem permissão, permitir acesso direto
+    const hasAdminAccess = currentUser?.role.name === 'Admin' || currentUser?.role.allowed_resources?.includes('view:admin_access_button');
+    if (!isAdmin && !hasAdminAccess) {
         return <LoginScreen onUnlock={() => setIsAdmin(true)} requireRole='admin' />;
     }
 
