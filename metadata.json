@@ -1,5 +1,5 @@
 {
-  "name": "Linha de Produção Digital",
+  "name": "Digitals Documents",
   "version": "0.1.0",
   "description": "Um aplicativo de documentos digitais para linha de produção, otimizado para displays verticais touchscreen. Inclui visualizadores de PDF, relatórios Power BI, instruções de trabalho interativas, alertas de qualidade e um painel de administração.",
   "requestFramePermissions": []
