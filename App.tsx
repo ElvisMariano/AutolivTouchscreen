@@ -59,6 +59,17 @@ const AppContent: React.FC = () => {
         void root.offsetHeight;
     }, [settings.theme]);
 
+    // Font Size Management
+    useEffect(() => {
+        const root = window.document.documentElement;
+        const sizeMap: Record<typeof settings.fontSize, string> = {
+            small: '14px',
+            medium: '16px',
+            large: '18px',
+        };
+        root.style.fontSize = sizeMap[settings.fontSize] || '16px';
+    }, [settings.fontSize]);
+
     // Sound Feedback
     useEffect(() => {
         const playClickSound = () => {
