@@ -9,7 +9,8 @@ import {
     PencilSquareIcon,
     ClipboardDocumentCheckIcon,
     DocumentTextIcon,
-    ChartBarIcon
+    ChartBarIcon,
+    PresentationChartBarIcon
 } from './common/Icons';
 
 import { useI18n } from '../contexts/I18nContext';
@@ -49,9 +50,18 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
         logEvent('bi', 'view', report.id, report.name);
     }
 
+    const sqdcmReport = React.useMemo(() =>
+        biReports.find(r => r.lineId === selectedLineId && r.name === 'SQDCM'),
+        [biReports, selectedLineId]
+    );
+
     const filteredReports = React.useMemo(() =>
-        biReports.filter(report => !report.lineId || report.lineId === selectedLineId),
-        [biReports, selectedLineId]);
+        biReports.filter(report =>
+            (!report.lineId || report.lineId === selectedLineId) &&
+            report.name !== 'SQDCM'
+        ),
+        [biReports, selectedLineId]
+    );
 
     return (
         <div className="h-full flex p-4 flex-col gap-6">
@@ -89,20 +99,31 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
                 ))}
             </div>
 
-            {filteredReports.length > 0 && (
-                <div className="grid grid-cols-4 gap-6 h-1/3">
-                    {filteredReports.map((report) => (
-                        <Ripple
-                            key={report.id}
-                            onClick={() => handleReportClick(report)}
-                            className="bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-700 dark:to-gray-800 hover:from-gray-400 hover:to-gray-500 dark:hover:from-gray-600 dark:hover:to-gray-700 rounded-2xl text-gray-900 dark:text-white font-semibold flex flex-col items-center justify-center p-6 transition-all transform hover:scale-105 shadow-xl border border-gray-400 dark:border-gray-600"
-                        >
-                            <ChartBarIcon className="h-12 w-12 mb-3 text-blue-600 dark:text-blue-400" />
-                            <span className="text-xl text-center">{report.name}</span>
-                        </Ripple>
-                    ))}
-                </div>
-            )}
+            <div className={`grid grid-cols-${sqdcmReport ? '4' : '4'} gap-6 h-1/3`}>
+                {/* SQDCM Button - Fixo e Destacado */}
+                {sqdcmReport && (
+                    <Ripple
+                        onClick={() => handleReportClick(sqdcmReport)}
+                        className="bg-gradient-to-br from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 rounded-2xl text-white font-bold flex flex-col items-center justify-center p-6 transition-all transform hover:scale-105 shadow-xl border border-blue-500"
+                    >
+                        {/* Ícone Diferente para SQDCM */}
+                        <PresentationChartBarIcon className="h-14 w-14 mb-3 text-white" />
+                        <span className="text-3xl text-center tracking-wider">SQDCM</span>
+                    </Ripple>
+                )}
+
+                {/* Outros Relatórios */}
+                {filteredReports.map((report) => (
+                    <Ripple
+                        key={report.id}
+                        onClick={() => handleReportClick(report)}
+                        className="bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-700 dark:to-gray-800 hover:from-gray-400 hover:to-gray-500 dark:hover:from-gray-600 dark:hover:to-gray-700 rounded-2xl text-gray-900 dark:text-white font-semibold flex flex-col items-center justify-center p-6 transition-all transform hover:scale-105 shadow-xl border border-gray-400 dark:border-gray-600"
+                    >
+                        <ChartBarIcon className="h-12 w-12 mb-3 text-blue-600 dark:text-blue-400" />
+                        <span className="text-xl text-center">{report.name}</span>
+                    </Ripple>
+                ))}
+            </div>
 
             <Modal
                 isOpen={!!selectedReport}

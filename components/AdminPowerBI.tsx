@@ -12,6 +12,7 @@ const AdminPowerBI: React.FC = () => {
     const { biReports, addBiReport, updateBiReport, deleteBiReport } = useData();
     const { t } = useI18n();
     const { selectedLine } = useLine(); // Retrieve selectedLine
+    const { currentUser } = useAuth(); // Retrieve currentUser here
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<PowerBiReport | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -50,8 +51,11 @@ const AdminPowerBI: React.FC = () => {
         const [isLoading, setIsLoading] = useState(false);
         const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-        // Filter reports by selected line
-        const filteredReports = biReports.filter(r => !r.lineId || (selectedLine && r.lineId === selectedLine.id));
+        // Filter reports by selected line AND exclude SQDCM (managed separately)
+        const filteredReports = biReports.filter(r =>
+            (!r.lineId || (selectedLine && r.lineId === selectedLine.id)) &&
+            r.name !== 'SQDCM'
+        );
 
         useEffect(() => { setVisibleCount(20); }, [biReports.length, selectedLine]);
 
@@ -195,6 +199,21 @@ const AdminPowerBI: React.FC = () => {
         )
     }
 
+    const [sqdcmLink, setSqdcmLink] = useState('');
+    const [sqdcmReport, setSqdcmReport] = useState<PowerBiReport | undefined>(undefined);
+
+    // Carregar SQDCM quando a linha selecionada mudar
+    useEffect(() => {
+        if (!selectedLine) {
+            setSqdcmLink('');
+            setSqdcmReport(undefined);
+            return;
+        }
+        const existingSqdcm = biReports.find(r => r.lineId === selectedLine.id && r.name === 'SQDCM');
+        setSqdcmReport(existingSqdcm);
+        setSqdcmLink(existingSqdcm?.embedUrl || '');
+    }, [selectedLine, biReports]);
+
     return (
         <div className="h-full flex flex-col">
             <div className="flex justify-between items-center mb-6">
@@ -202,6 +221,77 @@ const AdminPowerBI: React.FC = () => {
                 <button onClick={() => openModal()} className="px-6 py-3 bg-cyan-600 rounded-lg text-xl font-bold text-white hover:bg-cyan-500 shadow-lg transition-transform transform hover:scale-105">
                     + {t('admin.newReport')}
                 </button>
+            </div>
+
+
+            {/* SQDCM Section */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 mb-8">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <span className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg text-blue-600 dark:text-blue-300">📊</span>
+                    {t('admin.sqdcmSettings')}
+                </h3>
+                <div className="flex gap-4 items-end">
+                    <div className="flex-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            {t('admin.sqdcmLink')}
+                        </label>
+                        <input
+                            type="url"
+                            value={sqdcmLink}
+                            onChange={(e) => setSqdcmLink(e.target.value)}
+                            placeholder={t('admin.sqdcmPlaceholder')}
+                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors"
+                            disabled={!selectedLine}
+                        />
+                    </div>
+                    <button
+                        onClick={async () => {
+                            if (!selectedLine || !currentUser) return;
+
+                            try {
+                                if (sqdcmReport) {
+                                    // Update
+                                    const updated = { ...sqdcmReport, embedUrl: sqdcmLink };
+                                    updateBiReport(updated);
+                                    await updateLineDocument(sqdcmReport.id, {
+                                        document_id: sqdcmLink
+                                    });
+                                } else {
+                                    // Create
+                                    const newReport: any = {
+                                        id: Date.now().toString(),
+                                        name: 'SQDCM',
+                                        embedUrl: sqdcmLink,
+                                        lineId: selectedLine.id
+                                    };
+                                    addBiReport(newReport);
+                                    await addLineDocument(
+                                        selectedLine.id,
+                                        'report',
+                                        sqdcmLink,
+                                        'SQDCM',
+                                        currentUser.id,
+                                        '1',
+                                        { line_name: selectedLine.name }
+                                    );
+                                }
+                                alert(t('common.success'));
+                            } catch (err) {
+                                console.error(err);
+                                alert(t('common.error'));
+                            }
+                        }}
+                        disabled={!selectedLine || !sqdcmLink.trim()}
+                        className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow transition-colors"
+                    >
+                        {t('common.save')}
+                    </button>
+                </div>
+                {!selectedLine && (
+                    <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
+                        ⚠️ {t('admin.selectLinePlaceholder')}
+                    </p>
+                )}
             </div>
 
             <BiList />

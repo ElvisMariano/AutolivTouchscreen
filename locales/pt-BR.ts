@@ -113,6 +113,7 @@ export default {
         warning: "Aviso",
         alertsActive: "Alertas Ativos",
         quickAccess: "Acesso Rápido",
+        sqdcm: "SQDCM",
     },
     workInstructions: {
         title: "Instruções de Trabalho",
@@ -246,6 +247,10 @@ export default {
         newReport: "Novo Relatório",
         editReport: "Editar Relatório",
         addReport: "Adicionar Relatório",
+        sqdcmSettings: "Configuração SQDCM",
+        sqdcmLink: "Link do Painel SQDCM",
+        sqdcmPlaceholder: "Cole o link 'Publish to Web' do Power BI aqui...",
+        sqdcmSaved: "SQDCM salvo com sucesso!",
         userManagement: "Gerenciamento de Usuários",
         addUser: "Adicionar Usuário",
         editUser: "Editar Usuário",
