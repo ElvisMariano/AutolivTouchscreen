@@ -305,7 +305,7 @@ const AdminPresentations: React.FC = () => {
     return (
         <div className="h-full flex flex-col">
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-bold text-cyan-600 dark:text-cyan-400">{t('presentations.title')} (P3)</h2>
+                <h2 className="text-3xl font-bold text-cyan-600 dark:text-cyan-400">{t('presentations.title')}</h2>
                 <button onClick={() => openModal()} className="px-6 py-3 bg-cyan-600 rounded-lg text-xl font-bold text-white hover:bg-cyan-500 shadow-lg transition-transform transform hover:scale-105">
                     + {t('admin.newPresentation')}
                 </button>
