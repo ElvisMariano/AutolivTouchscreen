@@ -66,12 +66,12 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
     return (
         <div className="h-full flex p-4 flex-col gap-6">
             {/* Line Global Selector */}
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                <div>
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 flex flex-col md:flex-row items-center justify-between">
+                <div className="w-full md:w-auto mb-4 md:mb-0">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('workInstructions.selectLine')}</h2>
                     <p className="text-gray-500 text-sm">{t('dashboard.selectLineSubtitle') || 'Selecione a linha para filtrar o conteúdo'}</p>
                 </div>
-                <div className="w-1/3">
+                <div className="w-full md:w-1/3">
                     <select
                         value={selectedLineId}
                         onChange={(e) => setSelectedLineId(e.target.value)}
@@ -86,29 +86,29 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-6 flex-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 flex-1">
                 {mainNavItems.map(item => (
                     <Ripple
                         key={item.page}
                         onClick={() => navigateTo(item.page)}
-                        className={`rounded-2xl text-white font-bold flex flex-col items-center justify-center p-8 transition-all transform hover:scale-105 shadow-2xl ${item.style}`}
+                        className={`rounded-2xl text-white font-bold flex flex-col items-center justify-center p-4 md:p-8 transition-all transform hover:scale-105 shadow-2xl ${item.style}`}
                     >
-                        <item.icon className="h-24 w-24 mb-4 opacity-90" />
-                        <span className="text-3xl text-center">{item.label}</span>
+                        <item.icon className="h-16 w-16 md:h-24 md:w-24 mb-4 opacity-90" />
+                        <span className="text-xl md:text-3xl text-center">{item.label}</span>
                     </Ripple>
                 ))}
             </div>
 
-            <div className={`grid grid-cols-${sqdcmReport ? '4' : '4'} gap-6 h-1/3`}>
+            <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 shrink-0`}>
                 {/* SQDCM Button - Fixo e Destacado */}
                 {sqdcmReport && (
                     <Ripple
                         onClick={() => handleReportClick(sqdcmReport)}
-                        className="bg-gradient-to-br from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 rounded-2xl text-white font-bold flex flex-col items-center justify-center p-6 transition-all transform hover:scale-105 shadow-xl border border-blue-500"
+                        className="bg-gradient-to-br from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 rounded-2xl text-white font-bold flex flex-col items-center justify-center p-4 md:p-6 transition-all transform hover:scale-105 shadow-xl border border-blue-500"
                     >
                         {/* Ícone Diferente para SQDCM */}
-                        <PresentationChartBarIcon className="h-14 w-14 mb-3 text-white" />
-                        <span className="text-3xl text-center tracking-wider">SQDCM</span>
+                        <PresentationChartBarIcon className="h-10 w-10 md:h-14 md:w-14 mb-2 md:mb-3 text-white" />
+                        <span className="text-xl md:text-3xl text-center tracking-wider">SQDCM</span>
                     </Ripple>
                 )}
 
@@ -117,10 +117,10 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
                     <Ripple
                         key={report.id}
                         onClick={() => handleReportClick(report)}
-                        className="bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-700 dark:to-gray-800 hover:from-gray-400 hover:to-gray-500 dark:hover:from-gray-600 dark:hover:to-gray-700 rounded-2xl text-gray-900 dark:text-white font-semibold flex flex-col items-center justify-center p-6 transition-all transform hover:scale-105 shadow-xl border border-gray-400 dark:border-gray-600"
+                        className="bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-700 dark:to-gray-800 hover:from-gray-400 hover:to-gray-500 dark:hover:from-gray-600 dark:hover:to-gray-700 rounded-2xl text-gray-900 dark:text-white font-semibold flex flex-col items-center justify-center p-4 md:p-6 transition-all transform hover:scale-105 shadow-xl border border-gray-400 dark:border-gray-600"
                     >
-                        <ChartBarIcon className="h-12 w-12 mb-3 text-blue-600 dark:text-blue-400" />
-                        <span className="text-xl text-center">{report.name}</span>
+                        <ChartBarIcon className="h-10 w-10 md:h-12 md:w-12 mb-2 md:mb-3 text-blue-600 dark:text-blue-400" />
+                        <span className="text-sm md:text-xl text-center truncate w-full">{report.name}</span>
                     </Ripple>
                 ))}
             </div>
