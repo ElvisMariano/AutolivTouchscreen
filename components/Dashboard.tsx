@@ -1,6 +1,6 @@
 
 import React, { useState, Suspense } from 'react';
-import { Page, PowerBiReport as PowerBiReportType } from '../types';
+import { Page, PowerBiReport as PowerBiReportType, Presentation } from '../types';
 import { useData } from '../contexts/DataContext';
 import Modal from './common/Modal';
 import Ripple from './common/Ripple';
@@ -23,9 +23,10 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
-    const { biReports, logEvent, lines, selectedLineId, setSelectedLineId } = useData();
+    const { biReports, presentations, logEvent, lines, selectedLineId, setSelectedLineId } = useData();
     const { t } = useI18n();
     const [selectedReport, setSelectedReport] = useState<PowerBiReportType | null>(null);
+    const [selectedPresentation, setSelectedPresentation] = useState<Presentation | null>(null);
 
     const mainNavItems = [
         {
@@ -53,6 +54,11 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
         logEvent('bi', 'view', report.id, report.name);
     }
 
+    const handlePresentationClick = (presentation: Presentation) => {
+        setSelectedPresentation(presentation);
+        logEvent('presentation', 'view', presentation.id, presentation.title);
+    }
+
     const sqdcmReport = React.useMemo(() =>
         biReports.find(r => r.lineId === selectedLineId && r.name === 'SQDCM'),
         [biReports, selectedLineId]
@@ -64,6 +70,11 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
             report.name !== 'SQDCM'
         ),
         [biReports, selectedLineId]
+    );
+
+    const filteredPresentations = React.useMemo(() =>
+        presentations.filter(pres => !pres.lineId || pres.lineId === selectedLineId),
+        [presentations, selectedLineId]
     );
 
     return (
@@ -110,7 +121,7 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
                         className="bg-gradient-to-br from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 rounded-2xl text-white font-bold flex flex-col items-center justify-center p-4 md:p-6 transition-all transform hover:scale-105 shadow-xl border border-blue-500"
                     >
                         {/* Ícone Diferente para SQDCM */}
-                        <PresentationChartBarIcon className="h-10 w-10 md:h-14 md:w-14 mb-2 md:mb-3 text-white" />
+                        <ChartBarIcon className="h-10 w-10 md:h-14 md:w-14 mb-2 md:mb-3 text-white" />
                         <span className="text-xl md:text-3xl text-center tracking-wider">SQDCM</span>
                     </Ripple>
                 )}
@@ -124,6 +135,18 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
                     >
                         <ChartBarIcon className="h-10 w-10 md:h-12 md:w-12 mb-2 md:mb-3 text-blue-600 dark:text-blue-400" />
                         <span className="text-sm md:text-xl text-center truncate w-full">{report.name}</span>
+                    </Ripple>
+                ))}
+
+                {/* Apresentações */}
+                {filteredPresentations.map((pres) => (
+                    <Ripple
+                        key={pres.id}
+                        onClick={() => handlePresentationClick(pres)}
+                        className="bg-gradient-to-br from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 rounded-2xl text-white font-semibold flex flex-col items-center justify-center p-4 md:p-6 transition-all transform hover:scale-105 shadow-xl border border-pink-400"
+                    >
+                        <PresentationChartBarIcon className="h-10 w-10 md:h-12 md:w-12 mb-2 md:mb-3 text-white" />
+                        <span className="text-sm md:text-xl text-center truncate w-full">{pres.title}</span>
                     </Ripple>
                 ))}
             </div>
@@ -142,6 +165,36 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
                     }>
                         <PowerBiReport report={selectedReport} />
                     </Suspense>
+                )}
+            </Modal>
+
+            {/* Presentation Modal */}
+            <Modal
+                isOpen={!!selectedPresentation}
+                onClose={() => setSelectedPresentation(null)}
+                title={selectedPresentation?.title || ''}
+                size="full"
+            >
+                {selectedPresentation && (
+                    <div className="w-full h-[85vh] bg-gray-100 dark:bg-gray-900 rounded-lg overflow-hidden relative">
+                        <iframe
+                            src={selectedPresentation.url}
+                            className="w-full h-full border-0"
+                            allowFullScreen
+                            title={selectedPresentation.title}
+                            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                        />
+                        <div className="absolute bottom-4 right-4">
+                            <a
+                                href={selectedPresentation.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-2 bg-gray-800 text-white rounded-lg shadow-lg opacity-50 hover:opacity-100 transition-opacity text-sm"
+                            >
+                                Abrir em nova aba ↗
+                            </a>
+                        </div>
+                    </div>
                 )}
             </Modal>
         </div>

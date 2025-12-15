@@ -1,10 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useData } from '../contexts/DataContext';
-import { Document } from '../types';
+import { Presentation } from '../types';
 import Modal from './common/Modal';
-import { PencilSquareIcon, TrashIcon } from './common/Icons';
-import { cacheUrl, hasCache, putBlob } from '../services/offlineCache';
-import { usePDFStorage } from '../hooks/usePDFStorage';
+import { PencilSquareIcon, TrashIcon, CheckCircleIcon, ExclamationTriangleIcon } from './common/Icons'; // Icons assumed to exist or need update
 import { useI18n } from '../contexts/I18nContext';
 import { useLine } from '../contexts/LineContext';
 import { addLineDocument, updateLineDocument } from '../services/lineService';
@@ -14,12 +12,13 @@ const AdminPresentations: React.FC = () => {
     const { presentations, addPresentation, updatePresentation, deletePresentation } = useData();
     const { t } = useI18n();
     const { selectedLine } = useLine();
+    const { currentUser } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingItem, setEditingItem] = useState<Document | null>(null);
+    const [editingItem, setEditingItem] = useState<Presentation | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
-    const openModal = (item: Document | null = null) => {
+    const openModal = (item: Presentation | null = null) => {
         setEditingItem(item);
         setIsModalOpen(true);
     };
@@ -48,21 +47,11 @@ const AdminPresentations: React.FC = () => {
     }
 
     const PresentationList: React.FC = () => {
-        const [cachedMap, setCachedMap] = useState<Record<string, boolean>>({});
         const [visibleCount, setVisibleCount] = useState(20);
         const [isLoading, setIsLoading] = useState(false);
         const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-        // Filter presentations by selected line (or show all if no lineId assigned - though admin usually assigns one)
         const filteredPresentations = presentations.filter(p => !p.lineId || (selectedLine && p.lineId === selectedLine.id));
-
-        useEffect(() => {
-            let mounted = true;
-            Promise.all(filteredPresentations.map(async d => [d.id, await hasCache(d.url)] as const)).then(entries => {
-                if (mounted) setCachedMap(Object.fromEntries(entries));
-            });
-            return () => { mounted = false; };
-        }, [filteredPresentations.map(d => d.url).join('|')]);
 
         const loadMore = async () => {
             if (isLoading) return;
@@ -110,16 +99,6 @@ const AdminPresentations: React.FC = () => {
                                     <button onClick={() => handleDelete(doc.id)} className="p-2 text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title={t('common.delete')}>
                                         <TrashIcon className="h-6 w-6" />
                                     </button>
-                                    <button
-                                        onClick={async () => { await cacheUrl(doc.url).catch(() => { }); const v = await hasCache(doc.url); setCachedMap(prev => ({ ...prev, [doc.id]: v })); }}
-                                        className="px-3 py-1 bg-green-600 dark:bg-green-700 text-white rounded-md hover:bg-green-500 dark:hover:bg-green-600 text-sm transition-colors shadow-sm"
-                                    >
-                                        {t('admin.saveOffline')}
-                                    </button>
-                                    <label className="px-3 py-1 bg-gray-600 dark:bg-gray-700 text-white rounded-md hover:bg-gray-500 dark:hover:bg-gray-600 cursor-pointer text-sm transition-colors shadow-sm">
-                                        {t('admin.uploadLocal')}
-                                        <input type="file" accept="application/pdf" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; await putBlob(doc.url, f); const v = await hasCache(doc.url); setCachedMap(prev => ({ ...prev, [doc.id]: v })); e.currentTarget.value = ''; }} className="hidden" />
-                                    </label>
                                 </td>
                             </tr>
                         ))}
@@ -135,34 +114,57 @@ const AdminPresentations: React.FC = () => {
     const FormModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         const { selectedLine } = useLine();
         const { currentUser } = useAuth();
-        const [formData, setFormData] = useState<Partial<Document>>(editingItem || {});
-        const [uploadMode, setUploadMode] = useState<'url' | 'upload'>('url');
-        const [selectedFile, setSelectedFile] = useState<File | null>(null);
-        const [uploadProgress, setUploadProgress] = useState<string>('');
-        const { savePDF } = usePDFStorage();
+        const [formData, setFormData] = useState<Partial<Presentation>>(editingItem || {});
+        const [embedCode, setEmbedCode] = useState('');
+        const [extractedUrl, setExtractedUrl] = useState<string | null>(editingItem?.url || null);
+        const [error, setError] = useState<string | null>(null);
+
+        useEffect(() => {
+            if (editingItem?.url) {
+                // If editing, try to reconstruct an iframe code representation or just leave empty instructions
+                setExtractedUrl(editingItem.url);
+            }
+        }, [editingItem]);
+
+        const extractUrlFromEmbed = (code: string) => {
+            setEmbedCode(code);
+            setError(null);
+
+            if (!code.trim()) {
+                setExtractedUrl(null);
+                return;
+            }
+
+            // Regex to find src attribute within iframe tag
+            const srcMatch = code.match(/<iframe.*?src=["'](.*?)["']/i);
+
+            if (srcMatch && srcMatch[1]) {
+                const url = srcMatch[1];
+                // Verify if it looks like a valid URL
+                if (url.startsWith('http')) {
+                    setExtractedUrl(url);
+                    setFormData(prev => ({ ...prev, url: url }));
+                } else {
+                    setError('A URL extraída parece inválida.');
+                    setExtractedUrl(null);
+                }
+            } else {
+                // If user pasted a direct URL instead of iframe code, we might want to warn them
+                // But per requirements "Only Embed Code", we should enforce it.
+                // Checking if input itself is a URL
+                if (code.trim().startsWith('http')) {
+                    setError('Por favor, cole o código HTML completo do iframe (<iframe src="...">).');
+                    setExtractedUrl(null);
+                } else {
+                    setError('Código de incorporação inválido. Certifique-se de copiar o tag <iframe> completo.');
+                    setExtractedUrl(null);
+                }
+            }
+        };
 
         const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             const { name, value } = e.target;
             setFormData(prev => ({ ...prev, [name]: value }));
-        };
-
-        const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-
-            if (file.type !== 'application/pdf') {
-                alert(t('admin.onlyPdf'));
-                return;
-            }
-
-            const maxSize = 50 * 1024 * 1024; // 50MB
-            if (file.size > maxSize) {
-                alert(t('admin.fileTooLarge'));
-                return;
-            }
-
-            setSelectedFile(file);
-            setUploadProgress(`${t('admin.fileSelected')}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
         };
 
         const handleSubmit = async (e: React.FormEvent) => {
@@ -173,48 +175,42 @@ const AdminPresentations: React.FC = () => {
                 return;
             }
 
-            if (uploadMode === 'upload' && selectedFile) {
-                try {
-                    setUploadProgress(t('admin.uploading'));
-                    const targetId = editingItem ? editingItem.id : `pres-${Date.now()}`;
-                    const indexedDBUrl = await savePDF(selectedFile, targetId);
-                    formData.url = indexedDBUrl;
-                    setUploadProgress(t('admin.uploadComplete'));
-                } catch (error) {
-                    alert(t('admin.uploadError'));
-                    console.error('Upload error:', error);
-                    return;
-                }
+            if (!extractedUrl) {
+                alert('URL da apresentação inválida.');
+                return;
             }
 
+            const docData = {
+                ...formData,
+                url: extractedUrl
+            } as Presentation;
+
             if (editingItem) {
-                updatePresentation(formData as Document);
+                updatePresentation(docData);
 
                 try {
                     await updateLineDocument(editingItem.id, {
                         title: formData.title,
-                        document_id: formData.url,
+                        document_id: extractedUrl,
                         version: formData.version?.toString()
                     });
-                    console.log('Apresentação atualizada no banco.');
                 } catch (error) {
                     console.error('Erro ao atualizar apresentação:', error);
                 }
             } else {
-                addPresentation({ ...(formData as any), category: `Apresentação`, lineId: selectedLine.id });
+                addPresentation({ ...docData, lineId: selectedLine.id });
 
-                if (currentUser && formData.url && formData.title) {
+                if (currentUser && extractedUrl && formData.title) {
                     try {
                         await addLineDocument(
                             selectedLine.id,
                             'presentation',
-                            formData.url,
+                            extractedUrl,
                             formData.title,
                             currentUser.id,
-                            formData.version,
+                            formData.version?.toString() || '1',
                             { line_name: selectedLine.name }
                         );
-                        console.log('Apresentação vinculada à linha');
                     } catch (error) {
                         console.error('Erro ao vincular:', error);
                     }
@@ -233,69 +229,63 @@ const AdminPresentations: React.FC = () => {
                             </p>
                         </div>
                     )}
-                    <label className="text-xl block text-gray-900 dark:text-white">{t('common.title')} <input name="title" value={formData.title || ''} onChange={handleChange} className="w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-3 rounded-lg text-lg border-2 border-gray-300 dark:border-gray-600 focus:border-cyan-500 focus:outline-none transition-colors" required /></label>
 
-                    <div className="flex gap-3 mb-4">
-                        <button
-                            type="button"
-                            onClick={() => setUploadMode('url')}
-                            className={`flex-1 py-4 px-6 rounded-lg text-lg font-medium transition-all border-2 ${uploadMode === 'url'
-                                ? 'bg-cyan-600 border-cyan-500 text-white'
-                                : 'bg-gray-200 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-500'
-                                }`}
-                        >
-                            🔗 {t('admin.externalUrl')}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setUploadMode('upload')}
-                            className={`flex-1 py-4 px-6 rounded-lg text-lg font-medium transition-all border-2 ${uploadMode === 'upload'
-                                ? 'bg-cyan-600 border-cyan-500 text-white'
-                                : 'bg-gray-200 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-500'
-                                }`}
-                        >
-                            📁 {t('admin.uploadFile')}
-                        </button>
+                    <div className="space-y-2">
+                        <label className="text-xl block text-gray-900 dark:text-white">
+                            {t('common.title')} <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            name="title"
+                            value={formData.title || ''}
+                            onChange={handleChange}
+                            className="w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-3 rounded-lg text-lg border-2 border-gray-300 dark:border-gray-600 focus:border-cyan-500 focus:outline-none transition-colors"
+                            required
+                        />
                     </div>
 
-                    {uploadMode === 'url' ? (
+                    <div className="space-y-2">
                         <label className="text-xl block text-gray-900 dark:text-white">
-                            {t('admin.pdfUrl')}
-                            <input
-                                name="url"
-                                type="url"
-                                value={formData.url || ''}
-                                onChange={handleChange}
-                                className="w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-3 rounded-lg text-lg border-2 border-gray-300 dark:border-gray-600 focus:border-cyan-500 focus:outline-none transition-colors"
-                                placeholder="https://exemplo.com/documento.pdf"
-                                required
-                            />
+                            {t('admin.embedCode')} (SharePoint Embed) <span className="text-red-500">*</span>
                         </label>
-                    ) : (
-                        <div className="space-y-3">
-                            <label className="block">
-                                <div className="text-xl mb-2 text-gray-900 dark:text-white">{t('admin.selectPdf')}</div>
-                                <div className="relative">
-                                    <input
-                                        type="file"
-                                        accept=".pdf,application/pdf"
-                                        onChange={handleFileSelect}
-                                        className="w-full text-gray-900 dark:text-white file:mr-4 file:py-3 file:px-6 file:rounded-lg file:border-0 file:text-lg file:font-medium file:bg-cyan-600 file:text-white hover:file:bg-cyan-700 file:cursor-pointer cursor-pointer bg-gray-100 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded-lg p-3"
-                                        required={!selectedFile}
-                                    />
-                                </div>
-                            </label>
-                            {uploadProgress && (
-                                <div className="p-3 bg-cyan-100 dark:bg-cyan-900/30 border border-cyan-300 dark:border-cyan-500/30 rounded-lg text-cyan-800 dark:text-cyan-300 text-sm">
-                                    {uploadProgress}
-                                </div>
-                            )}
-                        </div>
-                    )}
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                            Copie o código completo em <b>Arquivo {'>'} Compartilhar {'>'} Incorporar</b> no SharePoint.
+                        </p>
+                        <textarea
+                            rows={4}
+                            value={embedCode}
+                            onChange={(e) => extractUrlFromEmbed(e.target.value)}
+                            placeholder='<iframe src="https://..." width="..." ...></iframe>'
+                            className={`w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-3 rounded-lg text-sm font-mono border-2 focus:outline-none transition-colors ${error ? 'border-red-500 focus:border-red-500' :
+                                extractedUrl ? 'border-green-500 focus:border-green-500' : 'border-gray-300 dark:border-gray-600 focus:border-cyan-500'
+                                }`}
+                        />
+                        {error && (
+                            <p className="text-red-500 text-sm flex items-center gap-1">
+                                <ExclamationTriangleIcon className="w-4 h-4" /> {error}
+                            </p>
+                        )}
+                        {extractedUrl && (
+                            <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                                <p className="text-sm text-green-700 dark:text-green-300 flex items-center gap-2">
+                                    <CheckCircleIcon className="w-5 h-5" />
+                                    Link extraído com sucesso!
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
+                                    {extractedUrl}
+                                </p>
+                            </div>
+                        )}
+                    </div>
 
-                    <div className="flex justify-end space-x-4">
+                    <div className="flex justify-end space-x-4 pt-4">
                         <button type="button" onClick={onClose} className="px-6 py-3 bg-gray-600 rounded-lg text-xl hover:bg-gray-500 text-white">{t('common.cancel')}</button>
-                        <button type="submit" className="px-6 py-3 bg-cyan-600 rounded-lg text-xl hover:bg-cyan-500 text-white">{t('common.save')}</button>
+                        <button
+                            type="submit"
+                            disabled={!extractedUrl || !selectedLine || !formData.title}
+                            className="px-6 py-3 bg-cyan-600 rounded-lg text-xl hover:bg-cyan-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {t('common.save')}
+                        </button>
                     </div>
                 </form>
             </Modal>

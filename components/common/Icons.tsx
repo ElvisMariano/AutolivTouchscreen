@@ -23,7 +23,8 @@ import {
   PaperAirplaneIcon,
   UserCircleIcon,
   CpuChipIcon,
-  ClipboardDocumentCheckIcon
+  ClipboardDocumentCheckIcon,
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
 
 export {
@@ -51,5 +52,6 @@ export {
   PaperAirplaneIcon,
   UserCircleIcon,
   CpuChipIcon,
-  ClipboardDocumentCheckIcon
+  ClipboardDocumentCheckIcon,
+  CheckCircleIcon
 };
