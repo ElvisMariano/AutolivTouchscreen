@@ -1,10 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { Page, PowerBiReport as PowerBiReportType } from '../types';
 import { useData } from '../contexts/DataContext';
 import Modal from './common/Modal';
-import PowerBiReport from './common/PowerBiReport';
 import Ripple from './common/Ripple';
+import Skeleton from './common/Skeleton';
 import {
     PencilSquareIcon,
     ClipboardDocumentCheckIcon,
@@ -14,6 +14,9 @@ import {
 } from './common/Icons';
 
 import { useI18n } from '../contexts/I18nContext';
+
+// Lazy load PowerBiReport
+const PowerBiReport = React.lazy(() => import('./common/PowerBiReport'));
 
 interface DashboardProps {
     navigateTo: (page: Page) => void;
@@ -131,7 +134,15 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
                 title={selectedReport?.name || ''}
                 size="full"
             >
-                {selectedReport && <PowerBiReport report={selectedReport} />}
+                {selectedReport && (
+                    <Suspense fallback={
+                        <div className="w-full h-full bg-gray-900 rounded-lg flex flex-col p-4 animate-pulse">
+                            <Skeleton width="100%" height="100%" />
+                        </div>
+                    }>
+                        <PowerBiReport report={selectedReport} />
+                    </Suspense>
+                )}
             </Modal>
         </div>
     );

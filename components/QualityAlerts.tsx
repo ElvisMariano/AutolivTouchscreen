@@ -1,12 +1,14 @@
 
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, Suspense } from 'react';
 import { useData } from '../contexts/DataContext';
 import { QualityAlert, Document, AlertSeverity, getSeverityColorClass, DocumentCategory, isAlertActive } from '../types';
 import Modal from './common/Modal';
-import PdfViewer from './common/PdfViewer';
 import { useI18n } from '../contexts/I18nContext';
+import Skeleton from './common/Skeleton';
 
+// Lazy load PdfViewer
+const PdfViewer = React.lazy(() => import('./common/PdfViewer'));
 
 const QualityAlerts: React.FC = () => {
     const { alerts, getDocumentById, updateAlertStatus, selectedLineId } = useData();
@@ -150,7 +152,15 @@ const QualityAlerts: React.FC = () => {
                     </div>
                     {displayDocument ? (
                         <div className="flex-1 min-h-0">
-                            <PdfViewer document={displayDocument} />
+                            <Suspense fallback={
+                                <div className="flex items-center justify-center h-full">
+                                    <div className="flex flex-col items-center gap-4 w-full px-4">
+                                        <Skeleton width="100%" height="60vh" />
+                                    </div>
+                                </div>
+                            }>
+                                <PdfViewer document={displayDocument} />
+                            </Suspense>
                         </div>
                     ) : (
                         <div className="flex-1 flex items-center justify-center bg-gray-200 dark:bg-gray-800 rounded-lg">

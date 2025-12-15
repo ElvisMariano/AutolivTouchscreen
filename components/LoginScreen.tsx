@@ -29,11 +29,14 @@ export default function LoginScreen({ onClose }: LoginScreenProps) {
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
+            <div
+                className="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+            >
                 {onClose && (
                     <button
-                        onClick={onClose}
+                        onClick={(e) => { e.stopPropagation(); onClose(); }}
                         className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
                     >
                         <XCircleIcon className="w-6 h-6" />
