@@ -185,17 +185,30 @@ const AppContent: React.FC = () => {
 import { AuthProvider } from './contexts/AuthContext';
 import { I18nProvider } from './contexts/I18nContext';
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient({
+    defaultOptions: {
+        queries: {
+            refetchOnWindowFocus: false, // Prevent excessive refetches
+            staleTime: 1000 * 60 * 5, // 5 minutes stale time
+        },
+    },
+});
+
 const App: React.FC = () => {
     return (
-        <AuthProvider>
-            <DataProvider>
-                <I18nProvider>
-                    <LineProvider>
-                        <AppContent />
-                    </LineProvider>
-                </I18nProvider>
-            </DataProvider>
-        </AuthProvider>
+        <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+                <DataProvider>
+                    <I18nProvider>
+                        <LineProvider>
+                            <AppContent />
+                        </LineProvider>
+                    </I18nProvider>
+                </DataProvider>
+            </AuthProvider>
+        </QueryClientProvider>
     );
 };
 
