@@ -27,7 +27,7 @@ const AdminUserManagement: React.FC = () => {
         let mounted = true;
         getRoles().then(r => {
             if (mounted) setRoles(r);
-        }).catch(() => {});
+        }).catch(() => { });
         return () => { mounted = false; };
     }, []);
 
@@ -44,7 +44,22 @@ const AdminUserManagement: React.FC = () => {
     };
 
     const UserFormModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-        const [formData, setFormData] = useState<Partial<User>>(editingUser || { role: (roles[0]?.name?.toLowerCase() as any) || 'operator', plant_ids: [] });
+        const [formData, setFormData] = useState<Partial<User>>(() => {
+            if (editingUser) {
+                // Flatten role object to string for the form select
+                const roleValue = typeof editingUser.role === 'object'
+                    ? editingUser.role.name.toLowerCase()
+                    : editingUser.role;
+                return {
+                    ...editingUser,
+                    role: roleValue as any
+                };
+            }
+            return {
+                role: (roles[0]?.name?.toLowerCase() as any) || 'operator',
+                plant_ids: []
+            };
+        });
 
         const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
             const { name, value } = e.target;
@@ -162,7 +177,9 @@ const AdminUserManagement: React.FC = () => {
                             <tr key={user.id} className="border-b border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                                 <td className="p-4 font-medium">{user.name}</td>
                                 <td className="p-4">{user.username}</td>
-                                <td className="p-4 capitalize">{user.role}</td>
+                                <td className="p-4 capitalize">
+                                    {typeof user.role === 'object' ? user.role.name : user.role}
+                                </td>
                                 <td className="p-4 text-sm text-gray-500 dark:text-gray-400">
                                     {getPlantNames(user.plant_ids)}
                                 </td>
