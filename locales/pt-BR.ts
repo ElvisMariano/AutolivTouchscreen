@@ -172,6 +172,7 @@ export default {
         lines: "Linhas",
         selectLine: "Selecionar Linha de Produção",
         selectLinePlaceholder: "Nenhuma linha selecionada",
+        selectLineToEnable: "Selecione uma linha para habilitar o cadastro.",
         documents: "Documentos",
         alerts: "Alertas",
         reports: "Relatórios",

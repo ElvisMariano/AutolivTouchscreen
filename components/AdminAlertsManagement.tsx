@@ -5,9 +5,11 @@ import Modal from './common/Modal';
 import { PencilSquareIcon, TrashIcon } from './common/Icons';
 import { usePDFStorage } from '../hooks/usePDFStorage';
 import { useI18n } from '../contexts/I18nContext';
+import { useLine } from '../contexts/LineContext';
 
 const AdminAlertsManagement: React.FC = () => {
-  const { alerts, addAlert, updateAlert, deleteAlert, selectedLineId } = useData();
+  const { alerts, addAlert, updateAlert, deleteAlert } = useData();
+  const { selectedLine } = useLine();
   const { t, locale } = useI18n();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<QualityAlert | null>(null);
@@ -15,7 +17,7 @@ const AdminAlertsManagement: React.FC = () => {
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   // Filter alerts for the selected line
-  const filteredAlerts = alerts.filter(a => a.lineId === selectedLineId);
+  const filteredAlerts = alerts.filter(a => selectedLine && a.lineId === selectedLine.id);
 
   const openModal = (item: QualityAlert | null = null) => {
     setEditingItem(item);
@@ -168,7 +170,10 @@ const AdminAlertsManagement: React.FC = () => {
       if (editingItem) {
         updateAlert(formData as QualityAlert);
       } else {
-        addAlert(formData as any);
+        // Ensure lineId is added if not present (though addAlert might handle it based on DataContext, we should ideally pass it explicitly if we moved away from DataContext dependency)
+        // DataContext's addAlert uses selectedLineId from DataContext, which might be auto-selected.
+        // But since we are blocking the UI if no line is selected, we assume selectedLine exists here.
+        addAlert({ ...formData, lineId: selectedLine?.id } as any);
       }
       onClose();
     }
@@ -288,14 +293,16 @@ const AdminAlertsManagement: React.FC = () => {
     <div className="h-full flex flex-col">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-bold text-cyan-600 dark:text-cyan-400">{t('header.alerts')}</h2>
-        <button
-          onClick={() => openModal()}
-          disabled={!selectedLineId}
-          className={`px-6 py-3 rounded-lg text-xl font-bold text-white shadow-lg transition-transform transform hover:scale-105 ${!selectedLineId ? 'bg-gray-400 cursor-not-allowed' : 'bg-cyan-600 hover:bg-cyan-500'}`}
-          title={!selectedLineId ? 'Selecione uma linha para adicionar' : ''}
-        >
-          + {t('admin.newAlert')}
-        </button>
+        <div className="flex flex-col items-end gap-2">
+          <button
+            onClick={() => openModal()}
+            disabled={!selectedLine}
+            className={`px-6 py-3 rounded-lg text-xl font-bold text-white shadow-lg transition-transform transform ${!selectedLine ? 'bg-gray-400 cursor-not-allowed' : 'bg-cyan-600 hover:bg-cyan-500 hover:scale-105'}`}
+          >
+            + {t('admin.newAlert')}
+          </button>
+          {!selectedLine && <p className="text-red-500 text-sm font-semibold">{t('admin.selectLineToEnable')}</p>}
+        </div>
       </div>
 
       <AlertsList />

@@ -302,9 +302,16 @@ const AdminStandardizedWork: React.FC = () => {
         <div className="h-full flex flex-col">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-3xl font-bold text-cyan-600 dark:text-cyan-400">{t('standardizedWork.title')} (P4)</h2>
-                <button onClick={() => openModal()} className="px-6 py-3 bg-cyan-600 rounded-lg text-xl font-bold text-white hover:bg-cyan-500 shadow-lg transition-transform transform hover:scale-105">
-                    + {t('admin.newDocument')}
-                </button>
+                <div className="flex flex-col items-end gap-2">
+                    <button
+                        disabled={!selectedLine}
+                        onClick={() => openModal()}
+                        className={`px-6 py-3 rounded-lg text-xl font-bold text-white shadow-lg transition-transform transform ${!selectedLine ? 'bg-gray-400 cursor-not-allowed' : 'bg-cyan-600 hover:bg-cyan-500 hover:scale-105'}`}
+                    >
+                        + {t('admin.newDocument')}
+                    </button>
+                    {!selectedLine && <p className="text-red-500 text-sm font-semibold">{t('admin.selectLineToEnable')}</p>}
+                </div>
             </div>
 
             <DocumentList />

@@ -24,6 +24,7 @@ Aplicação web desenvolvida para gerenciamento de instruções de trabalho, ale
 - **Alertas de Qualidade:** Sistema de alertas com níveis de severidade (A, B, C) e expiração automática.
 - **Critérios de Aceitação & Trabalho Padronizado:** Módulos dedicados para documentação de processos.
 - **Integração PowerBI:** Visualização de relatórios embutidos.
+- **Validação:** Bloqueio de cadastro de documentos caso nenhuma linha de produção esteja selecionada, garantindo integridade dos dados.
 
 ### 👤 Gestão de Usuários e Roles
 - **CRUD de Usuários:** Cadastro completo com vinculação a roles e plantas.
