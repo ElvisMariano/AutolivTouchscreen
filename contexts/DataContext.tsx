@@ -88,7 +88,8 @@ const useLocalStorage = <T,>(key: string, initialValue: T): [T, React.Dispatch<R
             const item = window.localStorage.getItem(key);
             return item ? JSON.parse(item) : initialValue;
         } catch (error) {
-            console.error(error);
+            console.error(`Error reading localStorage key "${key}":`, error);
+            window.localStorage.removeItem(key); // Clear corrupted data
             return initialValue;
         }
     });
@@ -97,7 +98,7 @@ const useLocalStorage = <T,>(key: string, initialValue: T): [T, React.Dispatch<R
         try {
             window.localStorage.setItem(key, JSON.stringify(storedValue));
         } catch (error) {
-            console.error(error);
+            console.error(`Error saving localStorage key "${key}":`, error);
         }
     }, [key, storedValue]);
 
@@ -144,6 +145,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         updateLine: updateLineMutation,
         deleteLine: deleteLineMutation
     } = useLines(plantIds);
+
+    // Auto-select first line if none selected
+    useEffect(() => {
+        if (lines && lines.length > 0) {
+            const isValid = lines.some(l => l.id === selectedLineId);
+            if (!selectedLineId || !isValid) {
+                console.log('Auto-selecting first line:', lines[0].name);
+                setSelectedLineId(lines[0].id);
+            }
+        }
+    }, [lines, selectedLineId, setSelectedLineId]);
 
     const {
         data: unifiedDocs,

@@ -3,6 +3,7 @@ import { supabase } from './supabaseClient';
 export interface User {
     id: string;
     username: string;
+    name?: string;
     role: {
         id: string;
         name: string;
@@ -80,6 +81,7 @@ export async function login(username: string, password: string): Promise<AuthRes
             .select(`
         id,
         username,
+        name,
         password_hash,
         salt,
         role:permissions(
@@ -112,6 +114,7 @@ export async function login(username: string, password: string): Promise<AuthRes
             user: {
                 id: userData.id,
                 username: userData.username,
+                name: userData.name,
                 role: userData.role as any
             }
         };
@@ -131,6 +134,7 @@ export async function autoLoginOperator(username: string): Promise<AuthResult> {
             .select(`
         id,
         username,
+        name,
         role:permissions(
           id,
           name,
@@ -160,6 +164,7 @@ export async function autoLoginOperator(username: string): Promise<AuthResult> {
             user: {
                 id: userData.id,
                 username: userData.username,
+                name: userData.name,
                 role: userRole as any
             }
         };
@@ -253,6 +258,7 @@ export async function syncMsalUser(username: string, name: string): Promise<User
             .select(`
                 id,
                 username,
+                name,
                 role:permissions(
                     id,
                     name,
@@ -269,6 +275,7 @@ export async function syncMsalUser(username: string, name: string): Promise<User
             return {
                 id: existingUser.id,
                 username: existingUser.username,
+                name: existingUser.name,
                 role: userRole as any
             };
         }

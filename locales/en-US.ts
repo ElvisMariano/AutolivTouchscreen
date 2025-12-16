@@ -111,6 +111,8 @@ export default {
         warning: "Warning",
         alertsActive: "Active Alerts",
         quickAccess: "Quick Access",
+        sqdcm: "SQDCM",
+        openInNewTab: "Open in new tab",
     },
     workInstructions: {
         title: "Work Instructions",
