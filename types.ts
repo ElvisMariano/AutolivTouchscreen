@@ -131,6 +131,8 @@ export interface SystemSettings {
     showTutorials: boolean;
     compactMode: boolean; // UI density
     kioskMode: boolean; // Prevent exit/gestures
+    gestureNavigation: boolean; // Enable gesture navigation
+    gestureSensitivity: number; // Swipe threshold in pixels
 }
 
 export interface Plant {

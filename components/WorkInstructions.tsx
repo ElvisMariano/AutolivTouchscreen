@@ -10,12 +10,13 @@ import { useI18n } from '../contexts/I18nContext';
 import { usePDFStorage } from '../hooks/usePDFStorage';
 import Modal from './common/Modal';
 import Skeleton from './common/Skeleton';
+import GestureWrapper from './common/GestureWrapper';
 
 // Lazy load PdfViewer
 const PdfViewer = React.lazy(() => import('./common/PdfViewer'));
 
 const WorkInstructions: React.FC = () => {
-    const { getDocumentById, setSelectedLineId, selectedLineId, lines } = useData();
+    const { getDocumentById, setSelectedLineId, selectedLineId, lines, settings } = useData();
     const { t } = useI18n();
 
     // Local state for Machines/Instructions (still specific to this view's data fetching)
@@ -159,24 +160,69 @@ const WorkInstructions: React.FC = () => {
                 title={selectedMachine?.name || ''}
                 size="full"
             >
-                <Suspense fallback={
-                    <div className="flex items-center justify-center h-full">
-                        <div className="flex flex-col items-center gap-4 w-full max-w-2xl px-4">
-                            <Skeleton width="100%" height="60vh" />
-                            <Skeleton width="80%" height="20px" />
-                            <Skeleton width="60%" height="20px" />
-                        </div>
-                    </div>
-                }>
-                    {instructionDoc ? (
-                        <PdfViewer document={instructionDoc} className="w-full h-full" />
-                    ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-gray-600 dark:text-gray-500 bg-gray-200 dark:bg-gray-900/50 rounded-lg">
-                            <DocumentTextIcon className="w-24 h-24 mb-4 opacity-20" />
-                            <p className="text-xl">{t('workInstructions.noInstructions')}</p>
-                        </div>
+                <div className="h-full relative group">
+                    {/* Botão Anterior */}
+                    {selectedMachine && machines.findIndex(m => m.id === selectedMachine.id) > 0 && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                const idx = machines.findIndex(m => m.id === selectedMachine.id);
+                                if (idx > 0) setSelectedMachine(machines[idx - 1]);
+                            }}
+                            className="absolute left-4 top-1/2 -translate-y-1/2 z-50 p-4 rounded-full bg-black/20 hover:bg-black/40 text-white backdrop-blur-sm transition-all focus:outline-none shadow-lg border border-white/10"
+                            title={t('common.previousPage')}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-8 h-8">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                            </svg>
+                        </button>
                     )}
-                </Suspense>
+
+                    {/* Botão Próximo */}
+                    {selectedMachine && machines.findIndex(m => m.id === selectedMachine.id) < machines.length - 1 && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                const idx = machines.findIndex(m => m.id === selectedMachine.id);
+                                if (idx < machines.length - 1) setSelectedMachine(machines[idx + 1]);
+                            }}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 z-50 p-4 rounded-full bg-black/20 hover:bg-black/40 text-white backdrop-blur-sm transition-all focus:outline-none shadow-lg border border-white/10"
+                            title={t('common.nextPage')}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-8 h-8">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                            </svg>
+                        </button>
+                    )}
+
+                    <motion.div
+                        key={selectedMachine?.id}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.2 }}
+                        className="h-full w-full"
+                    >
+                        <Suspense fallback={
+                            <div className="flex items-center justify-center h-full">
+                                <div className="flex flex-col items-center gap-4 w-full max-w-2xl px-4">
+                                    <Skeleton width="100%" height="60vh" />
+                                    <Skeleton width="80%" height="20px" />
+                                    <Skeleton width="60%" height="20px" />
+                                </div>
+                            </div>
+                        }>
+                            {instructionDoc ? (
+                                <PdfViewer document={instructionDoc} className="w-full h-full" />
+                            ) : (
+                                <div className="flex flex-col items-center justify-center h-full text-gray-600 dark:text-gray-500 bg-gray-200 dark:bg-gray-900/50 rounded-lg">
+                                    <DocumentTextIcon className="w-24 h-24 mb-4 opacity-20" />
+                                    <p className="text-xl">{t('workInstructions.noInstructions')}</p>
+                                </div>
+                            )}
+                        </Suspense>
+                    </motion.div>
+                </div>
             </Modal>
         </div>
     );

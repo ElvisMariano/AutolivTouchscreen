@@ -180,6 +180,36 @@ const AdminSettings: React.FC = () => {
                         />
                         <span className="text-xl text-gray-900 dark:text-white">{t('admin.kioskMode')}</span>
                     </label>
+                    <label className="flex items-center gap-4 p-4 bg-white dark:bg-gray-900 rounded-lg cursor-pointer border border-gray-300 dark:border-gray-700 hover:border-cyan-500 transition-colors">
+                        <input
+                            type="checkbox"
+                            checked={settings.gestureNavigation ?? true}
+                            onChange={(e) => updateSetting('gestureNavigation', e.target.checked)}
+                            className="w-6 h-6 accent-cyan-500"
+                        />
+                        <span className="text-xl text-gray-900 dark:text-white">Navegação por Gestos</span>
+                    </label>
+
+                    {settings.gestureNavigation && (
+                        <div className="p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-700">
+                            <label className="block text-xl mb-2 text-gray-900 dark:text-white">
+                                Sensibilidade (Px): <span className="font-bold text-cyan-500">{settings.gestureSensitivity || 100}px</span>
+                            </label>
+                            <input
+                                type="range"
+                                min="50"
+                                max="300"
+                                step="10"
+                                value={settings.gestureSensitivity || 100}
+                                onChange={(e) => updateSetting('gestureSensitivity', parseInt(e.target.value))}
+                                className="w-full accent-cyan-500 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                            />
+                            <div className="flex justify-between text-xs text-gray-500 mt-1">
+                                <span>Mais Sensível (50px)</span>
+                                <span>Menos Sensível (300px)</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
             <div className="mt-10 border-t border-gray-300 dark:border-gray-700 pt-6">

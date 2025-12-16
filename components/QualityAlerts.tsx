@@ -4,6 +4,7 @@ import React, { useState, useMemo, Suspense } from 'react';
 import { useData } from '../contexts/DataContext';
 import { QualityAlert, Document, AlertSeverity, getSeverityColorClass, DocumentCategory, isAlertActive } from '../types';
 import Modal from './common/Modal';
+import GestureWrapper from './common/GestureWrapper';
 import { useI18n } from '../contexts/I18nContext';
 import Skeleton from './common/Skeleton';
 
@@ -11,7 +12,7 @@ import Skeleton from './common/Skeleton';
 const PdfViewer = React.lazy(() => import('./common/PdfViewer'));
 
 const QualityAlerts: React.FC = () => {
-    const { alerts, getDocumentById, updateAlertStatus, selectedLineId } = useData();
+    const { alerts, getDocumentById, updateAlertStatus, selectedLineId, settings } = useData();
     const { t, locale } = useI18n();
     const [selectedAlert, setSelectedAlert] = useState<QualityAlert | null>(null);
     const [filterMode, setFilterMode] = useState<'newest' | 'oldest' | 'expiration'>('newest');
@@ -133,41 +134,82 @@ const QualityAlerts: React.FC = () => {
             </div>
 
             <Modal isOpen={!!selectedAlert} onClose={() => setSelectedAlert(null)} title={selectedAlert?.title || ''} size="full">
-                <div className="h-full flex flex-col gap-2">
-                    <div className="bg-gray-200 dark:bg-gray-700 p-3 rounded-lg flex justify-between items-center">
-                        <div>
-                            <p className="text-lg text-gray-900 dark:text-white"><span className="font-bold">{t('common.description')}: </span>{selectedAlert?.description}</p>
-                            <p>
-                                <span className="font-bold">{t('qualityAlerts.severity')}: </span>
-                                <span className={`px-3 py-2 rounded-md text-white font-bold ${selectedAlert ? getSeverityClass(selectedAlert.severity) : 'bg-gray-500'}`}>
-                                    {selectedAlert?.severity}
-                                </span>
-                            </p>
-                        </div>
-                        {selectedAlert?.pdfUrl && (
-                            <div className="bg-cyan-900/50 px-4 py-2 rounded border border-cyan-500/50">
-                                <span className="text-cyan-300 font-bold">📎 {t('qualityAlerts.viewingPdf')}</span>
+                <GestureWrapper
+                    enabled={settings.gestureNavigation}
+                    threshold={settings.gestureSensitivity}
+                    onNavigate={(direction) => {
+                        if (!selectedAlert) return;
+                        const currentIndex = filteredAlerts.findIndex(a => a.id === selectedAlert.id);
+                        if (currentIndex === -1) return;
+
+                        let nextIndex = currentIndex;
+                        if (direction === 'next') {
+                            nextIndex = currentIndex + 1;
+                        } else {
+                            nextIndex = currentIndex - 1;
+                        }
+
+                        if (nextIndex >= 0 && nextIndex < filteredAlerts.length) {
+                            const nextAlert = filteredAlerts[nextIndex];
+                            setSelectedAlert(nextAlert);
+                            if (!nextAlert.isRead) {
+                                updateAlertStatus(nextAlert.id, true);
+                            }
+                        }
+                    }}
+                    canGoNext={selectedAlert && filteredAlerts.findIndex(a => a.id === selectedAlert.id) < filteredAlerts.length - 1}
+                    canGoPrev={selectedAlert && filteredAlerts.findIndex(a => a.id === selectedAlert.id) > 0}
+                    className="h-full"
+                >
+                    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+                        {/* Header aligned mostly with WorkInstructions style */}
+                        <div className="flex-none p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center shadow-sm z-10">
+                            <div className="flex flex-col gap-1">
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">
+                                    {selectedAlert?.description}
+                                </h2>
+                                <div className="flex items-center gap-3">
+                                    <span className={`px-2 py-0.5 rounded text-xs font-bold text-white uppercase tracking-wider ${selectedAlert ? getSeverityClass(selectedAlert.severity) : 'bg-gray-500'}`}>
+                                        {t('qualityAlerts.severity')}: {selectedAlert?.severity}
+                                    </span>
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                                        {selectedAlert?.title}
+                                    </span>
+                                </div>
                             </div>
-                        )}
-                    </div>
-                    {displayDocument ? (
-                        <div className="flex-1 min-h-0">
-                            <Suspense fallback={
+
+                            {selectedAlert?.pdfUrl && (
+                                <div className="bg-cyan-50 dark:bg-cyan-900/30 px-3 py-1.5 rounded-md border border-cyan-200 dark:border-cyan-800 flex items-center gap-2">
+                                    <span className="text-cyan-700 dark:text-cyan-300 font-medium text-sm">
+                                        {t('qualityAlerts.viewingPdf')}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex-1 min-h-0 relative bg-gray-100 dark:bg-gray-900 overflow-hidden">
+                            {displayDocument ? (
+                                <Suspense fallback={
+                                    <div className="flex items-center justify-center h-full">
+                                        <div className="flex flex-col items-center gap-4 w-full px-4">
+                                            <Skeleton width="100%" height="60vh" />
+                                        </div>
+                                    </div>
+                                }>
+                                    <PdfViewer document={displayDocument} />
+                                </Suspense>
+                            ) : (
                                 <div className="flex items-center justify-center h-full">
-                                    <div className="flex flex-col items-center gap-4 w-full px-4">
-                                        <Skeleton width="100%" height="60vh" />
+                                    <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm max-w-md mx-4">
+                                        <div className="text-gray-400 mb-4 text-6xl">📄</div>
+                                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('qualityAlerts.noDocument')}</h3>
+                                        <p className="text-gray-500 dark:text-gray-400">{t('qualityAlerts.selectAnother')}</p>
                                     </div>
                                 </div>
-                            }>
-                                <PdfViewer document={displayDocument} />
-                            </Suspense>
+                            )}
                         </div>
-                    ) : (
-                        <div className="flex-1 flex items-center justify-center bg-gray-200 dark:bg-gray-800 rounded-lg">
-                            <p className="text-xl text-gray-700 dark:text-gray-300">{t('qualityAlerts.noDocument')}</p>
-                        </div>
-                    )}
-                </div>
+                    </div>
+                </GestureWrapper>
             </Modal>
         </div>
     );

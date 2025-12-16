@@ -120,6 +120,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         showTutorials: true,
         compactMode: false,
         kioskMode: false,
+        gestureNavigation: true,
+        gestureSensitivity: 100,
     });
 
     const [changeLogs, setChangeLogs] = useLocalStorage<ChangeLog[]>('system_changelogs', []);

@@ -13,6 +13,7 @@ import StandardizedWork from './components/StandardizedWork';
 import QualityAlerts from './components/QualityAlerts';
 import AdminPanel from './components/AdminPanel';
 import Header from './components/common/Header';
+import GestureWrapper from './components/common/GestureWrapper';
 
 import LoginScreen from './components/LoginScreen';
 import UnauthorizedScreen from './components/UnauthorizedScreen';
@@ -143,6 +144,51 @@ const AppContent: React.FC = () => {
         }
     };
 
+    // Global Navigation Logic
+    const PAGE_ORDER = [
+        Page.Dashboard,
+        Page.WorkInstructions,
+        Page.AcceptanceCriteria,
+        Page.StandardizedWork,
+        Page.QualityAlerts
+    ];
+
+    const handleSwipeNavigation = (direction: 'next' | 'prev') => {
+        // If kiosk settings disable navigation or something similar, check here.
+        // For now, allow always.
+
+        // Important: If a Modal is open, we usually don't want global navigation.
+        // But App.tsx doesn't know about Modals inside components easily unless we lift state.
+        // However, the Inner GestureWrapper in Modal should stop propagation, so this shouldn't fire.
+        // BUT, framer-motion drag listener on parent might still pick it up if not handled carefully.
+        // Let's rely on event bubbling control.
+
+        const currentIndex = PAGE_ORDER.indexOf(currentPage);
+        if (currentIndex === -1) return;
+
+        let nextIndex = currentIndex;
+        if (direction === 'next') {
+            nextIndex = currentIndex + 1;
+        } else {
+            nextIndex = currentIndex - 1;
+        }
+
+        // Boundary checks
+        if (nextIndex >= 0 && nextIndex < PAGE_ORDER.length) {
+            navigateTo(PAGE_ORDER[nextIndex]);
+        }
+    };
+
+    const canGoNext = () => {
+        const currentIndex = PAGE_ORDER.indexOf(currentPage);
+        return currentIndex < PAGE_ORDER.length - 1;
+    }
+
+    const canGoPrev = () => {
+        const currentIndex = PAGE_ORDER.indexOf(currentPage);
+        return currentIndex > 0;
+    }
+
     // Conditional RENDERING only (not hooks)
     if (isLoading) {
         return (
@@ -175,7 +221,16 @@ const AppContent: React.FC = () => {
                     key={currentPage}
                     className="absolute p-4 inset-0 overflow-auto pb-5"
                 >
-                    {renderPage()}
+                    <GestureWrapper
+                        onNavigate={handleSwipeNavigation}
+                        canGoNext={canGoNext()}
+                        canGoPrev={canGoPrev()}
+                        className="h-full"
+                        enabled={settings.gestureNavigation}
+                        threshold={settings.gestureSensitivity}
+                    >
+                        {renderPage()}
+                    </GestureWrapper>
                 </div>
             </main>
         </div>
