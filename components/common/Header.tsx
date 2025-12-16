@@ -2,6 +2,7 @@ import React from 'react';
 import { Page, isAlertActive } from '../../types';
 import { useData } from '../../contexts/DataContext';
 import { HomeIcon, Cog6ToothIcon, ExclamationTriangleIcon } from './Icons';
+import DocumentNotification from './DocumentNotification';
 import useUpdateCheck from '../../hooks/useUpdateCheck';
 import { useI18n } from '../../contexts/I18nContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -72,8 +73,6 @@ const Header: React.FC<HeaderProps> = ({ currentPage, navigateTo }) => {
                 <button onClick={() => navigateTo(Page.Dashboard)} className="p-2 md:p-3 bg-gray-300 dark:bg-gray-700 rounded-xl hover:bg-gray-400 dark:hover:bg-gray-600 transition-all hover:scale-105 shadow-md group">
                     <HomeIcon className="h-6 w-6 md:h-8 md:w-8 text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-white transition-colors" />
                 </button>
-
-                <h1 className="text-lg md:text-4xl font-bold text-gray-900 dark:text-gray-100 tracking-tight truncate max-w-[150px] md:max-w-none">{getPageTitle(currentPage)}</h1>
             </div>
 
             <div className="flex items-center space-x-2 md:space-x-6">
@@ -82,6 +81,15 @@ const Header: React.FC<HeaderProps> = ({ currentPage, navigateTo }) => {
                         {t('common.update')}
                     </button>
                 )}
+
+
+                <DocumentNotification navigateTo={navigateTo} />
+
+                {/* Current Shift Display (Read-only) */}
+                <div className="hidden md:flex items-center px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600 mr-2">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 uppercase mr-2 font-bold">{t('admin.shift') || 'TURNO'}:</span>
+                    <span className="font-bold text-blue-600 dark:text-blue-400">{useData().currentShift}</span>
+                </div>
 
                 <button
                     onClick={() => navigateTo(Page.QualityAlerts)}
@@ -106,7 +114,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, navigateTo }) => {
                     </button>
                 )}
             </div>
-        </header>
+        </header >
     );
 };
 

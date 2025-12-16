@@ -236,6 +236,7 @@ export async function updateLineDocument(
         .from('line_documents')
         .update({
             ...updates,
+            uploaded_at: new Date().toISOString()
             // não atualizamos line_id ou document_type normalmente
         })
         .eq('id', documentId); // Importante: O ID do documento local deve corresponder ao ID da tabela line_documents se foi carregado do banco.
@@ -302,5 +303,52 @@ export async function getAllLineDocumentsFromDB() {
         return [];
     }
 
+    return data || [];
+}
+
+/**
+ * Confirmar leitura de documento por turno
+ */
+export async function acknowledgeDocument(documentId: string, shift: string, userId?: string) {
+    // Upsert acknowledgment (if not exists or update it? Actually insert is enough, handling unique constraint)
+    // Constraint is unique(document_id, shift).
+    // If we want to support multiple re-acks (for new versions), we need to handle it.
+    // Logic: 
+    // If acknowledgment exists: UPDATE acknowledged_at = now()
+    // If not exists: INSERT
+
+    // Check if exists first? Or upsert.
+    const { error } = await supabase
+        .from('document_acknowledgments')
+        .upsert({
+            document_id: documentId,
+            shift,
+            acknowledged_by: userId,
+            acknowledged_at: new Date().toISOString()
+        }, { onConflict: 'document_id, shift' });
+
+    if (error) {
+        console.error('Error acknowledging document:', error);
+        return false;
+    }
+    return true;
+}
+
+/**
+ * Buscar confirmações de leitura para uma lista de documentos e turno
+ */
+export async function getDocumentAcknowledgments(documentIds: string[], shift: string) {
+    if (documentIds.length === 0) return [];
+
+    const { data, error } = await supabase
+        .from('document_acknowledgments')
+        .select('*')
+        .in('document_id', documentIds)
+        .eq('shift', shift);
+
+    if (error) {
+        console.error('Error fetching acknowledgments:', error);
+        return [];
+    }
     return data || [];
 }

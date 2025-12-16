@@ -253,3 +253,20 @@ export async function updateStationInstruction(
 
     return data;
 }
+
+/**
+ * Buscar TODAS as instruções de todas as estações (para notificações globais)
+ */
+export async function getAllStationInstructions(): Promise<StationInstruction[]> {
+    const { data, error } = await supabase
+        .from('station_instructions')
+        .select('*, work_stations!inner(line_id, name)')
+        .order('uploaded_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching all station instructions:', error);
+        throw error;
+    }
+
+    return data || [];
+}

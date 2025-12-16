@@ -103,6 +103,7 @@ export async function updatePlant(plantId: string, updates: Partial<Plant>): Pro
                 name: updates.name,
                 location: updates.location,
                 status: updates.status,
+                shift_config: updates.shift_config,
                 updated_at: new Date().toISOString()
             })
             .eq('id', plantId);

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAllLineDocumentsFromDB, addLineDocument, updateLineDocument, deleteLineDocument } from '../services/lineService';
-import { getStationsByLine, createStation, updateStation, deleteStation, reorderStations } from '../services/stationService';
+import { getAllLineDocumentsFromDB, addLineDocument, updateLineDocument, deleteLineDocument, acknowledgeDocument } from '../services/lineService';
+import { getStationsByLine, createStation, updateStation, deleteStation, reorderStations, getAllStationInstructions } from '../services/stationService';
 import { Document, DocumentCategory, PowerBiReport, Presentation, QualityAlert, Machine } from '../types';
 
 // Use this for global documents fetching
@@ -10,8 +10,10 @@ export const useDocuments = () => {
     const query = useQuery({
         queryKey: ['documents'],
         queryFn: async () => {
-            const dbDocs = await getAllLineDocumentsFromDB();
-            // Parse diverse document types
+            const [dbDocs, stationInstructions] = await Promise.all([
+                getAllLineDocumentsFromDB(),
+                getAllStationInstructions()
+            ]);
 
             const reports: PowerBiReport[] = [];
             const presentations: Presentation[] = [];
@@ -68,6 +70,20 @@ export const useDocuments = () => {
                     }
                 }
             });
+
+            // Merge Station Instructions as Documents
+            stationInstructions.forEach((si: any) => {
+                docs.push({
+                    id: si.id, // Use the station_instruction id (UUID)
+                    title: si.title,
+                    url: si.document_id,
+                    category: DocumentCategory.WorkInstruction,
+                    version: si.version || '1',
+                    lineId: si.work_stations?.line_id,
+                    lastUpdated: si.uploaded_at
+                });
+            });
+
             return { reports, presentations, alerts, docs };
         },
         staleTime: 1000 * 60 * 5,
@@ -109,12 +125,22 @@ export const useDocuments = () => {
         }
     });
 
+    const acknowledgeDoc = useMutation({
+        mutationFn: async ({ documentId, shift, userId }: { documentId: string, shift: string, userId?: string }) => {
+            return await acknowledgeDocument(documentId, shift, userId);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['acknowledgments'] });
+        }
+    });
+
     return {
         data: query.data,
         isLoading: query.isLoading,
         createDocument,
         updateDocument,
-        deleteDocument
+        deleteDocument,
+        acknowledgeDocument: acknowledgeDoc
     };
 };
 

@@ -141,6 +141,16 @@ const AdminSettings: React.FC = () => {
                             className="w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-3 rounded-lg text-xl border border-gray-300 dark:border-gray-600 focus:border-cyan-500 focus:outline-none transition-colors"
                         />
                     </div>
+                    {/* Shift Check Interval */}
+                    <div>
+                        <label className="block text-xl mb-2">Intervalo de Verificação de Turno (segundos)</label>
+                        <input
+                            type="number"
+                            value={settings.shiftCheckInterval || 60}
+                            onChange={(e) => updateSetting('shiftCheckInterval', parseInt(e.target.value) || 60)}
+                            className="w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-3 rounded-lg text-xl border border-gray-300 dark:border-gray-600 focus:border-cyan-500 focus:outline-none transition-colors"
+                        />
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">

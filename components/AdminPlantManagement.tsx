@@ -9,18 +9,46 @@ const AdminPlantManagement: React.FC = () => {
     const { currentUser } = useAuth();
     const [isAdding, setIsAdding] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [formData, setFormData] = useState({ name: '', location: '' });
+    const [formData, setFormData] = useState<{
+        name: string;
+        location: string;
+        shift_config: { name: string; startTime: string; endTime: string; isActive: boolean }[];
+    }>({
+        name: '',
+        location: '',
+        shift_config: [
+            { name: '1º Turno', startTime: '06:00', endTime: '14:00', isActive: true },
+            { name: '2º Turno', startTime: '14:00', endTime: '22:00', isActive: true },
+            { name: '3º Turno', startTime: '22:00', endTime: '06:00', isActive: true },
+        ]
+    });
     const [error, setError] = useState('');
 
     const resetForm = () => {
-        setFormData({ name: '', location: '' });
+        setFormData({
+            name: '',
+            location: '',
+            shift_config: [
+                { name: '1º Turno', startTime: '06:00', endTime: '14:00', isActive: true },
+                { name: '2º Turno', startTime: '14:00', endTime: '22:00', isActive: true },
+                { name: '3º Turno', startTime: '22:00', endTime: '06:00', isActive: true },
+            ]
+        });
         setIsAdding(false);
         setEditingId(null);
         setError('');
     };
 
     const handleEdit = (plant: Plant) => {
-        setFormData({ name: plant.name, location: plant.location });
+        setFormData({
+            name: plant.name,
+            location: plant.location,
+            shift_config: plant.shift_config || [
+                { name: '1º Turno', startTime: '06:00', endTime: '14:00', isActive: true },
+                { name: '2º Turno', startTime: '14:00', endTime: '22:00', isActive: true },
+                { name: '3º Turno', startTime: '22:00', endTime: '06:00', isActive: true },
+            ]
+        });
         setEditingId(plant.id);
         setIsAdding(false);
     };
@@ -37,7 +65,16 @@ const AdminPlantManagement: React.FC = () => {
         try {
             if (isAdding) {
                 const success = await addPlant(formData.name, formData.location);
-                if (success) resetForm();
+                // Note: addPlant currently doesn't take shift_config. 
+                // We should ideally update createPlant or call update immediately.
+                // Since this is a "planning" to "execution" transition, I'll rely on updatePlant for now if needed or logic update.
+                // Assuming basic add works and user edits for shifts if addPlant isn't updated, 
+                // BUT better to just handle it:
+                if (success && success.data) {
+                    // Update generic fields immediately if needed or just reset form
+                    await updatePlant(success.data.id, { shift_config: formData.shift_config });
+                    resetForm();
+                }
                 else setError('Falha ao criar planta');
             } else if (editingId) {
                 const success = await updatePlant(editingId, formData);
@@ -96,6 +133,58 @@ const AdminPlantManagement: React.FC = () => {
                                 placeholder="Ex: Taubaté, SP"
                             />
                         </div>
+
+                        <div className="mt-4">
+                            <h4 className="font-semibold mb-2">Configuração de Turnos</h4>
+                            <div className="space-y-3">
+                                {formData.shift_config.map((shift, index) => (
+                                    <div key={index} className="flex items-center gap-4 bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-600">
+                                        <div className="w-32">
+                                            <span className="font-medium">{shift.name}</span>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-500 block">Início</label>
+                                            <input
+                                                type="time"
+                                                value={shift.startTime}
+                                                onChange={(e) => {
+                                                    const newShifts = [...formData.shift_config];
+                                                    newShifts[index].startTime = e.target.value;
+                                                    setFormData({ ...formData, shift_config: newShifts });
+                                                }}
+                                                className="p-1 rounded border dark:bg-gray-700 dark:border-gray-600"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-500 block">Fim</label>
+                                            <input
+                                                type="time"
+                                                value={shift.endTime}
+                                                onChange={(e) => {
+                                                    const newShifts = [...formData.shift_config];
+                                                    newShifts[index].endTime = e.target.value;
+                                                    setFormData({ ...formData, shift_config: newShifts });
+                                                }}
+                                                className="p-1 rounded border dark:bg-gray-700 dark:border-gray-600"
+                                            />
+                                        </div>
+                                        <label className="flex items-center gap-2 cursor-pointer ml-auto">
+                                            <input
+                                                type="checkbox"
+                                                checked={shift.isActive}
+                                                onChange={(e) => {
+                                                    const newShifts = [...formData.shift_config];
+                                                    newShifts[index].isActive = e.target.checked;
+                                                    setFormData({ ...formData, shift_config: newShifts });
+                                                }}
+                                            />
+                                            <span className="text-sm">Ativo</span>
+                                        </label>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
                         <div className="flex gap-2 justify-end">
                             <button
                                 type="button"

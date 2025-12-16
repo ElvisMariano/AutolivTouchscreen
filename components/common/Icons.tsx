@@ -24,7 +24,9 @@ import {
   UserCircleIcon,
   CpuChipIcon,
   ClipboardDocumentCheckIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  BellIcon,
+  EyeIcon
 } from '@heroicons/react/24/outline';
 
 export {
@@ -53,5 +55,7 @@ export {
   UserCircleIcon,
   CpuChipIcon,
   ClipboardDocumentCheckIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  BellIcon,
+  EyeIcon
 };

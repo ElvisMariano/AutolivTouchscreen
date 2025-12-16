@@ -41,3 +41,6 @@ build
 
 # System Files
 Thumbs.db
+
+#DB Corrective
+migration_*.sql

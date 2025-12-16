@@ -12,11 +12,34 @@ import Skeleton from './common/Skeleton';
 const PdfViewer = React.lazy(() => import('./common/PdfViewer'));
 
 const QualityAlerts: React.FC = () => {
-    const { alerts, getDocumentById, updateAlertStatus, selectedLineId, settings } = useData();
+    const {
+        alerts,
+        getDocumentById,
+        updateAlertStatus,
+        selectedLineId,
+        settings,
+        autoOpenDocId,
+        setAutoOpenDocId,
+        unreadDocuments,
+        acknowledgeDocument,
+        currentShift
+    } = useData();
     const { t, locale } = useI18n();
     const [selectedAlert, setSelectedAlert] = useState<QualityAlert | null>(null);
     const [filterMode, setFilterMode] = useState<'newest' | 'oldest' | 'expiration'>('newest');
     const [severityFilter, setSeverityFilter] = useState<AlertSeverity | 'all'>('all');
+
+    // Handle auto-opening specific document if passed via context
+    React.useEffect(() => {
+        if (autoOpenDocId) {
+            const foundAlert = alerts.find(a => a.id === autoOpenDocId || a.documentId === autoOpenDocId);
+            if (foundAlert) {
+                console.log('Auto-opening alert:', autoOpenDocId);
+                setSelectedAlert(foundAlert);
+                setAutoOpenDocId(null); // Clear after opening to avoid loop
+            }
+        }
+    }, [autoOpenDocId, alerts, setAutoOpenDocId]);
 
     const filteredAlerts = useMemo(() => {
         let result = alerts.filter(a => !selectedLineId || a.lineId === selectedLineId);
@@ -36,10 +59,32 @@ const QualityAlerts: React.FC = () => {
         });
     }, [alerts, filterMode, severityFilter, selectedLineId]);
 
+    const isUnread = (alert: QualityAlert) => {
+        return unreadDocuments.some(doc => doc.id === alert.id);
+    };
+
     const handleAlertClick = (alert: QualityAlert) => {
         setSelectedAlert(alert);
-        if (!alert.isRead) {
-            updateAlertStatus(alert.id, true);
+        // Note: We no longer auto-acknowledge on click/open. 
+        // User must confirm explicitly inside the modal now.
+    };
+
+    const handleConfirmRead = async () => {
+        if (!selectedAlert) return;
+
+        // Find the unread doc record to get the correct ID if needed, 
+        // though typically alert.id matches the document ID for alerts in our system.
+        // For alerts, the 'id' IS the document id in unreadDocuments list if it came from line_documents.
+        const unreadDoc = unreadDocuments.find(d => d.id === selectedAlert.id);
+
+        if (unreadDoc || !selectedAlert.isRead) {
+            try {
+                await acknowledgeDocument(selectedAlert.id);
+                // Also update local legacy state if needed
+                updateAlertStatus(selectedAlert.id, true);
+            } catch (error) {
+                console.error('Error acknowledging alert:', error);
+            }
         }
     };
 
@@ -73,9 +118,12 @@ const QualityAlerts: React.FC = () => {
         return getDocumentById(selectedAlert.documentId);
     }, [selectedAlert, getDocumentById]);
 
+    const hasUnread = selectedAlert ? isUnread(selectedAlert) : false;
+
     return (
         <div className="h-full flex flex-col">
             <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+                <h1 className="text-lg md:text-4xl font-bold text-gray-900 dark:text-gray-100 tracking-tight truncate max-w-[150px] md:max-w-none">{t('qualityAlerts.title')}</h1>
                 <div className="flex space-x-4 items-center bg-gray-200 dark:bg-gray-800 p-2 rounded-lg">
                     <span className="text-gray-900 dark:text-white font-semibold ml-2">{t('qualityAlerts.filterBy')}:</span>
                     <select
@@ -103,29 +151,51 @@ const QualityAlerts: React.FC = () => {
 
             <div className="flex-1 overflow-y-auto pr-2">
                 <ul className="space-y-4">
-                    {filteredAlerts.length > 0 ? filteredAlerts.map(alert => (
-                        <li key={alert.id}>
-                            <button onClick={() => handleAlertClick(alert)} className="w-full text-left bg-gray-200 dark:bg-gray-800 p-4 rounded-lg flex items-start gap-4 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors">
-                                {!alert.isRead && <div className="w-4 h-4 bg-yellow-400 rounded-full mt-2 flex-shrink-0"></div>}
-                                <div className="flex-1">
-                                    <div className="flex justify-between items-center">
-                                        <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{alert.title}</h3>
-                                        <span
-                                            className={`px-3 py-1 text-sm font-bold rounded-full text-white ${getSeverityClass(alert.severity)}`}
-                                        >
-                                            {alert.severity}
-                                        </span>
+                    {filteredAlerts.length > 0 ? filteredAlerts.map(alert => {
+                        const activeUnread = isUnread(alert);
+                        return (
+                            <li key={alert.id}>
+                                <button
+                                    onClick={() => handleAlertClick(alert)}
+                                    className={`
+                                        w-full text-left p-4 rounded-lg flex items-start gap-4 transition-all duration-300
+                                        ${activeUnread
+                                            ? 'bg-red-50 dark:bg-red-900/10 border-2 border-red-500 shadow-lg shadow-red-500/10 hover:bg-red-100 dark:hover:bg-red-900/20'
+                                            : 'bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 border-none'
+                                        }
+                                    `}
+                                >
+                                    {activeUnread && (
+                                        <div className="absolute top-2 right-2 flex h-3 w-3">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                        </div>
+                                    )}
+
+                                    {!alert.isRead && !activeUnread && <div className="w-4 h-4 bg-yellow-400 rounded-full mt-2 flex-shrink-0"></div>}
+
+                                    <div className="flex-1 relative">
+                                        <div className="flex justify-between items-center">
+                                            <h3 className={`text-2xl font-bold ${activeUnread ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
+                                                {alert.title}
+                                            </h3>
+                                            <span
+                                                className={`px-3 py-1 text-sm font-bold rounded-full text-white ${getSeverityClass(alert.severity)}`}
+                                            >
+                                                {alert.severity}
+                                            </span>
+                                        </div>
+                                        <p className="text-gray-700 dark:text-gray-300 mt-1">{alert.description}</p>
+                                        <p className="text-sm text-gray-600 dark:text-gray-500 mt-2">
+                                            {t('common.created')}: {new Date(alert.createdAt).toLocaleString(locale)} |
+                                            {t('qualityAlerts.validUntil')}: {new Date(alert.expiresAt).toLocaleString(locale)}
+                                            {alert.pdfUrl && <span className="ml-2 text-cyan-400 font-bold">📎 {t('qualityAlerts.pdfAttached')}</span>}
+                                        </p>
                                     </div>
-                                    <p className="text-gray-700 dark:text-gray-300 mt-1">{alert.description}</p>
-                                    <p className="text-sm text-gray-600 dark:text-gray-500 mt-2">
-                                        {t('common.created')}: {new Date(alert.createdAt).toLocaleString(locale)} |
-                                        {t('qualityAlerts.validUntil')}: {new Date(alert.expiresAt).toLocaleString(locale)}
-                                        {alert.pdfUrl && <span className="ml-2 text-cyan-400 font-bold">📎 {t('qualityAlerts.pdfAttached')}</span>}
-                                    </p>
-                                </div>
-                            </button>
-                        </li>
-                    )) : (
+                                </button>
+                            </li>
+                        );
+                    }) : (
                         <div className="text-center py-10">
                             <p className="text-2xl text-gray-600 dark:text-gray-500">{t('qualityAlerts.noAlerts')}</p>
                         </div>
@@ -152,9 +222,7 @@ const QualityAlerts: React.FC = () => {
                         if (nextIndex >= 0 && nextIndex < filteredAlerts.length) {
                             const nextAlert = filteredAlerts[nextIndex];
                             setSelectedAlert(nextAlert);
-                            if (!nextAlert.isRead) {
-                                updateAlertStatus(nextAlert.id, true);
-                            }
+                            // Do NOt auto-read
                         }
                     }}
                     canGoNext={selectedAlert && filteredAlerts.findIndex(a => a.id === selectedAlert.id) < filteredAlerts.length - 1}
@@ -162,6 +230,32 @@ const QualityAlerts: React.FC = () => {
                     className="h-full"
                 >
                     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+                        {/* Confirmation Bar */}
+                        {hasUnread && (
+                            <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between shadow-lg animate-pulse z-50">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-white/20 rounded-full">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="font-bold text-lg">{t('common.documentUpdated')}</span>
+                                        <span className="text-sm opacity-90">{t('common.confirmReadRequired')}</span>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={handleConfirmRead}
+                                    className="bg-white text-red-600 px-6 py-2 rounded-lg font-bold hover:bg-red-50 transition-colors shadow-sm flex items-center gap-2"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                    {t('common.confirmRead')}
+                                </button>
+                            </div>
+                        )}
+
                         {/* Header aligned mostly with WorkInstructions style */}
                         <div className="flex-none p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center shadow-sm z-10">
                             <div className="flex flex-col gap-1">
@@ -178,13 +272,24 @@ const QualityAlerts: React.FC = () => {
                                 </div>
                             </div>
 
-                            {selectedAlert?.pdfUrl && (
-                                <div className="bg-cyan-50 dark:bg-cyan-900/30 px-3 py-1.5 rounded-md border border-cyan-200 dark:border-cyan-800 flex items-center gap-2">
-                                    <span className="text-cyan-700 dark:text-cyan-300 font-medium text-sm">
-                                        {t('qualityAlerts.viewingPdf')}
-                                    </span>
-                                </div>
-                            )}
+                            <div className="flex items-center gap-4">
+                                {currentShift && (
+                                    <div className="hidden md:flex flex-col items-end mr-4">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-bold">Turno Atual</span>
+                                        <span className="text-sm font-medium text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                                            {currentShift}
+                                        </span>
+                                    </div>
+                                )}
+
+                                {selectedAlert?.pdfUrl && (
+                                    <div className="bg-cyan-50 dark:bg-cyan-900/30 px-3 py-1.5 rounded-md border border-cyan-200 dark:border-cyan-800 flex items-center gap-2">
+                                        <span className="text-cyan-700 dark:text-cyan-300 font-medium text-sm">
+                                            {t('qualityAlerts.viewingPdf')}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div className="flex-1 min-h-0 relative bg-gray-100 dark:bg-gray-900 overflow-hidden">

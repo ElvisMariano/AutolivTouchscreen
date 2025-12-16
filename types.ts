@@ -133,6 +133,14 @@ export interface SystemSettings {
     kioskMode: boolean; // Prevent exit/gestures
     gestureNavigation: boolean; // Enable gesture navigation
     gestureSensitivity: number; // Swipe threshold in pixels
+    shiftCheckInterval: number; // in seconds
+}
+
+export interface ShiftConfig {
+    name: string;
+    startTime: string; // HH:mm
+    endTime: string; // HH:mm
+    isActive: boolean;
 }
 
 export interface Plant {
@@ -143,6 +151,7 @@ export interface Plant {
     created_at: string;
     updated_at: string;
     created_by?: string;
+    shift_config?: ShiftConfig[];
 }
 
 export const isAlertActive = (alert: QualityAlert): boolean => {

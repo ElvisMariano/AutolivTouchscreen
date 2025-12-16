@@ -4,6 +4,7 @@ import { usePlants } from '../hooks/usePlants';
 import { useLines } from '../hooks/useLines';
 import { useDocuments } from '../hooks/useDocuments';
 import { useUsers } from '../hooks/useUsers';
+import { useAcknowledgments } from '../hooks/useAcknowledgments';
 
 import {
     ProductionLine,
@@ -32,6 +33,11 @@ interface DataContextType {
     selectedLineId: string;
     selectedLine: ProductionLine | undefined;
     selectedPlantId: string;
+    currentShift: string;
+    activeShifts: string[];
+    unreadDocuments: Document[];
+    setCurrentShift: (shift: string) => void;
+    acknowledgeDocument: (docId: string) => void;
     setSelectedLineId: (id: string) => void;
     setSelectedPlantId: (id: string) => void;
     getMachineById: (id: string) => Machine | undefined;
@@ -66,9 +72,12 @@ interface DataContextType {
     // CRUD Alerts
     addAlert: (alert: Omit<QualityAlert, 'id' | 'createdAt' | 'isRead'>) => void;
     updateAlert: (alert: QualityAlert) => void;
+
+    // IMPOSSIBLE TO DO BOTH IN ONE CHUNK AS THEY ARE FAR APART.
+    // I will fix typo first and then logic.
     deleteAlert: (id: string) => void;
     // CRUD Plants
-    addPlant: (name: string, location: string) => Promise<boolean>;
+    addPlant: (name: string, location: string) => Promise<{ success: boolean; data?: Plant; error?: string }>;
     updatePlant: (id: string, updates: Partial<Plant>) => Promise<boolean>;
     deletePlant: (id: string) => Promise<boolean>;
     // Machine Management
@@ -77,6 +86,8 @@ interface DataContextType {
     deleteMachine: (lineId: string, machineId: string) => void;
     moveMachine: (lineId: string, machineId: string, direction: 'up' | 'down') => void;
     updateMachinePosition: (lineId: string, machineId: string, position: { x: number; y: number }) => void;
+    autoOpenDocId: string | null;
+    setAutoOpenDocId: (id: string | null) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -122,6 +133,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         kioskMode: false,
         gestureNavigation: true,
         gestureSensitivity: 100,
+        shiftCheckInterval: 60,
     });
 
     const [changeLogs, setChangeLogs] = useLocalStorage<ChangeLog[]>('system_changelogs', []);
@@ -129,6 +141,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // 2. Selection State (Local)
     const [selectedLineId, setSelectedLineId] = useLocalStorage<string>('selectedLineId', '');
     const [selectedPlantId, setSelectedPlantId] = useLocalStorage<string>('selectedPlantId', '');
+
+    // Shift State (Auto-detected)
+    const [currentShift, setCurrentShiftState] = useState<string>('1º Turno');
+
+    // Navigation/Deep Link State
+    const [autoOpenDocId, setAutoOpenDocId] = useState<string | null>(null);
+    // We will update this via useEffect relying on configuration
 
     // 3. React Query Hooks
     const {
@@ -163,7 +182,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         data: unifiedDocs,
         createDocument: createDocMutation,
         updateDocument: updateDocMutation,
-        deleteDocument: deleteDocMutation
+        deleteDocument: deleteDocMutation,
+        acknowledgeDocument: acknowledgeDocMutation
     } = useDocuments();
 
     const {
@@ -234,10 +254,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Plants
     const addPlant = async (name: string, location: string) => {
         try {
-            await createPlantMutation.mutateAsync({ name, location });
+            const result = await createPlantMutation.mutateAsync({ name, location });
             logEvent('plant', 'create', name, location);
-            return true;
-        } catch (e) { return false; }
+            return result;
+        } catch (e) { return { success: false, error: 'Unknown error' }; }
     };
     const updatePlantFn = async (id: string, updates: Partial<Plant>) => {
         try {
@@ -419,6 +439,107 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const exportAll = () => ({ lines, plants, docs, settings });
     const importAll = () => { };
 
+    // Auto-detect Shift Logic
+    const getShiftByTime = (plant: Plant | undefined): string => {
+        if (!plant || !plant.shift_config) return '1º Turno';
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+        const activeShifts = plant.shift_config.filter(s => s.isActive);
+
+        for (const shift of activeShifts) {
+            const [startH, startM] = shift.startTime.split(':').map(Number);
+            const [endH, endM] = shift.endTime.split(':').map(Number);
+            const start = startH * 60 + startM;
+            const end = endH * 60 + endM;
+
+            if (end < start) { // Crosses midnight
+                if (currentMinutes >= start || currentMinutes < end) return shift.name;
+            } else {
+                if (currentMinutes >= start && currentMinutes < end) return shift.name;
+            }
+        }
+        return '1º Turno';
+    };
+
+    const selectedPlant = plants.find(p => p.id === selectedPlantId);
+
+    useEffect(() => {
+        const updateShift = () => {
+            const shift = getShiftByTime(selectedPlant);
+            if (shift !== currentShift) {
+                console.log(`Auto-switching shift to: ${shift}`);
+                setCurrentShiftState(shift);
+            }
+        };
+
+        updateShift();
+        const intervalId = setInterval(updateShift, (settings.shiftCheckInterval || 60) * 1000);
+        return () => clearInterval(intervalId);
+    }, [selectedPlant, settings.shiftCheckInterval, currentShift]);
+
+    // Backward compatibility / Helper
+    const setCurrentShift = (shift: string) => {
+        console.warn('Manual shift setting is deprecated. System is auto-detecting shifts.');
+        setCurrentShiftState(shift);
+    };
+
+    // Unread Logic
+    const activeShifts = useMemo(() => {
+        return selectedPlant?.shift_config?.filter(s => s.isActive).map(s => s.name) || ['1º Turno', '2º Turno', '3º Turno'];
+    }, [selectedPlant]);
+
+    // Calculate unread docs for selected line
+    const selectedLineDocs = docs.filter(d => d.lineId === selectedLineId);
+
+    // Filter active alerts for selected line
+    const selectedLineAlerts = alerts.filter(a => {
+        const isActive = new Date(a.expiresAt).getTime() > Date.now();
+        return (a.lineId === selectedLineId || !a.lineId) && isActive;
+    });
+
+    // Dependencies need to be stable
+    const docIds = useMemo(() => {
+        const dIds = selectedLineDocs.map(d => d.id);
+        const aIds = selectedLineAlerts.map(a => a.id);
+        return [...dIds, ...aIds];
+    }, [selectedLineDocs, selectedLineAlerts]);
+
+    const { data: acks } = useAcknowledgments(docIds, currentShift);
+
+    const unreadDocuments = useMemo(() => {
+        if (!selectedLineId || !acks) return [];
+
+        const unreadDocs = selectedLineDocs.filter(doc => {
+            const ack = acks.find((a: any) => a.document_id === doc.id);
+            if (!ack) return true; // Never acknowledged
+
+            const docTime = new Date(doc.lastUpdated).getTime();
+            const ackTime = new Date(ack.acknowledged_at).getTime();
+            return docTime > ackTime;
+        });
+
+        const unreadAlerts = selectedLineAlerts.filter(alert => {
+            const ack = acks.find((a: any) => a.document_id === alert.id);
+            if (!ack) return true; // Never acknowledged
+
+            const alertTime = new Date(alert.createdAt).getTime();
+            const ackTime = new Date(ack.acknowledged_at).getTime();
+            return alertTime > ackTime;
+        }).map(alert => ({
+            id: alert.id,
+            title: alert.title,
+            url: alert.pdfUrl || alert.documentId || '', // Map url
+            version: 1, // Default version for alerts
+            lastUpdated: alert.createdAt,
+            category: DocumentCategory.QualityAlert,
+            lineId: alert.lineId,
+            stationId: undefined
+        } as Document));
+
+        return [...unreadDocs, ...unreadAlerts];
+    }, [selectedLineDocs, selectedLineAlerts, acks, currentShift, selectedLineId]);
+
     return (
         <DataContext.Provider value={{
             lines, plants, docs, alerts, settings, biReports, presentations, users,
@@ -434,7 +555,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             addUser, updateUser: updateUserFn, deleteUser: deleteUserFn, restoreUser: restoreUserFn,
             addAlert, updateAlert, deleteAlert,
             addPlant, updatePlant: updatePlantFn, deletePlant: deletePlantFn,
-            addMachine, updateMachine, deleteMachine, moveMachine, updateMachinePosition
+            addMachine, updateMachine, deleteMachine, moveMachine, updateMachinePosition,
+            currentShift, setCurrentShift, unreadDocuments,
+            acknowledgeDocument: (id) => acknowledgeDocMutation.mutate({ documentId: id, shift: currentShift, userId: currentUser?.id }),
+            activeShifts,
+            autoOpenDocId,
+            setAutoOpenDocId
         }}>
             {children}
         </DataContext.Provider>
