@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { DataProvider, useData } from './contexts/DataContext';
 import { LineProvider } from './contexts/LineContext';
@@ -7,9 +6,10 @@ import { I18nProvider } from './contexts/I18nContext';
 import { LogProvider } from './contexts/LogContext';
 import { SettingsProvider, useSettings } from './contexts/SettingsContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Page, AdminSubPage } from './types';
+import { AdminSubPage, Page } from './types'; // Page still used for ordering logic if needed, or remove
 import useInactivityTimer from './hooks/useInactivityTimer';
 import { useKioskMode } from './hooks/useKioskMode';
+import { HashRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 
 import Dashboard from './components/Dashboard';
 import WorkInstructions from './components/WorkInstructions';
@@ -24,17 +24,19 @@ import LoginScreen from './components/LoginScreen';
 import UnauthorizedScreen from './components/UnauthorizedScreen';
 
 
-const AppContent: React.FC = () => {
-    const [currentPage, setCurrentPage] = useState<Page>(Page.Dashboard);
-    const [selectedMachineId, setSelectedMachineId] = useState<string | null>(null);
+const AppRoutes: React.FC = () => {
+    const { currentUser, unauthorizedUser, isLoading } = useAuth();
+    const { settings } = useSettings();
+    const { logEvent } = useData();
+    const navigate = useNavigate();
+    const location = useLocation();
+
     const [isAdmin, setIsAdmin] = useState(false);
     const [adminSubPage, setAdminSubPage] = useState<AdminSubPage>(AdminSubPage.Settings);
-
-    // Auth Logic from Context
-    // Auth Logic from Context
-    const { currentUser, unauthorizedUser, isLoading } = useAuth();
-    const { settings, updateSetting } = useSettings();
-    const { logEvent } = useData();
+    // Remove selectedMachineId if not used globally or handle differently.
+    // Dashboard usually sets it. If it's ephemeral, might belong in Dashboard or context.
+    // Existing App logic had it. Let's keep it locally if needed, but Dashboard handles its own navigation?
+    // Looking at previous code, selectedMachineId seemed unused in global scope except for clearing it on navigation.
 
     // Hooks must be called unconditionally
     const isKioskEnabled = settings.kioskMode || (currentUser?.role?.allowed_resources?.includes('system:kiosk_mode') ?? false);
@@ -42,18 +44,15 @@ const AppContent: React.FC = () => {
 
     const handleTimeout = useCallback(() => {
         console.log("Inactivity timeout. Returning to dashboard.");
-        setCurrentPage(Page.Dashboard);
-        setSelectedMachineId(null);
+        navigate('/');
         setIsAdmin(false);
-    }, []);
+    }, [navigate]);
 
     useInactivityTimer(handleTimeout, settings.inactivityTimeout * 1000);
 
     // Theme Management
     useEffect(() => {
         const root = window.document.documentElement;
-        console.log('App: Theme changed to:', settings.theme);
-
         if (settings.theme === 'dark') {
             root.classList.add('dark');
             root.classList.remove('light');
@@ -61,8 +60,6 @@ const AppContent: React.FC = () => {
             root.classList.add('light');
             root.classList.remove('dark');
         }
-
-        // Force a repaint to ensure classes are applied
         void root.offsetHeight;
     }, [settings.theme]);
 
@@ -80,12 +77,8 @@ const AppContent: React.FC = () => {
     // Sound Feedback
     useEffect(() => {
         const playClickSound = () => {
-            // ... existing sound logic ...
             if (settings.enableSoundNotifications) {
                 const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-                // ... (abbreviated for brevity, full logic assumed present but simplified here for replacement context if unchanged, 
-                // but better to keep full implementation to avoid breaking sound) ...
-                // Re-implementing full logic to ensure no regression:
                 const oscillator = audioContext.createOscillator();
                 const gainNode = audioContext.createGain();
 
@@ -108,68 +101,25 @@ const AppContent: React.FC = () => {
         return () => window.removeEventListener('click', playClickSound);
     }, [settings.enableSoundNotifications]);
 
+    // Navigation Logging
+    useEffect(() => {
+        logEvent('navigation', 'view', location.pathname, location.pathname);
+    }, [location.pathname, logEvent]);
 
-    const navigateTo = (page: Page) => {
-        setCurrentPage(page);
-        setSelectedMachineId(null);
-        logEvent('navigation', 'view', String(page), String(page));
-    };
 
-    const onSelectMachine = (machineId: string) => {
-        setSelectedMachineId(machineId);
-    };
-
-    const renderPage = () => {
-        if (currentPage === Page.Admin) {
-            return <AdminPanel
-                isAdmin={isAdmin}
-                setIsAdmin={setIsAdmin}
-                subPage={adminSubPage}
-                setSubPage={setAdminSubPage}
-            />;
-        }
-
-        if (selectedMachineId) {
-            const { getMachineById } = useData();
-            const machine = getMachineById(selectedMachineId);
-        }
-
-        switch (currentPage) {
-            case Page.Dashboard:
-                return <Dashboard navigateTo={navigateTo} />;
-            case Page.WorkInstructions:
-                return <WorkInstructions />;
-            case Page.AcceptanceCriteria:
-                return <AcceptanceCriteria />;
-            case Page.StandardizedWork:
-                return <StandardizedWork />;
-            case Page.QualityAlerts:
-                return <QualityAlerts />;
-            default:
-                return <Dashboard navigateTo={navigateTo} />;
-        }
-    };
-
-    // Global Navigation Logic
-    const PAGE_ORDER = [
-        Page.Dashboard,
-        Page.WorkInstructions,
-        Page.AcceptanceCriteria,
-        Page.StandardizedWork,
-        Page.QualityAlerts
+    // Global Navigation Logic (Swipe)
+    const ORDERED_PATHS = [
+        '/',
+        '/work-instructions',
+        '/acceptance-criteria',
+        '/standardized-work',
+        '/quality-alerts'
     ];
 
     const handleSwipeNavigation = (direction: 'next' | 'prev') => {
-        // If kiosk settings disable navigation or something similar, check here.
-        // For now, allow always.
+        const currentPath = location.pathname === '/index.html' ? '/' : location.pathname; // Electron fix if needed
+        const currentIndex = ORDERED_PATHS.indexOf(currentPath);
 
-        // Important: If a Modal is open, we usually don't want global navigation.
-        // But App.tsx doesn't know about Modals inside components easily unless we lift state.
-        // However, the Inner GestureWrapper in Modal should stop propagation, so this shouldn't fire.
-        // BUT, framer-motion drag listener on parent might still pick it up if not handled carefully.
-        // Let's rely on event bubbling control.
-
-        const currentIndex = PAGE_ORDER.indexOf(currentPage);
         if (currentIndex === -1) return;
 
         let nextIndex = currentIndex;
@@ -179,23 +129,25 @@ const AppContent: React.FC = () => {
             nextIndex = currentIndex - 1;
         }
 
-        // Boundary checks
-        if (nextIndex >= 0 && nextIndex < PAGE_ORDER.length) {
-            navigateTo(PAGE_ORDER[nextIndex]);
+        if (nextIndex >= 0 && nextIndex < ORDERED_PATHS.length) {
+            navigate(ORDERED_PATHS[nextIndex]);
         }
     };
 
     const canGoNext = () => {
-        const currentIndex = PAGE_ORDER.indexOf(currentPage);
-        return currentIndex < PAGE_ORDER.length - 1;
+        const currentIndex = ORDERED_PATHS.indexOf(location.pathname);
+        return currentIndex < ORDERED_PATHS.length - 1;
     }
 
     const canGoPrev = () => {
-        const currentIndex = PAGE_ORDER.indexOf(currentPage);
+        const currentIndex = ORDERED_PATHS.indexOf(location.pathname);
         return currentIndex > 0;
     }
 
-    // Conditional RENDERING only (not hooks)
+    // Wrapper for Dashboard to pass legacy navigateTo if needed, or update Dashboard.
+    // Assuming Dashboard uses navigateTo prop. We can provide a wrapper.
+    // Wrapper removed
+
     if (isLoading) {
         return (
             <div className="h-screen w-screen flex items-center justify-center bg-gray-900 text-white flex-col">
@@ -221,12 +173,9 @@ const AppContent: React.FC = () => {
 
     return (
         <div className="flex flex-col h-screen w-screen bg-gray-100 dark:bg-gray-900 font-sans text-gray-900 dark:text-white transition-colors duration-300">
-            <Header currentPage={currentPage} navigateTo={navigateTo} />
+            <Header />
             <main className="flex-1 overflow-hidden relative p-4 md:p-8">
-                <div
-                    key={currentPage}
-                    className="absolute p-4 inset-0 overflow-auto pb-5"
-                >
+                <div key={location.pathname} className="absolute p-4 inset-0 overflow-auto pb-5">
                     <GestureWrapper
                         onNavigate={handleSwipeNavigation}
                         canGoNext={canGoNext()}
@@ -235,7 +184,22 @@ const AppContent: React.FC = () => {
                         enabled={settings.gestureNavigation}
                         threshold={settings.gestureSensitivity}
                     >
-                        {renderPage()}
+                        <Routes>
+                            <Route path="/" element={<Dashboard />} />
+                            <Route path="/work-instructions" element={<WorkInstructions />} />
+                            <Route path="/acceptance-criteria" element={<AcceptanceCriteria />} />
+                            <Route path="/standardized-work" element={<StandardizedWork />} />
+                            <Route path="/quality-alerts" element={<QualityAlerts />} />
+                            <Route path="/admin" element={
+                                <AdminPanel
+                                    isAdmin={isAdmin}
+                                    setIsAdmin={setIsAdmin}
+                                    subPage={adminSubPage}
+                                    setSubPage={setAdminSubPage}
+                                />
+                            } />
+                            <Route path="*" element={<Navigate to="/" replace />} />
+                        </Routes>
                     </GestureWrapper>
                 </div>
             </main>
@@ -246,8 +210,8 @@ const AppContent: React.FC = () => {
 const queryClient = new QueryClient({
     defaultOptions: {
         queries: {
-            refetchOnWindowFocus: false, // Prevent excessive refetches
-            staleTime: 1000 * 60 * 5, // 5 minutes stale time
+            refetchOnWindowFocus: false,
+            staleTime: 1000 * 60 * 5,
         },
     },
 });
@@ -261,7 +225,9 @@ const App: React.FC = () => {
                         <DataProvider>
                             <I18nProvider>
                                 <LineProvider>
-                                    <AppContent />
+                                    <HashRouter>
+                                        <AppContent />
+                                    </HashRouter>
                                 </LineProvider>
                             </I18nProvider>
                         </DataProvider>
@@ -271,5 +237,7 @@ const App: React.FC = () => {
         </QueryClientProvider>
     );
 };
+// Helper to wrap AppContent
+const AppContent = () => <AppRoutes />;
 
 export default App;

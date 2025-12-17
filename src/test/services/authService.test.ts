@@ -30,7 +30,10 @@ describe('authService', () => {
             const mockIs = vi.fn().mockReturnValue({ single: mockSingle });
             const mockEq = vi.fn().mockReturnValue({ is: mockIs });
             const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
-            (supabase.from as any).mockReturnValue({ select: mockSelect });
+            (supabase.from as any).mockReturnValue({
+                select: mockSelect,
+                insert: vi.fn().mockResolvedValue({ error: null })
+            });
 
             const result = await login('nonexistent', 'password');
 

@@ -2,34 +2,36 @@ import React, { useState } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { BellIcon, EyeIcon } from './Icons';
 import Modal from './Modal';
-import { Page, DocumentCategory } from '../../types';
+import { DocumentCategory } from '../../types';
+import { useNavigate } from 'react-router-dom';
 
 interface DocumentNotificationProps {
-    navigateTo: (page: Page) => void;
+    // navigateTo removed
 }
 
-const DocumentNotification: React.FC<DocumentNotificationProps> = ({ navigateTo }) => {
+const DocumentNotification: React.FC<DocumentNotificationProps> = () => {
     const { unreadDocuments, setAutoOpenDocId } = useData();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const navigate = useNavigate();
 
     const handleOpenDoc = (doc: any) => {
-        // Map category to page
-        let targetPage = Page.WorkInstructions; // Default
+        // Map category to page path
+        let targetPath = '/work-instructions'; // Default
         switch (doc.category) {
             case DocumentCategory.WorkInstruction:
-                targetPage = Page.WorkInstructions;
+                targetPath = '/work-instructions';
                 break;
             case DocumentCategory.QualityAlert:
-                targetPage = Page.QualityAlerts;
+                targetPath = '/quality-alerts';
                 break;
             case DocumentCategory.StandardizedWork:
-                targetPage = Page.StandardizedWork;
+                targetPath = '/standardized-work';
                 break;
             case DocumentCategory.AcceptanceCriteria:
-                targetPage = Page.AcceptanceCriteria;
+                targetPath = '/acceptance-criteria';
                 break;
             default:
-                targetPage = Page.WorkInstructions;
+                targetPath = '/work-instructions';
         }
 
         // Set context to auto-open
@@ -37,7 +39,7 @@ const DocumentNotification: React.FC<DocumentNotificationProps> = ({ navigateTo 
 
         // Navigate
         setIsModalOpen(false);
-        navigateTo(targetPage);
+        navigate(targetPath);
     };
 
     if (unreadDocuments.length === 0) return null;

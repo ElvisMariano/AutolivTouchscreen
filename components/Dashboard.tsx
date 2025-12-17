@@ -1,6 +1,5 @@
-
 import React, { useState, Suspense } from 'react';
-import { Page, PowerBiReport as PowerBiReportType, Presentation } from '../types';
+import { PowerBiReport as PowerBiReportType, Presentation, Page } from '../types';
 import Modal from './common/Modal';
 import Ripple from './common/Ripple';
 import Skeleton from './common/Skeleton';
@@ -16,19 +15,21 @@ import { useI18n } from '../contexts/I18nContext';
 import { useLog } from '../contexts/LogContext';
 import { useDocuments } from '../hooks/useDocuments';
 import { useLine } from '../contexts/LineContext';
+import { useNavigate } from 'react-router-dom';
 
 // Lazy load PowerBiReport
 const PowerBiReport = React.lazy(() => import('./common/PowerBiReport'));
 
 interface DashboardProps {
-    navigateTo: (page: Page) => void;
+    // navigateTo removed
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
+const Dashboard: React.FC<DashboardProps> = () => {
     const { t } = useI18n();
     const { logEvent } = useLog();
     const { lines, selectedLine, setSelectedLineId } = useLine();
     const selectedLineId = selectedLine?.id || '';
+    const navigate = useNavigate();
 
     const { data: unifiedDocs } = useDocuments();
     const biReports = unifiedDocs?.reports || [];
@@ -39,19 +40,19 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
 
     const mainNavItems = [
         {
-            page: Page.WorkInstructions,
+            path: '/work-instructions',
             label: t('dashboard.workInstructions'),
             icon: PencilSquareIcon,
             style: 'bg-gradient-to-br from-green-500 to-green-700 hover:from-green-600 hover:to-green-800'
         },
         {
-            page: Page.AcceptanceCriteria,
+            path: '/acceptance-criteria',
             label: t('dashboard.acceptanceCriteria'),
             icon: ClipboardDocumentCheckIcon,
             style: 'bg-gradient-to-br from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700'
         },
         {
-            page: Page.StandardizedWork,
+            path: '/standardized-work',
             label: t('dashboard.standardizedWork'),
             icon: DocumentTextIcon,
             style: 'bg-gradient-to-br from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800'
@@ -113,8 +114,8 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 flex-1">
                 {mainNavItems.map(item => (
                     <Ripple
-                        key={item.page}
-                        onClick={() => navigateTo(item.page)}
+                        key={item.path}
+                        onClick={() => navigate(item.path)}
                         className={`rounded-2xl text-white font-bold flex flex-col items-center justify-center p-4 md:p-8 transition-all transform hover:scale-105 shadow-2xl ${item.style}`}
                     >
                         <item.icon className="h-16 w-16 md:h-24 md:w-24 mb-4 opacity-90" />

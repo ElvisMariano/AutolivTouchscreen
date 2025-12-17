@@ -6,17 +6,31 @@ import DocumentNotification from './DocumentNotification';
 import useUpdateCheck from '../../hooks/useUpdateCheck';
 import { useI18n } from '../../contexts/I18nContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface HeaderProps {
-    currentPage: Page;
-    navigateTo: (page: Page) => void;
+    // navigateTo removed
+    // currentPage removed (we'll use useLocation)
 }
 
-const Header: React.FC<HeaderProps> = ({ currentPage, navigateTo }) => {
+const Header: React.FC<HeaderProps> = () => {
     const { alerts, selectedLineId } = useData();
     const { hasUpdate } = useUpdateCheck(60000);
     const { t, locale } = useI18n();
     const { isAdmin } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    // Helper to map location.pathname to Page enum (optional, or just use paths directly in navigation)
+    // Page enum values are string 'Dashboard', 'WorkInstructions'. 
+    // We should map them to paths: /dashboard, /work-instructions or just use strings as paths?
+    // Implementation Plan said: /dashboard, /work-instructions.
+
+    // For now, let's assume we pass strings to navigate().
+    // But page enum is used for Title.
+
+    // Note: navigateTo in props took Page enum. Now we navigate to paths.
+    // Dashboard -> '/'
 
     const activeAlertsCount = React.useMemo(() => {
         return alerts
@@ -24,18 +38,6 @@ const Header: React.FC<HeaderProps> = ({ currentPage, navigateTo }) => {
             .filter(isAlertActive)
             .length;
     }, [alerts, selectedLineId]);
-
-    const getPageTitle = (page: Page) => {
-        switch (page) {
-            case Page.Dashboard: return t('dashboard.title');
-            case Page.WorkInstructions: return t('workInstructions.title');
-            case Page.AcceptanceCriteria: return t('acceptanceCriteria.title');
-            case Page.StandardizedWork: return t('standardizedWork.title');
-            case Page.QualityAlerts: return t('qualityAlerts.title');
-            case Page.Admin: return t('admin.title');
-            default: return page;
-        }
-    };
 
     const Clock: React.FC = () => {
         const [time, setTime] = React.useState(new Date());
@@ -70,7 +72,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, navigateTo }) => {
 
                 <div className="h-8 w-px md:h-12 bg-gray-400 dark:bg-gray-600 mx-1 md:mx-2 hidden md:block"></div>
 
-                <button onClick={() => navigateTo(Page.Dashboard)} className="p-2 md:p-3 bg-gray-300 dark:bg-gray-700 rounded-xl hover:bg-gray-400 dark:hover:bg-gray-600 transition-all hover:scale-105 shadow-md group">
+                <button onClick={() => navigate('/')} className="p-2 md:p-3 bg-gray-300 dark:bg-gray-700 rounded-xl hover:bg-gray-400 dark:hover:bg-gray-600 transition-all hover:scale-105 shadow-md group">
                     <HomeIcon className="h-6 w-6 md:h-8 md:w-8 text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-white transition-colors" />
                 </button>
             </div>
@@ -83,12 +85,12 @@ const Header: React.FC<HeaderProps> = ({ currentPage, navigateTo }) => {
                 )}
 
 
-                <DocumentNotification navigateTo={navigateTo} />
+                <DocumentNotification />
 
 
 
                 <button
-                    onClick={() => navigateTo(Page.QualityAlerts)}
+                    onClick={() => navigate('/quality-alerts')}
                     className="relative px-3 py-2 md:px-6 md:py-3 bg-red-600 rounded-xl hover:bg-red-700 transition-all hover:scale-105 shadow-md group flex items-center gap-2 md:gap-3"
                 >
                     <ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-white" />
@@ -107,7 +109,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, navigateTo }) => {
                 </div>
 
                 {(isAdmin || (useAuth().currentUser?.role?.allowed_resources?.includes('view:admin_access_button'))) && (
-                    <button onClick={() => navigateTo(Page.Admin)} className="p-2 md:p-3 bg-gray-300 dark:bg-gray-700 rounded-xl hover:bg-gray-400 dark:hover:bg-gray-600 transition-all hover:scale-105 shadow-md group">
+                    <button onClick={() => navigate('/admin')} className="p-2 md:p-3 bg-gray-300 dark:bg-gray-700 rounded-xl hover:bg-gray-400 dark:hover:bg-gray-600 transition-all hover:scale-105 shadow-md group">
                         <Cog6ToothIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-600 dark:text-gray-400 group-hover:text-gray-800 dark:group-hover:text-white transition-colors" />
                     </button>
                 )}

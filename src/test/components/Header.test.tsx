@@ -2,7 +2,8 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Header from '../../../components/common/Header';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Page, QualityAlert } from '../../../types';
+import { QualityAlert } from '../../../types';
+import { MemoryRouter } from 'react-router-dom';
 
 // Mocks
 vi.mock('../../../contexts/DataContext', () => ({
@@ -21,11 +22,19 @@ vi.mock('../../../components/common/DocumentNotification', () => ({
     default: () => <div data-testid="doc-noti">DocNoti</div>
 }));
 
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+    const actual = await vi.importActual('react-router-dom');
+    return {
+        ...actual,
+        useNavigate: () => mockNavigate,
+    };
+});
+
 import { useData } from '../../../contexts/DataContext';
 import { useAuth } from '../../../contexts/AuthContext';
 
 describe('Header', () => {
-    const mockNavigateTo = vi.fn();
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -40,8 +49,16 @@ describe('Header', () => {
         });
     });
 
+    const renderHeader = () => {
+        return render(
+            <MemoryRouter>
+                <Header />
+            </MemoryRouter>
+        );
+    }
+
     it('should render logo', () => {
-        render(<Header currentPage={Page.Dashboard} navigateTo={mockNavigateTo} />);
+        renderHeader();
         expect(screen.getByAltText('Autoliv')).toBeInTheDocument();
     });
 
@@ -56,7 +73,7 @@ describe('Header', () => {
             selectedLineId: null
         });
 
-        render(<Header currentPage={Page.Dashboard} navigateTo={mockNavigateTo} />);
+        renderHeader();
 
         expect(screen.getByText('header.alerts')).toBeInTheDocument();
         expect(screen.getByText('1')).toBeInTheDocument(); // Badge
@@ -67,23 +84,20 @@ describe('Header', () => {
             isAdmin: false,
             currentUser: { role: { allowed_resources: [] } }
         });
-        render(<Header currentPage={Page.Dashboard} navigateTo={mockNavigateTo} />);
+        renderHeader();
 
-        // Admin button usually has Cog/Gear icon. 
-        // In the component: <Cog6ToothIcon ... />
-        // It's wrapped in a button that calls navigateTo(Page.Admin).
-        // Let's check via navigate logic or existence of button with specific behavior?
-        // Actually best is to check that the button is not present.
-        // It's the only logic controlled by isAdmin.
+        const buttons = screen.getAllByRole('button');
 
-        // Since we don't have aria-label/text easy to distinguish without checking code:
-        // Code: {isAdmin || (...) && <button onClick={() => navigateTo(Page.Admin)} ...>}
-        // If I click all buttons, none should navigate to Admin?
-        // Or better: ensure only Home, Update(if any), Alerts buttons are there.
-        // Let's assume there are 2 buttons (Home, Alerts).
+        let adminFound = false;
+        buttons.forEach(btn => {
+            fireEvent.click(btn);
+            if (mockNavigate.mock.calls.some(call => call[0] === '/admin')) {
+                adminFound = true;
+            }
+            mockNavigate.mockClear();
+        });
 
-        // Better: look for the icon usage. But `Cog6ToothIcon` is svg.
-        // I can mock Icons too?
+        expect(adminFound).toBe(false);
     });
 
     it('should show admin button for admin user', () => {
@@ -92,29 +106,20 @@ describe('Header', () => {
             currentUser: { role: { allowed_resources: [] } }
         });
 
-        render(<Header currentPage={Page.Dashboard} navigateTo={mockNavigateTo} />);
+        renderHeader();
 
-        // Finding the button...
-        // We can add data-testid to the button in the source or rely on structure.
-        // The header has a button that calls navigateTo(Page.Admin).
-
-        // Since I cannot change source easily in this step (though I can), 
-        // I will try to find it by clicking buttons.
         const buttons = screen.getAllByRole('button');
-        // Filter keys? 
-        // Home calls navigateTo(Dashboard)
-        // Alerts calls navigateTo(QualityAlerts)
-        // Admin calls navigateTo(Admin)
 
         let found = false;
         buttons.forEach(btn => {
             fireEvent.click(btn);
-            if (mockNavigateTo.mock.calls.some(call => call[0] === Page.Admin)) {
+            if (mockNavigate.mock.calls.some(call => call[0] === '/admin')) {
                 found = true;
             }
-            mockNavigateTo.mockClear();
+            mockNavigate.mockClear();
         });
 
         expect(found).toBe(true);
     });
 });
+
