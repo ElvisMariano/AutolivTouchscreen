@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useData } from '../contexts/DataContext';
 import { Document, DocumentCategory } from '../types';
 import Modal from './common/Modal';
 import { PencilSquareIcon, TrashIcon } from './common/Icons';
@@ -7,13 +6,15 @@ import { cacheUrl, hasCache, putBlob } from '../services/offlineCache';
 import { usePDFStorage } from '../hooks/usePDFStorage';
 import { useI18n } from '../contexts/I18nContext';
 import { useLine } from '../contexts/LineContext';
-import { addLineDocument, updateLineDocument, getLineDocuments, LineDocument } from '../services/lineService';
 import { useAuth } from '../contexts/AuthContext';
+import { useDocuments } from '../hooks/useDocuments';
 
 const AdminAcceptanceCriteria: React.FC = () => {
-    const { docs, addDocument, updateDocument, deleteDocument } = useData();
+    const { data: unifiedDocs, createDocument, updateDocument, deleteDocument } = useDocuments();
+    const docs = unifiedDocs?.docs || [];
     const { t } = useI18n();
     const { selectedLine } = useLine();
+    const { currentUser } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Document | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -35,9 +36,9 @@ const AdminAcceptanceCriteria: React.FC = () => {
         setIsDeleteModalOpen(true);
     }
 
-    const confirmDelete = () => {
+    const confirmDelete = async () => {
         if (itemToDelete) {
-            deleteDocument(itemToDelete);
+            await deleteDocument.mutateAsync(itemToDelete);
             setIsDeleteModalOpen(false);
             setItemToDelete(null);
         }
@@ -182,34 +183,33 @@ const AdminAcceptanceCriteria: React.FC = () => {
                 }
             }
 
-            if (editingItem) {
-                updateDocument(formData as Document);
-
+            if (editingItem && formData.url) {
                 try {
-                    await updateLineDocument(editingItem.id, {
-                        title: formData.title,
-                        document_id: formData.url,
-                        version: formData.version?.toString()
+                    await updateDocument.mutateAsync({
+                        id: editingItem.id,
+                        updates: {
+                            title: formData.title,
+                            document_id: formData.url,
+                            version: formData.version?.toString()
+                        }
                     });
                     console.log('Critério atualizado no banco.');
                 } catch (error) {
                     console.error('Erro ao atualizar critério:', error);
                 }
             } else {
-                addDocument({ ...formData as Document, category: DocumentCategory.AcceptanceCriteria, lineId: selectedLine.id });
-
-                // Salvar vínculo no Supabase
+                // New Criterion
                 if (currentUser && formData.url && formData.title) {
                     try {
-                        await addLineDocument(
-                            selectedLine.id,
-                            'acceptance_criteria',
-                            formData.url,
-                            formData.title,
-                            currentUser.id,
-                            formData.version?.toString(),
-                            { line_name: selectedLine.name }
-                        );
+                        await createDocument.mutateAsync({
+                            lineId: selectedLine.id,
+                            type: 'acceptance_criteria',
+                            documentId: formData.url,
+                            title: formData.title,
+                            uploadedBy: currentUser.id,
+                            version: formData.version?.toString(),
+                            metadata: { line_name: selectedLine.name }
+                        });
                         console.log('Critério vinculado à linha com sucesso');
                     } catch (error) {
                         console.error('Erro ao vincular critério:', error);

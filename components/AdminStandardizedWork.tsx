@@ -7,13 +7,15 @@ import { cacheUrl, hasCache, putBlob } from '../services/offlineCache';
 import { usePDFStorage } from '../hooks/usePDFStorage';
 import { useI18n } from '../contexts/I18nContext';
 import { useLine } from '../contexts/LineContext';
-import { addLineDocument, updateLineDocument } from '../services/lineService';
 import { useAuth } from '../contexts/AuthContext';
+import { useDocuments } from '../hooks/useDocuments';
 
 const AdminStandardizedWork: React.FC = () => {
-    const { docs, addDocument, updateDocument, deleteDocument } = useData();
+    const { data: unifiedDocs, createDocument, updateDocument, deleteDocument } = useDocuments();
+    const docs = unifiedDocs?.docs || [];
     const { t } = useI18n();
     const { selectedLine } = useLine();
+    const { currentUser } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Document | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -34,9 +36,9 @@ const AdminStandardizedWork: React.FC = () => {
         setIsDeleteModalOpen(true);
     }
 
-    const confirmDelete = () => {
+    const confirmDelete = async () => {
         if (itemToDelete) {
-            deleteDocument(itemToDelete);
+            await deleteDocument.mutateAsync(itemToDelete);
             setIsDeleteModalOpen(false);
             setItemToDelete(null);
         }
@@ -114,7 +116,6 @@ const AdminStandardizedWork: React.FC = () => {
                                     <button onClick={() => handleDelete(doc.id)} className="p-2 text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title={t('common.delete')}>
                                         <TrashIcon className="h-6 w-6" />
                                     </button>
-
                                 </td>
                             </tr>
                         ))}
@@ -183,33 +184,32 @@ const AdminStandardizedWork: React.FC = () => {
                 }
             }
 
-            if (editingItem) {
-                updateDocument(formData as Document);
-
+            if (editingItem && formData.url) {
                 try {
-                    await updateLineDocument(editingItem.id, {
-                        title: formData.title,
-                        document_id: formData.url,
-                        version: formData.version?.toString()
+                    await updateDocument.mutateAsync({
+                        id: editingItem.id,
+                        updates: {
+                            title: formData.title,
+                            document_id: formData.url,
+                            version: formData.version?.toString()
+                        }
                     });
                     console.log('Documento atualizado no banco.');
                 } catch (error) {
                     console.error('Erro ao atualizar documento no banco:', error);
                 }
             } else {
-                addDocument({ ...formData as Document, category: DocumentCategory.StandardizedWork, lineId: selectedLine.id });
-
                 if (currentUser && formData.url && formData.title) {
                     try {
-                        await addLineDocument(
-                            selectedLine.id,
-                            'standardized_work',
-                            formData.url,
-                            formData.title,
-                            currentUser.id,
-                            formData.version?.toString(),
-                            { line_name: selectedLine.name }
-                        );
+                        await createDocument.mutateAsync({
+                            lineId: selectedLine.id,
+                            type: 'standardized_work',
+                            documentId: formData.url,
+                            title: formData.title,
+                            uploadedBy: currentUser.id,
+                            version: formData.version?.toString(),
+                            metadata: { line_name: selectedLine.name }
+                        });
                         console.log('Trabalho Padronizado vinculado à linha');
                     } catch (error) {
                         console.error('Erro ao vincular:', error);

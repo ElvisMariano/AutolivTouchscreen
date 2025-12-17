@@ -9,9 +9,11 @@ import { usePDFStorage } from '../hooks/usePDFStorage';
 import { useI18n } from '../contexts/I18nContext';
 import { useLine } from '../contexts/LineContext';
 import StationSelector from './common/StationSelector';
-import { WorkStation, StationInstruction, getInstructionsByStation, getInstructionsByLine, getStationsByLine, updateStationInstruction } from '../services/stationService';
+import { WorkStation, StationInstruction, getInstructionsByStation, getInstructionsByLine, getStationsByLine, updateStationInstruction, deleteStationInstruction } from '../services/stationService';
 import { addStationInstruction } from '../services/stationService';
 import { useAuth } from '../contexts/AuthContext';
+import { useDocuments } from '../hooks/useDocuments';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface WorkInstructionRowProps {
     doc: Document & { stationName?: string };
@@ -43,17 +45,19 @@ const WorkInstructionRow = React.memo(({ doc, isCached, onEdit, onDelete, onCach
 });
 
 const AdminWorkInstructions: React.FC = () => {
-    const { docs, addDocument, updateDocument, deleteDocument } = useData();
+    const { data: unifiedDocs, deleteDocument: deleteLineDocument } = useDocuments();
+    const queryClient = useQueryClient();
     const { selectedLine } = useLine();
     const { t } = useI18n();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Document | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
-    const [supabaseInstructions, setSupabaseInstructions] = useState<StationInstruction[]>([]);
     const [selectedStationForFilter, setSelectedStationForFilter] = useState<string>('');
     const [stations, setStations] = useState<WorkStation[]>([]);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    const docs = unifiedDocs?.docs || [];
 
     // Buscar estações da linha selecionada
     useEffect(() => {
@@ -75,31 +79,6 @@ const AdminWorkInstructions: React.FC = () => {
         fetchStations();
     }, [selectedLine]);
 
-    // Buscar instruções do Supabase quando linha/estação mudar
-    useEffect(() => {
-        if (!selectedLine) {
-            setSupabaseInstructions([]);
-            return;
-        }
-
-        const fetchInstructions = async () => {
-            try {
-                if (selectedStationForFilter) {
-                    const instructions = await getInstructionsByStation(selectedStationForFilter);
-                    setSupabaseInstructions(instructions);
-                } else {
-                    const instructions = await getInstructionsByLine(selectedLine.id);
-                    setSupabaseInstructions(instructions);
-                }
-            } catch (error) {
-                console.error('Error fetching instructions:', error);
-                setSupabaseInstructions([]);
-            }
-        };
-
-        fetchInstructions();
-    }, [selectedLine, selectedStationForFilter, refreshTrigger]);
-
     const openModal = (item: Document | null = null) => {
         setEditingItem(item);
         setIsModalOpen(true);
@@ -115,9 +94,22 @@ const AdminWorkInstructions: React.FC = () => {
         setIsDeleteModalOpen(true);
     }
 
-    const confirmDelete = () => {
+    const confirmDelete = async () => {
         if (itemToDelete) {
-            deleteDocument(itemToDelete);
+            const docToDelete = docs.find(d => d.id === itemToDelete);
+
+            try {
+                if (docToDelete?.stationId) {
+                    await deleteStationInstruction(itemToDelete);
+                } else {
+                    await deleteLineDocument.mutateAsync(itemToDelete);
+                }
+                // Invalidate to refresh the list
+                queryClient.invalidateQueries({ queryKey: ['documents'] });
+            } catch (error) {
+                console.error("Failed to delete document", error);
+            }
+
             setIsDeleteModalOpen(false);
             setItemToDelete(null);
         }
@@ -129,38 +121,15 @@ const AdminWorkInstructions: React.FC = () => {
     }
 
     const DocumentList: React.FC = () => {
-        // Filtrar docs locais por categoria (compatibilidade) e pela linha selecionada
-        const localDocs = docs.filter(doc =>
-            doc.category === DocumentCategory.WorkInstruction &&
-            // Se o documento tiver lineId, ele deve corresponder à linha selecionada.
-            // Se não tiver (legado), mantemos o comportamento atual (aparece em todas), 
-            // ou poderíamos ocultar. Para evitar perda de dados offline, mantemos se for indefinido,
-            // mas o ideal é que todos tenham lineId.
-            (!doc.lineId || (selectedLine && doc.lineId === selectedLine.id))
-        );
+        // Filtrar docs: Categoria WorkInstruction e pertencentes à linha/estação selecionada
+        const filteredDocs = docs.filter(doc => {
+            if (doc.category !== DocumentCategory.WorkInstruction) return false;
 
-        // Converter instruções do Supabase em Documents para exibição
-        const supabaseDocs: (Document & { stationName?: string })[] = supabaseInstructions.map(inst => ({
-            id: inst.id,
-            title: inst.title,
-            url: inst.document_id, // document_id é a URL/ID do IndexedDB
-            category: DocumentCategory.WorkInstruction,
-            version: parseInt(inst.version || '1', 10),
-            lastUpdated: inst.uploaded_at,
-            stationName: inst.work_stations?.name,
-            stationId: inst.station_id
-        }));
+            if (selectedLine && doc.lineId !== selectedLine.id) return false;
 
-        // Combinar docs locais com docs do Supabase (priorizando Supabase e evitando duplicatas por ID ou URL)
-        const allDocs: (Document & { stationName?: string })[] = [...supabaseDocs];
+            if (selectedStationForFilter && doc.stationId !== selectedStationForFilter) return false;
 
-        localDocs.forEach(lDoc => {
-            // Verifica se o documento já existe na lista vinda do Supabase (por ID ou por URL)
-            // Se a URL for a mesma, assumimos que é o mesmo documento já sincronizado/vinculado
-            const exists = allDocs.some(d => d.id === lDoc.id || (d.url && d.url === lDoc.url));
-            if (!exists) {
-                allDocs.push(lDoc);
-            }
+            return true;
         });
 
         const [cachedMap, setCachedMap] = useState<Record<string, boolean>>({});
@@ -170,17 +139,17 @@ const AdminWorkInstructions: React.FC = () => {
 
         useEffect(() => {
             let mounted = true;
-            Promise.all(allDocs.map(async d => [d.id, await hasCache(d.url)] as const)).then(entries => {
+            Promise.all(filteredDocs.map(async d => [d.id, await hasCache(d.url)] as const)).then(entries => {
                 if (mounted) setCachedMap(Object.fromEntries(entries));
             });
             return () => { mounted = false; };
-        }, [allDocs.map(d => d.url).join('|')]);
+        }, [filteredDocs.map(d => d.url).join('|')]);
 
         const loadMore = async () => {
             if (isLoading) return;
             setIsLoading(true);
             await new Promise(r => setTimeout(r, 150));
-            setVisibleCount(v => Math.min(v + 20, allDocs.length));
+            setVisibleCount(v => Math.min(v + 20, filteredDocs.length));
             setIsLoading(false);
         };
 
@@ -189,16 +158,16 @@ const AdminWorkInstructions: React.FC = () => {
             if (!el) return;
             const io = new IntersectionObserver((entries) => {
                 for (const entry of entries) {
-                    if (entry.isIntersecting && visibleCount < allDocs.length) {
+                    if (entry.isIntersecting && visibleCount < filteredDocs.length) {
                         loadMore();
                     }
                 }
             }, { rootMargin: '200px' });
             io.observe(el);
             return () => io.disconnect();
-        }, [visibleCount, allDocs.length]);
+        }, [visibleCount, filteredDocs.length]);
 
-        const rows = allDocs.slice(0, visibleCount);
+        const rows = filteredDocs.slice(0, visibleCount);
 
         return (
             <div className="overflow-x-auto mt-6">
@@ -252,8 +221,8 @@ const AdminWorkInstructions: React.FC = () => {
         const { savePDF } = usePDFStorage();
 
         useEffect(() => {
-            if (editingItem && (editingItem as any).stationId) {
-                const sId = (editingItem as any).stationId;
+            if (editingItem && editingItem.stationId) {
+                const sId = editingItem.stationId;
                 const found = stations.find(s => s.id === sId);
                 if (found) setSelectedStation(found);
             }
@@ -310,8 +279,7 @@ const AdminWorkInstructions: React.FC = () => {
                 }
             }
 
-            if (editingItem) {
-                updateDocument(formData as Document);
+            if (editingItem && editingItem.stationId) {
                 if (formData.url) {
                     try {
                         await updateStationInstruction(
@@ -323,19 +291,11 @@ const AdminWorkInstructions: React.FC = () => {
                                 station_id: selectedStation?.id
                             }
                         );
-                        setRefreshTrigger(prev => prev + 1);
+                        queryClient.invalidateQueries({ queryKey: ['documents'] });
                     } catch (e) { console.error(e); }
                 }
             } else {
-                // Adicionar documento ao DataContext (compatibilidade)
-                addDocument({
-                    ...(formData as any),
-                    category: DocumentCategory.WorkInstruction,
-                    lineId: selectedLine.id,
-                    stationId: selectedStation.id
-                });
-
-                // Salvar vínculo no Supabase
+                // New Instruction
                 if (currentUser && formData.url && formData.title) {
                     try {
                         await addStationInstruction(
@@ -347,7 +307,7 @@ const AdminWorkInstructions: React.FC = () => {
                             { line_id: selectedLine.id, line_name: selectedLine.name, station_name: selectedStation.name }
                         );
                         console.log('Instrução vinculada à estação com sucesso');
-                        setRefreshTrigger(prev => prev + 1);
+                        queryClient.invalidateQueries({ queryKey: ['documents'] });
                     } catch (error) {
                         console.error('Erro ao vincular instrução:', error);
                     }
@@ -434,6 +394,8 @@ const AdminWorkInstructions: React.FC = () => {
         )
     }
 
+    const filteredCount = docs.filter(doc => doc.category === DocumentCategory.WorkInstruction && selectedLine && doc.lineId === selectedLine.id).length;
+
     return (
         <div className="h-full flex flex-col">
             <div className="flex justify-between items-center mb-6">
@@ -442,11 +404,9 @@ const AdminWorkInstructions: React.FC = () => {
                     {selectedLine && (
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                             📍 Linha: <span className="font-semibold">{selectedLine.name}</span>
-                            {supabaseInstructions.length > 0 && (
-                                <span className="ml-3 px-2 py-0.5 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs font-medium">
-                                    {supabaseInstructions.length} {supabaseInstructions.length === 1 ? 'instrução' : 'instruções'} cadastrada(s)
-                                </span>
-                            )}
+                            <span className="ml-3 px-2 py-0.5 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs font-medium">
+                                {filteredCount} {filteredCount === 1 ? 'instrução' : 'instruções'} cadastrada(s)
+                            </span>
                         </p>
                     )}
                 </div>
@@ -482,8 +442,6 @@ const AdminWorkInstructions: React.FC = () => {
                     </select>
                 </div>
             )}
-
-
 
             <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-300 mt-8 border-t border-gray-300 dark:border-gray-700 pt-6">{t('admin.documents')}</h3>
             <DocumentList />

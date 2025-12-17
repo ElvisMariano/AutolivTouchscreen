@@ -61,6 +61,7 @@ export interface Document {
     category: DocumentCategory;
     lineId?: string;
     stationId?: string;
+    stationName?: string;
 }
 
 export interface PowerBiReport {

@@ -1,7 +1,6 @@
 
 import React, { useState, Suspense } from 'react';
 import { Page, PowerBiReport as PowerBiReportType, Presentation } from '../types';
-import { useData } from '../contexts/DataContext';
 import Modal from './common/Modal';
 import Ripple from './common/Ripple';
 import Skeleton from './common/Skeleton';
@@ -14,6 +13,9 @@ import {
 } from './common/Icons';
 
 import { useI18n } from '../contexts/I18nContext';
+import { useLog } from '../contexts/LogContext';
+import { useDocuments } from '../hooks/useDocuments';
+import { useLine } from '../contexts/LineContext';
 
 // Lazy load PowerBiReport
 const PowerBiReport = React.lazy(() => import('./common/PowerBiReport'));
@@ -23,8 +25,15 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
-    const { biReports, presentations, logEvent, lines, selectedLineId, setSelectedLineId } = useData();
     const { t } = useI18n();
+    const { logEvent } = useLog();
+    const { lines, selectedLine, setSelectedLineId } = useLine();
+    const selectedLineId = selectedLine?.id || '';
+
+    const { data: unifiedDocs } = useDocuments();
+    const biReports = unifiedDocs?.reports || [];
+    const presentations = unifiedDocs?.presentations || [];
+
     const [selectedReport, setSelectedReport] = useState<PowerBiReportType | null>(null);
     const [selectedPresentation, setSelectedPresentation] = useState<Presentation | null>(null);
 
@@ -87,10 +96,11 @@ const Dashboard: React.FC<DashboardProps> = ({ navigateTo }) => {
                 </div>
                 <div className="w-full md:w-1/3">
                     <select
-                        value={selectedLineId}
+                        value={selectedLineId || ''}
                         onChange={(e) => setSelectedLineId(e.target.value)}
                         className="w-full p-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-lg font-medium"
                     >
+                        {!selectedLineId && <option value="">Selecione uma linha...</option>}
                         {lines.map(line => (
                             <option key={line.id} value={line.id}>
                                 {line.name} {line.plantName ? `| ${line.plantName}` : ''}

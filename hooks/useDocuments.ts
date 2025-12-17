@@ -80,6 +80,8 @@ export const useDocuments = () => {
                     category: DocumentCategory.WorkInstruction,
                     version: si.version || '1',
                     lineId: si.work_stations?.line_id,
+                    stationId: si.station_id,
+                    stationName: si.work_stations?.name,
                     lastUpdated: si.uploaded_at
                 });
             });

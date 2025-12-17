@@ -40,8 +40,11 @@ import LoginScreen from './common/LoginScreen';
 
 import { useSettings } from '../contexts/SettingsContext';
 
+import { useLog } from '../contexts/LogContext';
+
 const AdminSettings: React.FC = () => {
-    const { exportAll, importAll, logEvent } = useData();
+    const { exportAll, importAll } = useData();
+    const { logEvent } = useLog();
     const { settings, updateSetting } = useSettings();
     const { t } = useI18n();
     const [testResults, setTestResults] = useState<string[]>([]);

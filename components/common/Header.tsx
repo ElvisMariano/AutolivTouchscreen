@@ -85,11 +85,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, navigateTo }) => {
 
                 <DocumentNotification navigateTo={navigateTo} />
 
-                {/* Current Shift Display (Read-only) */}
-                <div className="hidden md:flex items-center px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600 mr-2">
-                    <span className="text-xs text-gray-500 dark:text-gray-400 uppercase mr-2 font-bold">{t('admin.shift') || 'TURNO'}:</span>
-                    <span className="font-bold text-blue-600 dark:text-blue-400">{useData().currentShift}</span>
-                </div>
+
 
                 <button
                     onClick={() => navigateTo(Page.QualityAlerts)}
@@ -105,6 +101,10 @@ const Header: React.FC<HeaderProps> = ({ currentPage, navigateTo }) => {
                 </button>
 
                 <div className="bg-gray-100 dark:bg-gray-900 px-3 py-1 md:px-6 md:py-2 rounded-xl border border-gray-300 dark:border-gray-700 shadow-inner">
+                    {/* Current Shift Display (Read-only) */}
+
+                    <span className="font-bold text-blue-600 dark:text-blue-400">{useData().currentShift}</span>
+
                     <Clock />
                 </div>
 
