@@ -42,7 +42,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onUnlock, requireRole }) => {
         setError('');
 
         const user = users.find(u =>
-            (u.username?.toLowerCase() === username.toLowerCase() || u.name.toLowerCase() === username.toLowerCase()) && // Fallback to name if username not set
+            (u.username?.toLowerCase() === username.toLowerCase() || u.name.toLowerCase() === username.toLowerCase()) &&
             u.password === password
         );
 
@@ -54,7 +54,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onUnlock, requireRole }) => {
             setCurrentUser(user);
             onUnlock();
         } else {
-            setError(t('admin.invalidCredentials') || 'Credenciais inválidas'); // Add translation key later
+            setError(t('admin.invalidCredentials') || 'Credenciais inválidas');
         }
     };
 

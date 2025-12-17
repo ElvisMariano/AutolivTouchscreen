@@ -102,9 +102,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, navigateTo }) => {
 
                 <div className="bg-gray-100 dark:bg-gray-900 px-3 py-1 md:px-6 md:py-2 rounded-xl border border-gray-300 dark:border-gray-700 shadow-inner">
                     {/* Current Shift Display (Read-only) */}
-
-                    <span className="font-bold text-blue-600 dark:text-blue-400">{useData().currentShift}</span>
-
+                    {/* <span className="font-bold text-blue-600 dark:text-blue-400">{useData().currentShift}</span> */}
                     <Clock />
                 </div>
 
