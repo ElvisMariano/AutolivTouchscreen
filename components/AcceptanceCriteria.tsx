@@ -5,20 +5,30 @@ import { Document, DocumentCategory } from '../types';
 import Modal from './common/Modal';
 import PdfViewer from './common/PdfViewer';
 import { hasCache } from '../services/offlineCache';
+import { useDocuments } from '../hooks/useDocuments';
+import { useUnreadDocuments } from '../hooks/useUnreadDocuments';
+import { useLine } from '../contexts/LineContext';
+import { useLog } from '../contexts/LogContext';
 
 const AcceptanceCriteria: React.FC = () => {
+    // 1. Hook Data
+    const { t } = useI18n();
+    const { logEvent } = useLog();
+    const { selectedLine } = useLine();
+    const selectedLineId = selectedLine?.id || null;
+    const { data: unifiedDocs, acknowledgeDocument } = useDocuments();
+    const docs = unifiedDocs?.docs || [];
+
+    // 2. Legacy/Global Data from DataContext
     const {
-        docs,
-        logEvent,
-        selectedLineId,
         autoOpenDocId,
         setAutoOpenDocId,
-        unreadDocuments,
-        acknowledgeDocument,
-        updateAlertStatus,
-        currentShift
+        currentShift,
+        activeShifts // Needed for unread hook
     } = useData();
-    const { t } = useI18n();
+
+    // 3. Derived Data
+    const unreadDocuments = useUnreadDocuments(selectedLineId, currentShift, activeShifts);
 
     const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
     const criteriaDocs = useMemo(() => docs.filter(doc =>
@@ -34,7 +44,7 @@ const AcceptanceCriteria: React.FC = () => {
             if (mounted) setOfflineMap(Object.fromEntries(entries));
         });
         return () => { mounted = false; };
-    }, [criteriaDocs.map(d => d.url).join('|')]);
+    }, [criteriaDocs]);
 
     // Auto-open logic
     useEffect(() => {
@@ -60,7 +70,11 @@ const AcceptanceCriteria: React.FC = () => {
     const handleConfirmRead = async () => {
         if (!selectedDoc) return;
         try {
-            await acknowledgeDocument(selectedDoc.id);
+            await acknowledgeDocument.mutateAsync({
+                documentId: selectedDoc.id,
+                shift: currentShift,
+                userId: undefined
+            });
         } catch (error) {
             console.error('Error acknowledging document:', error);
         }

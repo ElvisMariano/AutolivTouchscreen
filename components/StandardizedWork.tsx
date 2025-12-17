@@ -4,21 +4,31 @@ import { useData } from '../contexts/DataContext';
 import { Document, DocumentCategory } from '../types';
 import PdfViewer from './common/PdfViewer';
 import { hasCache } from '../services/offlineCache';
-import { useI18n } from '../contexts/I18nContext'; // Assuming this path for useI18n
+import { useI18n } from '../contexts/I18nContext';
+import { useDocuments } from '../hooks/useDocuments';
+import { useUnreadDocuments } from '../hooks/useUnreadDocuments';
+import { useLine } from '../contexts/LineContext';
+import { useLog } from '../contexts/LogContext';
 
 const StandardizedWork: React.FC = () => {
+    // 1. Hook Data
+    const { t } = useI18n();
+    const { logEvent } = useLog();
+    const { selectedLine } = useLine();
+    const selectedLineId = selectedLine?.id || null;
+    const { data: unifiedDocs, acknowledgeDocument } = useDocuments();
+    const docs = unifiedDocs?.docs || [];
+
+    // 2. Legacy/Global Data from DataContext
     const {
-        docs,
-        logEvent,
-        selectedLineId,
         autoOpenDocId,
         setAutoOpenDocId,
-        unreadDocuments,
-        acknowledgeDocument,
-        updateAlertStatus, // Used for legacy/local updates if needed
-        getUnreadAlertsCount // Just accessing context
+        currentShift,
+        activeShifts // Needed for unread hook
     } = useData();
-    const { t } = useI18n(); // Helper for translations
+
+    // 3. Derived Data
+    const unreadDocuments = useUnreadDocuments(selectedLineId, currentShift, activeShifts);
 
     const normativeDocs = useMemo(() => docs.filter(doc =>
         doc.category === DocumentCategory.StandardizedWork &&
@@ -33,7 +43,7 @@ const StandardizedWork: React.FC = () => {
             if (mounted) setOfflineMap(Object.fromEntries(entries));
         });
         return () => { mounted = false; };
-    }, [normativeDocs.map(d => d.url).join('|')]);
+    }, [normativeDocs]); // Dependency simplified
 
     const [selectedDoc, setSelectedDoc] = useState<Document | null>(normativeDocs[0] || null);
 
@@ -61,8 +71,11 @@ const StandardizedWork: React.FC = () => {
     const handleConfirmRead = async () => {
         if (!selectedDoc) return;
         try {
-            await acknowledgeDocument(selectedDoc.id);
-            // Optionally force unread refresh or UI update here if needed immediately
+            await acknowledgeDocument.mutateAsync({
+                documentId: selectedDoc.id,
+                shift: currentShift,
+                userId: undefined
+            });
         } catch (error) {
             console.error('Error acknowledging document:', error);
         }

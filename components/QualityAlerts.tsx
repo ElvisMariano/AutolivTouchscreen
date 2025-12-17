@@ -12,21 +12,33 @@ import Skeleton from './common/Skeleton';
 const PdfViewer = React.lazy(() => import('./common/PdfViewer'));
 
 import { useSettings } from '../contexts/SettingsContext';
+import { useDocuments } from '../hooks/useDocuments';
+import { useUnreadDocuments } from '../hooks/useUnreadDocuments';
+import { useLine } from '../contexts/LineContext';
 
 const QualityAlerts: React.FC = () => {
-    const {
-        alerts,
-        getDocumentById,
-        updateAlertStatus,
-        selectedLineId,
-        autoOpenDocId,
-        setAutoOpenDocId,
-        unreadDocuments,
-        acknowledgeDocument,
-        currentShift
-    } = useData();
+    // Global State from Hooks
     const { settings } = useSettings();
     const { t, locale } = useI18n();
+    const { selectedLine } = useLine();
+    const selectedLineId = selectedLine?.id || null;
+
+    // Data & Mutations from Hooks
+    const { data: unifiedDocs, acknowledgeDocument } = useDocuments();
+    const alerts = unifiedDocs?.alerts || [];
+    const docs = unifiedDocs?.docs || [];
+
+    // Pending Legacy State/Logic from DataContext (for Shift & AutoOpen)
+    const {
+        autoOpenDocId,
+        setAutoOpenDocId,
+        currentShift,
+        activeShifts // Needed for unread calculation
+    } = useData();
+
+    // Use specific unread hook
+    const unreadDocuments = useUnreadDocuments(selectedLineId, currentShift, activeShifts);
+
     const [selectedAlert, setSelectedAlert] = useState<QualityAlert | null>(null);
     const [filterMode, setFilterMode] = useState<'newest' | 'oldest' | 'expiration'>('newest');
     const [severityFilter, setSeverityFilter] = useState<AlertSeverity | 'all'>('all');
@@ -67,23 +79,21 @@ const QualityAlerts: React.FC = () => {
 
     const handleAlertClick = (alert: QualityAlert) => {
         setSelectedAlert(alert);
-        // Note: We no longer auto-acknowledge on click/open. 
-        // User must confirm explicitly inside the modal now.
     };
 
     const handleConfirmRead = async () => {
         if (!selectedAlert) return;
 
-        // Find the unread doc record to get the correct ID if needed, 
-        // though typically alert.id matches the document ID for alerts in our system.
-        // For alerts, the 'id' IS the document id in unreadDocuments list if it came from line_documents.
-        const unreadDoc = unreadDocuments.find(d => d.id === selectedAlert.id);
+        // Check if unread
+        const isAlertUnread = isUnread(selectedAlert);
 
-        if (unreadDoc || !selectedAlert.isRead) {
+        if (isAlertUnread || !selectedAlert.isRead) {
             try {
-                await acknowledgeDocument(selectedAlert.id);
-                // Also update local legacy state if needed
-                updateAlertStatus(selectedAlert.id, true);
+                // Use mutation
+                acknowledgeDocument.mutate({
+                    documentId: selectedAlert.id,
+                    shift: currentShift
+                });
             } catch (error) {
                 console.error('Error acknowledging alert:', error);
             }
@@ -97,6 +107,12 @@ const QualityAlerts: React.FC = () => {
             case AlertSeverity.C: return 'bg-green-500';
             default: return 'bg-gray-500';
         }
+    };
+
+    // Helper to get doc by ID from local list
+    const getDocumentByIdLocal = (id: string | undefined) => {
+        if (!id) return undefined;
+        return docs.find(d => d.id === id);
     };
 
     // Determina qual documento exibir: PDF vinculado ao alerta (prioridade) ou Documento associado
@@ -117,8 +133,8 @@ const QualityAlerts: React.FC = () => {
         }
 
         // Fallback para documento associado antigo
-        return getDocumentById(selectedAlert.documentId);
-    }, [selectedAlert, getDocumentById]);
+        return getDocumentByIdLocal(selectedAlert.documentId);
+    }, [selectedAlert, docs]);
 
     const hasUnread = selectedAlert ? isUnread(selectedAlert) : false;
 

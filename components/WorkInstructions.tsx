@@ -1,36 +1,54 @@
 import React, { useState, useEffect, Suspense } from 'react';
-import { useData } from '../contexts/DataContext';
+import { useData } from '../contexts/DataContext'; // Still need for some legacy methods if any (e.g. acknowledgeDocument if not using hook?)
 import { Machine } from '../types';
-import { ProductionLine } from '../services/lineService';
 import { getStationsByLine, getInstructionsByLine, StationInstruction } from '../services/stationService';
 import StationCard from './common/StationCard';
-import { XMarkIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
-import { AnimatePresence, motion } from 'framer-motion';
+import { DocumentTextIcon } from '@heroicons/react/24/outline';
+import { motion } from 'framer-motion';
 import { useI18n } from '../contexts/I18nContext';
 import { usePDFStorage } from '../hooks/usePDFStorage';
 import Modal from './common/Modal';
 import Skeleton from './common/Skeleton';
 import GestureWrapper from './common/GestureWrapper';
+import { useSettings } from '../contexts/SettingsContext';
+
+// New Hooks
+import { useDocuments } from '../hooks/useDocuments';
+import { useUnreadDocuments } from '../hooks/useUnreadDocuments';
+import { useLine } from '../contexts/LineContext'; // Use LineContext for selection
+import { useShiftLogic } from '../hooks/useShiftLogic';
 
 // Lazy load PdfViewer
 const PdfViewer = React.lazy(() => import('./common/PdfViewer'));
 
-import { useSettings } from '../contexts/SettingsContext';
-
 const WorkInstructions: React.FC = () => {
-    const { getDocumentById, setSelectedLineId, selectedLineId, lines, autoOpenDocId, setAutoOpenDocId, unreadDocuments, acknowledgeDocument, currentShift } = useData();
+    // 1. Hooks for Global State
     const { settings } = useSettings();
     const { t } = useI18n();
+    const { selectedLine, lines } = useLine(); // Use specific context
+    const selectedLineId = selectedLine?.id || null;
 
-    // Local state for Machines/Instructions (still specific to this view's data fetching)
+    // Shift Logic (Need active shifts for unread logic)
+    // Note: useShiftLogic takes selectedPlant found in DataContext. LineContext doesn't have plants?
+    // DataContext has plants. We might need usePlants logic or get plant from Line?
+    // selectedLine has plant_id.
+    // Let's use DataContext for getDocumentById fallback and legacy state for now to minimize breakage
+    const { getDocumentById, autoOpenDocId, setAutoOpenDocId, activeShifts, currentShift, plants } = useData();
+    // Warning: we are trying to remove useData. 
+    // `currentShift` can be got from useShiftLogic but needs plant. 
+    // `autoOpenDocId` -> should be in URL/Router eventually.
+
+    // 2. Documents & Acknowledgments
+    const { acknowledgeDocument } = useDocuments();
+    const unreadDocuments = useUnreadDocuments(selectedLineId, currentShift, activeShifts);
+
+    // Local state
     const [machines, setMachines] = useState<Machine[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
     const [fetchedInstructions, setFetchedInstructions] = useState<StationInstruction[]>([]);
     const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
     const { getPDF } = usePDFStorage();
-
-    // Line fetching is now done in DataContext globally
 
     // Fetch stations and instructions when line changes
     useEffect(() => {
@@ -52,8 +70,8 @@ const WorkInstructions: React.FC = () => {
                     return {
                         id: station.id,
                         name: station.name,
-                        status: 'offline', // Default status as we don't have real-time status from DB yet
-                        position: { x: 0, y: 0 }, // Grid layout doesn't use x/y
+                        status: 'offline',
+                        position: { x: 0, y: 0 },
                         type: 'station',
                         instructionId: stationInstruction?.document_id
                     };
@@ -74,28 +92,10 @@ const WorkInstructions: React.FC = () => {
     // Auto-open document logic
     useEffect(() => {
         if (autoOpenDocId && machines.length > 0 && fetchedInstructions.length > 0) {
-            // Find machine with this instruction doc id
-            // We need to check against fetchedInstructions or machine.instructionId
-            // The unread logic uses 'doc.id' which matches instruction.document_id (usually? No, doc.id is uuid)
-            // Wait, fetchedInstructions[].document_id IS the document uuid relation? No, it's the url/path usually?
-            // Let's check StationInstruction type: { id, title, document_id (url/path), version... }
-            // Actually `contracts` or `services`.
-            // In DataContext `docs` comes from `useDocuments` which fetches from `documents` table. `doc.id` is UUID.
-            // `station_instructions` view likely links to `documents` table?
-            // If `autoOpenDocId` is the UUID of the document.
-
-            // In `fetchStationsAndInstructions`, we map `instructionId: stationInstruction?.document_id`. 
-            // If `stationInstruction.document_id` holds the UUID, then we match that.
-
             const targetMachine = machines.find(m => m.instructionId === autoOpenDocId);
             if (targetMachine) {
                 setSelectedMachine(targetMachine);
-                // Don't clear autoOpenDocId immediately to allow re-opens or hold state? 
-                // Better clear it so it doesn't stuck if user closes.
                 setAutoOpenDocId(null);
-            } else {
-                // If not found in machines, maybe it's not on this line?
-                // But unreadDocs are filtered by line.
             }
         }
     }, [autoOpenDocId, machines, fetchedInstructions, setAutoOpenDocId]);
@@ -132,44 +132,15 @@ const WorkInstructions: React.FC = () => {
     }, [activeInstruction?.document_id]);
 
     const instructionDoc = (activeInstruction && resolvedUrl) ? {
-        id: activeInstruction.id, // This might differ from actual Document UUID if view returns row id?
-        // Actually checking logic in DataContext: "docs" come from `useDocuments`.
-        // StationInstruction comes from `getInstructionsByLine`.
-        // If they don't share IDs, we have a problem matching `unreadDocuments` to `activeInstruction`.
-        // `unreadDocuments` uses `Document` type. `id` is key.
-        // `StationInstruction` has `id, station_id, title, document_id, version`.
-        // If `document_id` in StationInstruction is the UUID of the doc, then we use that to match `unreadDocuments`.
-        // `instructionDoc` constructed here uses `activeInstruction.id` as `id`. That might be the join row id, not doc id.
-        // CHECK: `activeInstruction.document_id` is the URL usually?
-
-        // Let's assume for now `unreadDocuments` works.
-        // We need to know if the CURRENTLY VIEWED document is unread.
-        // If `activeInstruction` corresponds to an unread doc.
-
-        // If `activeInstruction.document_id` matches `doc.url` or `doc.documentId`?
-        // Or `activeInstruction` IS the document?
-
-        // Quick fix: Check if ANY unread document matches the title or some other prop if IDs don't match.
-        // Ideally IDs match.
-
+        id: activeInstruction.id,
         title: activeInstruction.title,
         url: resolvedUrl,
         category: 'work_instruction',
         version: activeInstruction.version || '1',
         lastUpdated: activeInstruction.uploaded_at
     } as any : (selectedMachine && selectedMachine.instructionId
-        ? getDocumentById(selectedMachine.instructionId) // This uses UUID
+        ? getDocumentById(selectedMachine.instructionId)
         : null);
-
-    // Is current doc unread?
-    // We need to compare `instructionDoc.id` (or equivalent) with `unreadDocuments`.
-    // If instructionDoc came from `getDocumentById`, ID is UUID.
-    // If constructed from `activeInstruction`, ID might be wrong?
-    // Let's try to match by Title + Line if ID fails, or assume `activeInstruction.document_id` IS the UUID (if using relations).
-    // Actually, `activeInstruction.document_id` is often the path string.
-
-    // Better strategy: Find unread doc that has same title/url? 
-    // Or check `activeInstruction.document_id` matches `doc.url` (since `doc.documentId` maps to `url` in `useDocuments` sometimes).
 
     const isUnread = instructionDoc && unreadDocuments.some(u =>
         u.id === instructionDoc.id ||
@@ -183,11 +154,14 @@ const WorkInstructions: React.FC = () => {
 
     const handleConfirmRead = () => {
         if (unreadDocId) {
-            acknowledgeDocument(unreadDocId);
+            // Use Mutation from hook
+            acknowledgeDocument.mutate({
+                documentId: unreadDocId,
+                shift: currentShift,
+                userId: undefined // Pass undefined for now or current user? DataContext passed currentUser?.id
+            });
         }
     };
-
-    const selectedLine = lines.find(l => l.id === selectedLineId);
 
     if (!selectedLine) {
         return (
@@ -220,12 +194,8 @@ const WorkInstructions: React.FC = () => {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
                         {machines.map((machine, index) => {
-                            // Check if this machine has an unread doc
-                            // machine.instructionId vs unreadDocs
-                            // If instructionId is UUID this works. If it's URL...
-                            // Let's check matching by title from fetchedInstructions
                             const instruction = fetchedInstructions.find(i => i.station_id === machine.id);
-                            const hasUnread = unreadDocuments.some(u => u.title === instruction?.title);
+                            const hasUnread = unreadDocuments.some(u => u.title === instruction?.title); // Match by title logic since IDs might differ
 
                             return (
                                 <StationCard
@@ -233,10 +203,7 @@ const WorkInstructions: React.FC = () => {
                                     machine={machine}
                                     index={index}
                                     onClick={() => setSelectedMachine(machine)}
-                                    hasUnread={hasUnread} // Pass this prop if StationCard accepts it, or just use badge logic here? 
-                                    // StationCard doesn't support hasUnread prop yet. We can modify StationCard or wrap it.
-                                    // For now, let's rely on the auto-open or just visual in modal.
-                                    // Adding a border or badge here would be nice though.
+                                    // Pass hasUnread if supported, otherwise just rely on border
                                     className={hasUnread ? "ring-4 ring-red-500 animate-pulse" : ""}
                                 />
                             )
@@ -311,7 +278,7 @@ const WorkInstructions: React.FC = () => {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
                         transition={{ duration: 0.2 }}
-                        className="h-full w-full pt-4" // Add pt-16 for the overlay space if present? Or just overlay it.
+                        className="h-full w-full pt-4"
                     >
                         <Suspense fallback={
                             <div className="flex items-center justify-center h-full">

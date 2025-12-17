@@ -1,11 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { useSettings } from './SettingsContext';
 import { useAuth } from './AuthContext';
+import { useLog } from './LogContext';
+import { useShiftLogic } from '../hooks/useShiftLogic';
 import { usePlants } from '../hooks/usePlants';
 import { useLines } from '../hooks/useLines';
 import { useDocuments } from '../hooks/useDocuments';
 import { useUsers } from '../hooks/useUsers';
 import { useAcknowledgments } from '../hooks/useAcknowledgments';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 
 import {
     ProductionLine,
@@ -93,44 +96,22 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-// Keep useLocalStorage for settings only
-const useLocalStorage = <T,>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
-    const [storedValue, setStoredValue] = useState<T>(() => {
-        try {
-            const item = window.localStorage.getItem(key);
-            return item ? JSON.parse(item) : initialValue;
-        } catch (error) {
-            console.error(`Error reading localStorage key "${key}":`, error);
-            window.localStorage.removeItem(key); // Clear corrupted data
-            return initialValue;
-        }
-    });
 
-    useEffect(() => {
-        try {
-            window.localStorage.setItem(key, JSON.stringify(storedValue));
-        } catch (error) {
-            console.error(`Error saving localStorage key "${key}":`, error);
-        }
-    }, [key, storedValue]);
-
-    return [storedValue, setStoredValue];
-};
 
 export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const { currentUser, isAdmin } = useAuth();
     const { settings } = useSettings();
+    const { logEvent, changeLogs } = useLog();
 
     // 1. Settings Provider (Local) - REMOVED -> Moved to SettingsContext
-
-    const [changeLogs, setChangeLogs] = useLocalStorage<ChangeLog[]>('system_changelogs', []);
+    // const [changeLogs, setChangeLogs] = useLocalStorage<ChangeLog[]>('system_changelogs', []); REMOVED -> Moved to LogContext
 
     // 2. Selection State (Local)
     const [selectedLineId, setSelectedLineId] = useLocalStorage<string>('selectedLineId', '');
     const [selectedPlantId, setSelectedPlantId] = useLocalStorage<string>('selectedPlantId', '');
 
-    // Shift State (Auto-detected)
-    const [currentShift, setCurrentShiftState] = useState<string>('1º Turno');
+    // Shift State (Auto-detected) - Moved to useShiftLogic
+    // const [currentShift, setCurrentShiftState] = useState<string>('1º Turno');
 
     // Navigation/Deep Link State
     const [autoOpenDocId, setAutoOpenDocId] = useState<string | null>(null);
@@ -187,20 +168,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const biReports = unifiedDocs?.reports || [];
     const presentations = unifiedDocs?.presentations || [];
 
-    // Helper: Log Event
-    const logEvent = (entity: ChangeEntity, action: 'create' | 'update' | 'delete' | 'view', targetId: string, label: string) => {
-        const newLog: ChangeLog = {
-            id: crypto.randomUUID(),
-            entity,
-            action,
-            targetId,
-            label,
-            timestamp: new Date().toISOString(),
-            userId: currentUser?.id,
-            userName: currentUser?.name || currentUser?.username || 'Sistema'
-        };
-        setChangeLogs(prev => [newLog, ...prev].slice(0, 1000));
-    };
+    // Helper: Log Event - REMOVED -> Moved to LogContext
 
     // 5. Actions / Mutations Implementations
     // updateSetting removed - moved to SettingsContext
@@ -424,43 +392,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const importAll = () => { };
 
     // Auto-detect Shift Logic
-    const getShiftByTime = (plant: Plant | undefined): string => {
-        if (!plant || !plant.shift_config) return '1º Turno';
-        const now = new Date();
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-        const activeShifts = plant.shift_config.filter(s => s.isActive);
-
-        for (const shift of activeShifts) {
-            const [startH, startM] = shift.startTime.split(':').map(Number);
-            const [endH, endM] = shift.endTime.split(':').map(Number);
-            const start = startH * 60 + startM;
-            const end = endH * 60 + endM;
-
-            if (end < start) { // Crosses midnight
-                if (currentMinutes >= start || currentMinutes < end) return shift.name;
-            } else {
-                if (currentMinutes >= start && currentMinutes < end) return shift.name;
-            }
-        }
-        return '1º Turno';
-    };
-
     const selectedPlant = plants.find(p => p.id === selectedPlantId);
 
-    useEffect(() => {
-        const updateShift = () => {
-            const shift = getShiftByTime(selectedPlant);
-            if (shift !== currentShift) {
-                console.log(`Auto-switching shift to: ${shift}`);
-                setCurrentShiftState(shift);
-            }
-        };
-
-        updateShift();
-        const intervalId = setInterval(updateShift, (settings.shiftCheckInterval || 60) * 1000);
-        return () => clearInterval(intervalId);
-    }, [selectedPlant, settings.shiftCheckInterval, currentShift]);
+    const { currentShift, setCurrentShift: setCurrentShiftState, activeShifts } = useShiftLogic(selectedPlant);
 
     // Backward compatibility / Helper
     const setCurrentShift = (shift: string) => {
@@ -469,9 +403,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     // Unread Logic
-    const activeShifts = useMemo(() => {
-        return selectedPlant?.shift_config?.filter(s => s.isActive).map(s => s.name) || ['1º Turno', '2º Turno', '3º Turno'];
-    }, [selectedPlant]);
+    // activeShifts is now from hook
 
     // Calculate unread docs for selected line
     const selectedLineDocs = docs.filter(d => d.lineId === selectedLineId);

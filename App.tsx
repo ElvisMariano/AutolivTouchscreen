@@ -2,6 +2,11 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { DataProvider, useData } from './contexts/DataContext';
 import { LineProvider } from './contexts/LineContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { I18nProvider } from './contexts/I18nContext';
+import { LogProvider } from './contexts/LogContext';
+import { SettingsProvider, useSettings } from './contexts/SettingsContext';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Page, AdminSubPage } from './types';
 import useInactivityTimer from './hooks/useInactivityTimer';
 import { useKioskMode } from './hooks/useKioskMode';
@@ -17,7 +22,6 @@ import GestureWrapper from './components/common/GestureWrapper';
 
 import LoginScreen from './components/LoginScreen';
 import UnauthorizedScreen from './components/UnauthorizedScreen';
-import { useAuth } from './contexts/AuthContext';
 
 
 const AppContent: React.FC = () => {
@@ -239,12 +243,6 @@ const AppContent: React.FC = () => {
     );
 };
 
-import { AuthProvider } from './contexts/AuthContext';
-import { I18nProvider } from './contexts/I18nContext';
-
-import { SettingsProvider, useSettings } from './contexts/SettingsContext';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
 const queryClient = new QueryClient({
     defaultOptions: {
         queries: {
@@ -259,13 +257,15 @@ const App: React.FC = () => {
         <QueryClientProvider client={queryClient}>
             <AuthProvider>
                 <SettingsProvider>
-                    <DataProvider>
-                        <I18nProvider>
-                            <LineProvider>
-                                <AppContent />
-                            </LineProvider>
-                        </I18nProvider>
-                    </DataProvider>
+                    <LogProvider>
+                        <DataProvider>
+                            <I18nProvider>
+                                <LineProvider>
+                                    <AppContent />
+                                </LineProvider>
+                            </I18nProvider>
+                        </DataProvider>
+                    </LogProvider>
                 </SettingsProvider>
             </AuthProvider>
         </QueryClientProvider>
