@@ -11,19 +11,21 @@ import Skeleton from './common/Skeleton';
 // Lazy load PdfViewer
 const PdfViewer = React.lazy(() => import('./common/PdfViewer'));
 
+import { useSettings } from '../contexts/SettingsContext';
+
 const QualityAlerts: React.FC = () => {
     const {
         alerts,
         getDocumentById,
         updateAlertStatus,
         selectedLineId,
-        settings,
         autoOpenDocId,
         setAutoOpenDocId,
         unreadDocuments,
         acknowledgeDocument,
         currentShift
     } = useData();
+    const { settings } = useSettings();
     const { t, locale } = useI18n();
     const [selectedAlert, setSelectedAlert] = useState<QualityAlert | null>(null);
     const [filterMode, setFilterMode] = useState<'newest' | 'oldest' | 'expiration'>('newest');

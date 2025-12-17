@@ -4,8 +4,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { Plant } from '../types';
 import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
 
+import { useSettings } from '../contexts/SettingsContext';
+
 const AdminPlantManagement: React.FC = () => {
-    const { plants, addPlant, updatePlant, deletePlant, settings } = useData();
+    const { plants, addPlant, updatePlant, deletePlant } = useData();
+    const { settings } = useSettings();
     const { currentUser } = useAuth();
     const [isAdding, setIsAdding] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);

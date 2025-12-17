@@ -409,7 +409,7 @@ const AdminDocumentManagement: React.FC = () => {
                     <tbody>
                         {presentations.slice(0, visibleCount).map(item => (
                             <tr key={item.id} className="border-b border-gray-700">
-                                <td className="p-4">{item.name}</td>
+                                <td className="p-4">{item.title}</td>
                                 <td className="p-4">{(item as Presentation).slides.length}</td>
                                 <td className="p-4 flex justify-end space-x-4">
                                     <button onClick={() => openModal(item)} className="text-blue-400 hover:text-blue-300"><PencilSquareIcon className="h-7 w-7" /></button>
@@ -766,7 +766,7 @@ const AdminDocumentManagement: React.FC = () => {
                     <label className="text-xl">Embed URL <input name="embedUrl" type="url" value={(formData as PowerBiReport).embedUrl || ''} onChange={handleChange} className={commonClass} required /></label>
                 </>;
                 case 'ppt': return <>
-                    <label className="text-xl">Nome <input name="name" value={(formData as Presentation).name || ''} onChange={handleChange} className={commonClass} required /></label>
+                    <label className="text-xl">Título <input name="title" value={(formData as Presentation).title || ''} onChange={handleChange} className={commonClass} required /></label>
                     <label className="text-xl">URLs dos Slides (um por linha) <textarea name="slides" value={((formData as Presentation).slides || []).join('\n')} onChange={handleChange} className={commonClass} rows={5} required /></label>
                 </>;
             }

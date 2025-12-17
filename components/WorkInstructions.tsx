@@ -15,8 +15,11 @@ import GestureWrapper from './common/GestureWrapper';
 // Lazy load PdfViewer
 const PdfViewer = React.lazy(() => import('./common/PdfViewer'));
 
+import { useSettings } from '../contexts/SettingsContext';
+
 const WorkInstructions: React.FC = () => {
-    const { getDocumentById, setSelectedLineId, selectedLineId, lines, settings, autoOpenDocId, setAutoOpenDocId, unreadDocuments, acknowledgeDocument, currentShift } = useData();
+    const { getDocumentById, setSelectedLineId, selectedLineId, lines, autoOpenDocId, setAutoOpenDocId, unreadDocuments, acknowledgeDocument, currentShift } = useData();
+    const { settings } = useSettings();
     const { t } = useI18n();
 
     // Local state for Machines/Instructions (still specific to this view's data fetching)

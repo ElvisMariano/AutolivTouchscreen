@@ -38,8 +38,11 @@ interface PinLockScreenProps {
 
 import LoginScreen from './common/LoginScreen';
 
+import { useSettings } from '../contexts/SettingsContext';
+
 const AdminSettings: React.FC = () => {
-    const { settings, updateSetting, exportAll, importAll, logEvent } = useData();
+    const { exportAll, importAll, logEvent } = useData();
+    const { settings, updateSetting } = useSettings();
     const { t } = useI18n();
     const [testResults, setTestResults] = useState<string[]>([]);
     const [testsDone, setTestsDone] = useState(false);

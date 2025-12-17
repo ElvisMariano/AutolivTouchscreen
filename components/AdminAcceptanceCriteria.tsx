@@ -207,7 +207,7 @@ const AdminAcceptanceCriteria: React.FC = () => {
                             formData.url,
                             formData.title,
                             currentUser.id,
-                            formData.version,
+                            formData.version?.toString(),
                             { line_name: selectedLine.name }
                         );
                         console.log('Critério vinculado à linha com sucesso');

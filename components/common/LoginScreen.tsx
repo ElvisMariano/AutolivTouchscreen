@@ -47,7 +47,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onUnlock, requireRole }) => {
         );
 
         if (user) {
-            if (requireRole && user.role !== requireRole) {
+            if (requireRole && user.role.id !== requireRole) {
                 setError(t('admin.accessDenied'));
                 return;
             }

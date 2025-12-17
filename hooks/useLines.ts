@@ -26,7 +26,7 @@ export const useLines = (plantIds: string[]) => {
             // Map to AppProductionLine to ensure 'machines' property exists
             return flatLines.map(l => ({
                 ...l,
-                machines: l.machines || []
+                machines: []
             })) as AppProductionLine[];
         },
         enabled: plantIds.length > 0,

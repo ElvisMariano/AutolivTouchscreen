@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
+import { useSettings } from './SettingsContext';
 import { useAuth } from './AuthContext';
 import { usePlants } from '../hooks/usePlants';
 import { useLines } from '../hooks/useLines';
@@ -26,7 +27,7 @@ interface DataContextType {
     plants: Plant[];
     docs: Document[];
     alerts: QualityAlert[];
-    settings: SystemSettings;
+    // settings: SystemSettings; // Removed - moved to SettingsContext
     biReports: PowerBiReport[];
     presentations: Presentation[];
     users: User[];
@@ -43,7 +44,7 @@ interface DataContextType {
     getMachineById: (id: string) => Machine | undefined;
     getDocumentById: (id: string) => Document | undefined;
     updateAlertStatus: (id: string, isRead: boolean) => void;
-    updateSetting: <K extends keyof SystemSettings>(key: K, value: SystemSettings[K]) => void;
+    // updateSetting removed
     getUnreadAlertsCount: () => number;
     changeLogs: ChangeLog[];
     addLine: (name: string) => void;
@@ -118,23 +119,9 @@ const useLocalStorage = <T,>(key: string, initialValue: T): [T, React.Dispatch<R
 
 export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const { currentUser, isAdmin } = useAuth();
+    const { settings } = useSettings();
 
-    // 1. Settings Provider (Local)
-    const [settings, setSettings] = useLocalStorage<SystemSettings>('app_settings', {
-        inactivityTimeout: 300,
-        language: 'pt-BR',
-        theme: 'light',
-        fontSize: 'medium',
-        autoRefreshInterval: 30,
-        enableSoundNotifications: true,
-        enableVibration: true,
-        showTutorials: true,
-        compactMode: false,
-        kioskMode: false,
-        gestureNavigation: true,
-        gestureSensitivity: 100,
-        shiftCheckInterval: 60,
-    });
+    // 1. Settings Provider (Local) - REMOVED -> Moved to SettingsContext
 
     const [changeLogs, setChangeLogs] = useLocalStorage<ChangeLog[]>('system_changelogs', []);
 
@@ -216,10 +203,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     // 5. Actions / Mutations Implementations
-    const updateSetting = <K extends keyof SystemSettings>(key: K, value: SystemSettings[K]) => {
-        setSettings(prev => ({ ...prev, [key]: value }));
-        logEvent('settings', 'update', key, String(value));
-    };
+    // updateSetting removed - moved to SettingsContext
 
     const addLine = (name: string) => {
         createLineMutation.mutate({
@@ -542,11 +526,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     return (
         <DataContext.Provider value={{
-            lines, plants, docs, alerts, settings, biReports, presentations, users,
+            lines, plants, docs, alerts, biReports, presentations, users,
             selectedLineId, selectedLine, selectedPlantId,
             setSelectedLineId, setSelectedPlantId,
             getMachineById, getDocumentById, updateAlertStatus,
-            updateSetting, getUnreadAlertsCount, changeLogs,
+            getUnreadAlertsCount, changeLogs,
             addLine, updateLine, deleteLine, logEvent,
             exportAll, importAll,
             addDocument, updateDocument, deleteDocument,

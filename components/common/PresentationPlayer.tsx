@@ -12,33 +12,41 @@ interface PresentationPlayerProps {
 
 const PresentationPlayer: React.FC<PresentationPlayerProps> = ({ presentation }) => {
     const [currentSlide, setCurrentSlide] = useState(0);
-    const [slideSrcs, setSlideSrcs] = useState<string[]>(presentation.slides);
+    const [slideSrcs, setSlideSrcs] = useState<string[]>(presentation.slides || []);
     const { logEvent } = useData();
     const { t } = useI18n();
 
     useEffect(() => {
         let active = true;
-        Promise.all(presentation.slides.map(async s => (await getBlobUrl(s)) || s)).then(srcs => {
+        Promise.all((presentation.slides || []).map(async s => (await getBlobUrl(s)) || s)).then(srcs => {
             if (active) setSlideSrcs(srcs);
         });
         return () => { active = false; };
     }, [presentation.slides]);
     useEffect(() => {
-        logEvent('presentation', 'view', presentation.id, `${presentation.name} slide ${currentSlide + 1}`);
+        logEvent('presentation', 'view', presentation.id, `${presentation.title} slide ${currentSlide + 1}`);
     }, [currentSlide, presentation.id]);
 
     const nextSlide = () => {
-        setCurrentSlide((prev) => (prev + 1) % presentation.slides.length);
+        const slides = presentation.slides || [];
+        if (!slides.length) return;
+        setCurrentSlide((prev) => (prev + 1) % slides.length);
     };
 
     const prevSlide = () => {
-        setCurrentSlide((prev) => (prev - 1 + presentation.slides.length) % presentation.slides.length);
+        const slides = presentation.slides || [];
+        if (!slides.length) return;
+        setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
     };
+
+    if (!presentation.slides || presentation.slides.length === 0) {
+        return <div className="text-white text-center p-4">Sem slides.</div>;
+    }
 
     return (
         <div className="w-full h-full flex flex-col bg-gray-900 rounded-lg overflow-hidden relative">
             <div className="bg-gray-700 p-3 text-center">
-                <h3 className="text-xl font-semibold truncate">{presentation.name}</h3>
+                <h3 className="text-xl font-semibold truncate">{presentation.title}</h3>
                 <p className="text-sm text-gray-400">
                     {t('presentations.slideCount', { current: currentSlide + 1, total: presentation.slides.length })}
                 </p>

@@ -11,6 +11,7 @@ export interface ProductionLine {
     station_count?: number;
     plant_id?: string;
     plantName?: string;
+    plantId?: string; // Mapped from plant_id
 }
 
 export interface CreateLineData {

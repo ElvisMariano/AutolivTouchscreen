@@ -27,8 +27,10 @@ const AppContent: React.FC = () => {
     const [adminSubPage, setAdminSubPage] = useState<AdminSubPage>(AdminSubPage.Settings);
 
     // Auth Logic from Context
+    // Auth Logic from Context
     const { currentUser, unauthorizedUser, isLoading } = useAuth();
-    const { settings, updateSetting, logEvent } = useData();
+    const { settings, updateSetting } = useSettings();
+    const { logEvent } = useData();
 
     // Hooks must be called unconditionally
     const isKioskEnabled = settings.kioskMode || (currentUser?.role?.allowed_resources?.includes('system:kiosk_mode') ?? false);
@@ -240,6 +242,7 @@ const AppContent: React.FC = () => {
 import { AuthProvider } from './contexts/AuthContext';
 import { I18nProvider } from './contexts/I18nContext';
 
+import { SettingsProvider, useSettings } from './contexts/SettingsContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const queryClient = new QueryClient({
@@ -255,13 +258,15 @@ const App: React.FC = () => {
     return (
         <QueryClientProvider client={queryClient}>
             <AuthProvider>
-                <DataProvider>
-                    <I18nProvider>
-                        <LineProvider>
-                            <AppContent />
-                        </LineProvider>
-                    </I18nProvider>
-                </DataProvider>
+                <SettingsProvider>
+                    <DataProvider>
+                        <I18nProvider>
+                            <LineProvider>
+                                <AppContent />
+                            </LineProvider>
+                        </I18nProvider>
+                    </DataProvider>
+                </SettingsProvider>
             </AuthProvider>
         </QueryClientProvider>
     );

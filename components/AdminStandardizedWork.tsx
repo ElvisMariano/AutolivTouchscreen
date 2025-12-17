@@ -207,7 +207,7 @@ const AdminStandardizedWork: React.FC = () => {
                             formData.url,
                             formData.title,
                             currentUser.id,
-                            formData.version,
+                            formData.version?.toString(),
                             { line_name: selectedLine.name }
                         );
                         console.log('Trabalho Padronizado vinculado à linha');

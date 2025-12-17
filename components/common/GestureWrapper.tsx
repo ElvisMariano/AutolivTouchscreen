@@ -8,6 +8,7 @@ interface GestureWrapperProps {
     canGoPrev?: boolean;
     className?: string;
     threshold?: number;
+    enabled?: boolean;
 }
 
 const GestureWrapper: React.FC<GestureWrapperProps> = ({
@@ -16,7 +17,8 @@ const GestureWrapper: React.FC<GestureWrapperProps> = ({
     canGoNext = true,
     canGoPrev = true,
     className = '',
-    threshold = 100 // Pixel distance to trigger navigation
+    threshold = 100, // Pixel distance to trigger navigation
+    enabled = true
 }) => {
     const x = useMotionValue(0);
     const opacity = useTransform(x, [-200, 0, 200], [0.5, 1, 0.5]);
@@ -25,6 +27,7 @@ const GestureWrapper: React.FC<GestureWrapperProps> = ({
     const hasNavigated = useRef(false);
 
     const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+        if (!enabled) return;
         const offset = info.offset.x;
         const velocity = info.velocity.x;
 
@@ -45,7 +48,7 @@ const GestureWrapper: React.FC<GestureWrapperProps> = ({
         <motion.div
             className={`w-full h-full ${className}`}
             style={{ x, opacity, touchAction: 'pan-y' }} // pan-y allows vertical scroll, horizontal is captured
-            drag="x"
+            drag={enabled ? "x" : false}
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.2} // Resistance feel
             onDragEnd={handleDragEnd}

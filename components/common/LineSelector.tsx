@@ -21,7 +21,7 @@ const LineSelector: React.FC = () => {
     return (
         <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('admin.selectLine', 'Selecionar Linha de Produção')}
+                {t('admin.selectLine')}
             </label>
             <div className="relative">
                 <select
@@ -33,7 +33,7 @@ const LineSelector: React.FC = () => {
                     }}
                     className="w-full px-4 py-3 pr-10 rounded-lg border-2 border-blue-500 dark:border-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none cursor-pointer transition-all"
                 >
-                    <option value="">{t('admin.selectLinePlaceholder', 'Nenhuma linha selecionada')}</option>
+                    <option value="">{t('admin.selectLinePlaceholder')}</option>
                     {filteredLines.map(line => (
                         <option key={line.id} value={line.id}>
                             {line.name}

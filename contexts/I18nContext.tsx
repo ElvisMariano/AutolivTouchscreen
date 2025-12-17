@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useData } from './DataContext';
+import { useSettings } from './SettingsContext';
 import ptBR from '../locales/pt-BR';
 import enUS from '../locales/en-US';
 import esES from '../locales/es-ES';
@@ -22,7 +22,7 @@ const translations: Record<Locale, Translations> = {
 };
 
 export const I18nProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const { settings } = useData();
+    const { settings } = useSettings();
     const [locale, setLocale] = useState<Locale>(settings.language || 'pt-BR');
 
     useEffect(() => {

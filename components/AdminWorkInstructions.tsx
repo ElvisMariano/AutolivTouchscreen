@@ -145,7 +145,7 @@ const AdminWorkInstructions: React.FC = () => {
             title: inst.title,
             url: inst.document_id, // document_id é a URL/ID do IndexedDB
             category: DocumentCategory.WorkInstruction,
-            version: inst.version || '1',
+            version: parseInt(inst.version || '1', 10),
             lastUpdated: inst.uploaded_at,
             stationName: inst.work_stations?.name,
             stationId: inst.station_id
@@ -319,7 +319,7 @@ const AdminWorkInstructions: React.FC = () => {
                             {
                                 title: formData.title,
                                 document_id: formData.url,
-                                version: formData.version,
+                                version: formData.version?.toString(),
                                 station_id: selectedStation?.id
                             }
                         );
@@ -343,7 +343,7 @@ const AdminWorkInstructions: React.FC = () => {
                             formData.url,
                             formData.title,
                             currentUser.id,
-                            formData.version,
+                            formData.version?.toString(),
                             { line_id: selectedLine.id, line_name: selectedLine.name, station_name: selectedStation.name }
                         );
                         console.log('Instrução vinculada à estação com sucesso');

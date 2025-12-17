@@ -2,8 +2,11 @@ import React from 'react';
 import { useData } from '../../contexts/DataContext';
 import { BuildingOfficeIcon } from '@heroicons/react/24/outline';
 
+import { useSettings } from '../../contexts/SettingsContext';
+
 const PlantSelector: React.FC = () => {
-    const { plants, selectedPlantId, setSelectedPlantId, settings } = useData();
+    const { plants, selectedPlantId, setSelectedPlantId } = useData();
+    const { settings } = useSettings();
 
     if (!plants || plants.length === 0) {
         return null; // Don't show if no plants available

@@ -1,15 +1,7 @@
 import { supabase } from './supabaseClient';
 
-export interface User {
-    id: string;
-    username: string;
-    name?: string;
-    role: {
-        id: string;
-        name: string;
-        allowed_resources: string[];
-    };
-}
+import { User } from '../types';
+export type { User }; // Re-export for compatibility
 
 export interface AuthResult {
     success: boolean;

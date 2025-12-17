@@ -76,6 +76,7 @@ export interface Presentation {
     url: string; // URL to the presentation file (PDF or similar)
     version?: number;
     lineId?: string;
+    slides?: string[];
 }
 
 
@@ -194,6 +195,7 @@ export interface User {
     password?: string; // Optional for existing users or purely auto-login users (though highly recommended)
     autoLogin?: boolean;
     plant_ids?: string[]; // IDs das plantas que o usuário tem acesso
+    settings?: Partial<SystemSettings>; // Configurações personalizadas do usuário
 }
 
 export type ChangeEntity = 'document' | 'alert' | 'user' | 'machine' | 'bi' | 'presentation' | 'settings' | 'navigation' | 'plant' | 'role';

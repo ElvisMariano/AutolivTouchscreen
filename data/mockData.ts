@@ -77,7 +77,8 @@ export const MOCK_BI_REPORTS: PowerBiReport[] = [
 export const MOCK_PRESENTATIONS: Presentation[] = [
     {
         id: 'ppt-01',
-        name: 'Integração de Novos Colaboradores',
+        title: 'Integração de Novos Colaboradores',
+        url: 'https://example.com/dummy-presentation',
         slides: [
             'https://picsum.photos/1080/1920?random=1',
             'https://picsum.photos/1080/1920?random=2',
@@ -88,6 +89,6 @@ export const MOCK_PRESENTATIONS: Presentation[] = [
 ];
 
 export const MOCK_USERS: User[] = [
-    { id: 'user-01', name: 'Admin', role: 'admin', username: 'admin', password: '123' },
-    { id: 'user-02', name: 'Operador 1', role: 'operator', username: 'operador', password: '123' },
+    { id: 'user-01', name: 'Admin', role: { id: 'admin', name: 'Admin', allowed_resources: [] }, username: 'admin', password: '123' },
+    { id: 'user-02', name: 'Operador 1', role: { id: 'operator', name: 'Operador', allowed_resources: [] }, username: 'operador', password: '123' },
 ];
