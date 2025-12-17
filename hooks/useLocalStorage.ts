@@ -6,7 +6,7 @@ export const useLocalStorage = <T,>(key: string, initialValue: T): [T, React.Dis
             const item = window.localStorage.getItem(key);
             return item ? JSON.parse(item) : initialValue;
         } catch (error) {
-            console.error(`Error reading localStorage key "${key}":`, error);
+            console.warn(`Error reading localStorage key "${key}":`, error);
             window.localStorage.removeItem(key); // Clear corrupted data
             return initialValue;
         }
@@ -14,9 +14,13 @@ export const useLocalStorage = <T,>(key: string, initialValue: T): [T, React.Dis
 
     useEffect(() => {
         try {
-            window.localStorage.setItem(key, JSON.stringify(storedValue));
+            if (storedValue === undefined) {
+                window.localStorage.removeItem(key);
+            } else {
+                window.localStorage.setItem(key, JSON.stringify(storedValue));
+            }
         } catch (error) {
-            console.error(`Error saving localStorage key "${key}":`, error);
+            console.warn(`Error saving localStorage key "${key}":`, error);
         }
     }, [key, storedValue]);
 
