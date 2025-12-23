@@ -21,6 +21,13 @@ function requirePermission(resource, action = null) {
             // 2. Verificar se tem permissões
             const allowedResources = req.user.allowedResources || {};
 
+            // VERIFICAÇÃO DE SUPER ADMIN (Wildcard)
+            // Se for array com "*" ou string "*", tem acesso total
+            if (allowedResources === '*' || (Array.isArray(allowedResources) && allowedResources.includes('*'))) {
+                console.log(`✅ Permissão concedida (SUPER ADMIN): ${req.user.email} → ${resource}`);
+                return next();
+            }
+
             // 3. Verificar se tem acesso ao recurso
             if (!allowedResources[resource]) {
                 console.warn(`⚠️ Acesso negado: ${req.user.email} tentou acessar ${resource}`);

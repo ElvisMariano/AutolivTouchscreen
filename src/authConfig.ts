@@ -19,8 +19,11 @@ export const msalConfig: Configuration = {
 };
 
 // Add scopes here for ID token to be used at Microsoft identity platform endpoints.
+// Add scopes here for ID token to be used at Microsoft identity platform endpoints.
 export const loginRequest: PopupRequest = {
-    scopes: ["User.Read"]
+    // Escopos padrão para obter perfil e email.
+    // Usaremos o ID TOKEN para autenticar no backend, pois ele possui audience = client_id
+    scopes: ["User.Read", "openid", "profile", "email"]
 };
 
 // Add the endpoints here for Microsoft Graph API services you'd like to use.

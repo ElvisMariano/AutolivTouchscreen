@@ -20,8 +20,19 @@ const PORT = process.env.PORT || 3001;
 app.use(morgan('dev'));
 
 // CORS
+// CORS
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173').split(',');
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: function (origin, callback) {
+        // allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            console.log('Origin blocked by CORS:', origin);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
 }));
 
@@ -64,6 +75,60 @@ app.get('/api/test-db', async (req, res) => {
 // Rotas PÚBLICAS (sem autenticação)
 const l2lRouter = require('./routes/l2l');
 app.get('/api/l2l/test-connection', l2lRouter); // Apenas test-connection é público
+
+// PROXY L2L (Para useHourlyProduction e outros)
+// Encaminha requisições do frontend (/api/1.0/...) para a API L2L real
+// PROXY L2L (Para useHourlyProduction e outros)
+// Encaminha requisições do frontend (/api/1.0/...) para a API L2L real
+// (Axis already required above if duplicated, but let's ensure one clean block)
+// Actually better to just keep the app.use part and assume axios is required once.
+// But looking at file, axios was required at line 81 AND 84.
+// I will start replacement from line 81.
+
+const axios = require('axios');
+app.use('/api/1.0', async (req, res) => {
+    // Check if method is GET, otherwise call next() or handle?
+    // Let's forward GET only for now as requested, or all?
+    if (req.method !== 'GET') return res.status(405).send('only GET allowed for proxy');
+
+    try {
+        const l2lBaseUrl = process.env.API_LEADING2LEAN_BASE_URL || 'https://autoliv-mx.leading2lean.com';
+        // Remove '/api/1.0' prefix from request path as it is part of l2lBaseUrl or we construct full url
+        // Frontend calls: /api/1.0/lines/?parameters...
+        // We want to call: https://autoliv-mx.leading2lean.com/api/1.0/lines/?parameters...
+
+        // Construct target URL
+        // If l2lBaseUrl ends with /api/1.0, we just append the path residue
+        // BUT env variable is usually full base URL: https://autoliv-mx.leading2lean.com/api/1.0/
+
+        // Let's assume process.env.API_LEADING2LEAN_BASE_URL is the root or api root.
+        // It's safer to just reconstruct using URL object if possible, but simple string replacement works too.
+
+        // req.originalUrl includes query params: /api/1.0/lines/?auth=...
+        const targetPath = req.originalUrl.replace('/api/1.0', '/api/1.0'); // No-op, effectively matches structure
+
+        // Actually, we just need to prepend the external domain.
+        // Extract /api/1.0/... from req.originalUrl
+        const path = req.originalUrl; // /api/1.0/lines/?...
+
+        // Base domain
+        const domain = 'https://autoliv-mx.leading2lean.com';
+
+        const targetUrl = `${domain}${path}`;
+
+        console.log(`🔀 Proxying L2L: ${path} -> ${targetUrl}`);
+
+        const response = await axios.get(targetUrl);
+        res.json(response.data);
+    } catch (error) {
+        console.error('❌ Proxy Error:', error.message);
+        if (error.response) {
+            res.status(error.response.status).json(error.response.data);
+        } else {
+            res.status(500).json({ error: 'Proxy Request Failed', details: error.message });
+        }
+    }
+});
 
 // TODAS as outras rotas /api/* requerem autenticação
 // Middleware global de autenticação (pode ser desabilitado temporariamente comentando)

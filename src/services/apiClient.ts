@@ -32,12 +32,25 @@ apiClient.interceptors.request.use(
                     ...loginRequest,
                     account: account
                 });
-                if (response.accessToken) {
-                    config.headers.Authorization = `Bearer ${response.accessToken}`;
+                // USA O ID TOKEN PARA O BACKEND (Audience = Client ID)
+                if (response.idToken) {
+                    config.headers.Authorization = `Bearer ${response.idToken}`;
                 }
             } catch (error) {
-                console.warn('⚠️ Falha ao obter token silencioso para API:', error);
-                // Não bloquear a request, pode ser uma rota pública ou o backend retornará 401
+                console.warn('⚠️ Falha ao obter token silencioso via API. Tentando via Popup...', error);
+                try {
+                    // Tentar obter via Popup se o silencioso falhar (ex: consentimento necessário)
+                    const response = await msalInstance.acquireTokenPopup({
+                        ...loginRequest,
+                        account: account
+                    });
+                    if (response.idToken) {
+                        config.headers.Authorization = `Bearer ${response.idToken}`;
+                    }
+                } catch (popupError) {
+                    console.error('❌ Falha crítica ao obter token:', popupError);
+                    // Aqui a request vai sem token e provavelmente tomará 401
+                }
             }
         }
 

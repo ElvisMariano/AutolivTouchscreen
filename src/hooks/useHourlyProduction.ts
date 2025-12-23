@@ -1,20 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 
-// Define environment interface extension
-interface Env {
-    API_LEADING2LEAN_BASE_URL: string;
-    API_LEADING2LEAN_KEY: string;
-}
+const env = import.meta.env;
 
-const env = process.env as unknown as Env;
+const API_BASE_URL = env.VITE_BACKEND_URL || 'http://localhost:3001';
 
-const RAW_BASE_URL = env.API_LEADING2LEAN_BASE_URL;
-// In dev, RAW_BASE_URL is empty string to trigger proxy usage via local origin
-const BASE_URL = (RAW_BASE_URL && RAW_BASE_URL.startsWith('http'))
-    ? RAW_BASE_URL
-    : window.location.origin;
+// L2L is now proxied via the Backend
+const BASE_URL = API_BASE_URL;
 
-const API_KEY = env.API_LEADING2LEAN_KEY;
+const API_KEY = env.VITE_API_LEADING2LEAN_KEY;
 
 interface PitchData {
     id: number;
