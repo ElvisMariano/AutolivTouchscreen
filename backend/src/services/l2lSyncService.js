@@ -227,6 +227,8 @@ async function syncMachinesForLine(lineId, l2lLineId, userId = null) {
 
         // Processar cada machine
         for (const machine of l2lMachines) {
+
+
             try {
                 // Mapeamento:
                 // code -> name

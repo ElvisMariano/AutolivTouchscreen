@@ -11,6 +11,7 @@ export interface WorkStation {
     updated_at: string;
     line_name?: string; // JOIN field
     plant_name?: string; // JOIN field
+    description?: string;
 }
 
 export interface CreateStationDTO {

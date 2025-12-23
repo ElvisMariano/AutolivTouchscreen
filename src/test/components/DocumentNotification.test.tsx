@@ -1,19 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import DocumentNotification from '../../../components/common/DocumentNotification';
+import DocumentNotification from '@/components/common/DocumentNotification';
 
 // Mock dos contextos
-vi.mock('../../../contexts/DataContext', () => ({
+vi.mock('@/contexts/DataContext', () => ({
     useData: vi.fn()
 }));
 
-vi.mock('../../../contexts/LineContext', () => ({
+vi.mock('@/contexts/LineContext', () => ({
     useLine: vi.fn()
 }));
 
-import { useData } from '../../../contexts/DataContext';
-import { useLine } from '../../../contexts/LineContext';
+import { useData } from '@/contexts/DataContext';
+import { useLine } from '@/contexts/LineContext';
 
 describe('DocumentNotification', () => {
     beforeEach(() => {
@@ -45,7 +45,7 @@ describe('DocumentNotification', () => {
 
     it('renderiza quando selectedLine existe e há unreadDocuments', () => {
         vi.mocked(useLine).mockReturnValue({
-            selectedLine: { id: 'line1', name: 'Linha 1', description: '', machines: [], createdBy: '', plantId: '' },
+            selectedLine: { id: 'line1', name: 'Linha 1', machines: [], createdBy: '', plantId: '' },
             lines: [],
             setSelectedLineId: vi.fn(),
             refreshLines: vi.fn(),
@@ -72,7 +72,7 @@ describe('DocumentNotification', () => {
 
     it('não renderiza quando não há documentos não lidos', () => {
         vi.mocked(useLine).mockReturnValue({
-            selectedLine: { id: 'line1', name: 'Linha 1', description: '', machines: [], createdBy: '', plantId: '' },
+            selectedLine: { id: 'line1', name: 'Linha 1', plant_id: '', status: 'active', created_at: '', updated_at: '' },
             lines: [],
             setSelectedLineId: vi.fn(),
             refreshLines: vi.fn(),
@@ -95,7 +95,7 @@ describe('DocumentNotification', () => {
 
     it('exibe contador correto quando há múltiplos documentos', () => {
         vi.mocked(useLine).mockReturnValue({
-            selectedLine: { id: 'line1', name: 'Linha 1', description: '', machines: [], createdBy: '', plantId: '' },
+            selectedLine: { id: 'line1', name: 'Linha 1', plant_id: '', status: 'active', created_at: '', updated_at: '' },
             lines: [],
             setSelectedLineId: vi.fn(),
             refreshLines: vi.fn(),

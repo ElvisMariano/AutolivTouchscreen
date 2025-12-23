@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosError, InternalAxeiosRequestConfig } from 'axios';
+import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 /**
  * API Client para comunicação com backend Node.js/Express
@@ -6,6 +6,9 @@ import axios, { AxiosInstance, AxiosError, InternalAxeiosRequestConfig } from 'a
  */
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+
+import { msalInstance } from './msalInstance';
+import { loginRequest } from '../authConfig';
 
 // Criar instância do Axios
 const apiClient: AxiosInstance = axios.create({
@@ -21,12 +24,22 @@ const apiClient: AxiosInstance = axios.create({
  * Adiciona token de autenticação automaticamente
  */
 apiClient.interceptors.request.use(
-    (config: InternalAxiosRequestConfig) => {
-        // TODO: Adicionar token MSAL quando autenticação estiver implementada
-        // const token = getMsalToken();
-        // if (token) {
-        //     config.headers.Authorization = `Bearer ${token}`;
-        // }
+    async (config: InternalAxiosRequestConfig) => {
+        const account = msalInstance.getActiveAccount();
+        if (account) {
+            try {
+                const response = await msalInstance.acquireTokenSilent({
+                    ...loginRequest,
+                    account: account
+                });
+                if (response.accessToken) {
+                    config.headers.Authorization = `Bearer ${response.accessToken}`;
+                }
+            } catch (error) {
+                console.warn('⚠️ Falha ao obter token silencioso para API:', error);
+                // Não bloquear a request, pode ser uma rota pública ou o backend retornará 401
+            }
+        }
 
         console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.url}`);
         return config;

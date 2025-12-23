@@ -146,7 +146,7 @@ async function assignUserToPlant(userId, plantId) {
     const existing = await pool.request()
         .input('user_id', sql.UniqueIdentifier, userId)
         .input('plant_id', sql.UniqueIdentifier, plantId)
-        .query('SELECT id FROM user_plants WHERE user_id = @user_id AND plant_id = @plant_id');
+        .query('SELECT user_id FROM user_plants WHERE user_id = @user_id AND plant_id = @plant_id');
 
     if (existing.recordset.length > 0) {
         return existing.recordset[0];

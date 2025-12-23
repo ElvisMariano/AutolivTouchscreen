@@ -8,7 +8,7 @@ async function getAllStations(lineId = null) {
 
     let query = `
         SELECT 
-            s.id, s.name, s.line_id, s.station_number, s.status, s.external_id,
+            s.id, s.name, s.description, s.line_id, s.station_number, s.status, s.external_id,
             s.created_at, s.updated_at,
             l.name as line_name,
             p.name as plant_name
@@ -42,7 +42,7 @@ async function getStationById(id) {
         .input('id', sql.UniqueIdentifier, id)
         .query(`
             SELECT 
-                s.id, s.name, s.line_id, s.station_number, s.status, s.external_id,
+                s.id, s.name, s.description, s.line_id, s.station_number, s.status, s.external_id,
                 s.created_at, s.updated_at,
                 l.name as line_name,
                 p.name as plant_name
@@ -63,7 +63,7 @@ async function getStationByExternalId(externalId) {
         .input('external_id', sql.NVarChar(100), externalId)
         .query(`
             SELECT 
-                s.id, s.name, s.line_id, s.station_number, s.status, s.external_id,
+                s.id, s.name, s.description, s.line_id, s.station_number, s.status, s.external_id,
                 s.created_at, s.updated_at,
                 l.name as line_name,
                 p.name as plant_name
