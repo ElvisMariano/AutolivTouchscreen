@@ -1,7 +1,10 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useData } from '../contexts/DataContext'; // Still need for some legacy methods if any (e.g. acknowledgeDocument if not using hook?)
 import { Machine } from '../types';
-import { getStationsByLine, getInstructionsByLine, StationInstruction } from '../services/stationService';
+import { getStations as getStationsByLine } from '../src/services/api/stations';
+import { getDocuments } from '../src/services/api/documents';
+import { LineDocument } from '../src/services/api/documents';
+import { DocumentCategory } from '../types';
 import StationCard from './common/StationCard';
 import { DocumentTextIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
@@ -46,7 +49,7 @@ const WorkInstructions: React.FC = () => {
     const [machines, setMachines] = useState<Machine[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
-    const [fetchedInstructions, setFetchedInstructions] = useState<StationInstruction[]>([]);
+    const [fetchedInstructions, setFetchedInstructions] = useState<LineDocument[]>([]);
     const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
     const { getPDF } = usePDFStorage();
 
@@ -57,14 +60,23 @@ const WorkInstructions: React.FC = () => {
 
             setIsLoading(true);
             try {
-                const [stations, instructions] = await Promise.all([
+                const [stations, allDocs] = await Promise.all([
                     getStationsByLine(selectedLineId),
-                    getInstructionsByLine(selectedLineId)
+                    getDocuments({ lineId: selectedLineId }) // Fetch all docs for line, filter locally
                 ]);
+
+                // Filter for Work Instructions (handling mixed naming conventions: L2L sync vs Manual create)
+                const instructions = allDocs.filter(d =>
+                    d.category === 'Work Instruction' ||
+                    d.category === 'work_instructions' ||
+                    d.category === 'Instrução de Trabalho' ||
+                    d.category === 'work_instruction'
+                );
 
                 // Map stations to Machine type
                 const mappedMachines: Machine[] = stations.map((station, index) => {
                     // Find latest instruction for this station
+                    // Use the filtered instructions list
                     const stationInstruction = instructions.find(i => i.station_id === station.id);
 
                     return {
@@ -73,11 +85,16 @@ const WorkInstructions: React.FC = () => {
                         status: 'offline',
                         position: { x: 0, y: 0 },
                         type: 'station',
-                        instructionId: stationInstruction?.document_id
+                        instructionId: stationInstruction?.document_url // Using document_url as ID/URL
                     };
                 });
 
-                setMachines(mappedMachines);
+                // Sort machines alphabetically by name
+                const sortedMachines = mappedMachines.sort((a, b) => {
+                    return a.name.localeCompare(b.name, 'pt-BR', { numeric: true, sensitivity: 'base' });
+                });
+
+                setMachines(sortedMachines);
                 setFetchedInstructions(instructions);
             } catch (error) {
                 console.error('Error fetching stations:', error);
@@ -106,11 +123,11 @@ const WorkInstructions: React.FC = () => {
 
     useEffect(() => {
         const resolveUrl = async () => {
-            if (!activeInstruction?.document_id) {
+            if (!activeInstruction?.document_url && !activeInstruction?.viewinfo) {
                 setResolvedUrl(null);
                 return;
             }
-            const url = activeInstruction.document_id;
+            const url = activeInstruction.viewinfo || activeInstruction.document_url; // Prioritize viewinfo
             if (url.startsWith('http') || url.startsWith('blob:') || url.startsWith('data:')) {
                 setResolvedUrl(url);
             } else {
@@ -129,16 +146,17 @@ const WorkInstructions: React.FC = () => {
             }
         };
         resolveUrl();
-    }, [activeInstruction?.document_id]);
+    }, [activeInstruction?.document_url, activeInstruction?.viewinfo]);
 
     const instructionDoc = (activeInstruction && resolvedUrl) ? {
         id: activeInstruction.id,
         title: activeInstruction.title,
         url: resolvedUrl,
-        category: 'work_instruction',
-        version: activeInstruction.version || '1',
-        lastUpdated: activeInstruction.uploaded_at
-    } as any : (selectedMachine && selectedMachine.instructionId
+        category: DocumentCategory.WorkInstruction,
+        version: activeInstruction.version || 1,
+        lastUpdated: activeInstruction.updated_at,
+        stationId: activeInstruction.station_id
+    } : (selectedMachine && selectedMachine.instructionId
         ? getDocumentById(selectedMachine.instructionId)
         : null);
 
@@ -194,8 +212,9 @@ const WorkInstructions: React.FC = () => {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
                         {machines.map((machine, index) => {
+                            // instruction is LineDocument (snake_case)
                             const instruction = fetchedInstructions.find(i => i.station_id === machine.id);
-                            const hasUnread = unreadDocuments.some(u => u.title === instruction?.title); // Match by title logic since IDs might differ
+                            const hasUnread = unreadDocuments.some(u => u.title === instruction?.title);
 
                             return (
                                 <StationCard
@@ -203,7 +222,6 @@ const WorkInstructions: React.FC = () => {
                                     machine={machine}
                                     index={index}
                                     onClick={() => setSelectedMachine(machine)}
-                                    // Pass hasUnread if supported, otherwise just rely on border
                                     className={hasUnread ? "ring-4 ring-red-500 animate-pulse" : ""}
                                 />
                             )

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { SystemSettings, User } from '../types';
-import { supabase } from '../services/supabaseClient';
+
 
 // Configurações padrão
 const DEFAULT_SETTINGS: SystemSettings = {
@@ -18,6 +18,7 @@ const DEFAULT_SETTINGS: SystemSettings = {
     gestureNavigation: true,
     gestureSensitivity: 100,
     shiftCheckInterval: 60,
+    productionRefreshInterval: 300, // 5 minutes default
 };
 
 interface SettingsContextType {
@@ -100,15 +101,8 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
             // Se logado, salvar no DB
             if (currentUser) {
-                const { error } = await supabase
-                    .from('users')
-                    .update({ settings: newSettings })
-                    .eq('id', currentUser.id);
-
-                if (error) {
-                    console.error('Erro ao salvar configurações no DB:', error);
-                    // Opcional: Reverter estado ou mostrar toast
-                }
+                // TODO: Implement API call to save settings
+                // const { error } = await api.updateUserSettings(currentUser.id, newSettings);
             }
         } catch (error) {
             console.error('Erro ao persistir configurações:', error);

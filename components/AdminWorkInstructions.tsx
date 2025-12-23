@@ -9,8 +9,10 @@ import { usePDFStorage } from '../hooks/usePDFStorage';
 import { useI18n } from '../contexts/I18nContext';
 import { useLine } from '../contexts/LineContext';
 import StationSelector from './common/StationSelector';
-import { WorkStation, StationInstruction, getInstructionsByStation, getInstructionsByLine, getStationsByLine, updateStationInstruction, deleteStationInstruction } from '../services/stationService';
-import { addStationInstruction } from '../services/stationService';
+import { WorkStation, getStations as getStationsByLine } from '../src/services/api/stations';
+import { getDocuments, createDocument, updateDocument, deleteDocument } from '../src/services/api/documents';
+// StationInstruction type replacement? Using generic Document/LineDocument?
+import { LineDocument as StationInstruction } from '../src/services/api/documents';
 import { useAuth } from '../contexts/AuthContext';
 import { useDocuments } from '../hooks/useDocuments';
 import { useQueryClient } from '@tanstack/react-query';
@@ -89,21 +91,31 @@ const AdminWorkInstructions: React.FC = () => {
         setIsModalOpen(false);
     };
 
-    const handleDelete = (id: string) => {
-        setItemToDelete(id);
-        setIsDeleteModalOpen(true);
-    }
+    const handleDelete = async (id: string) => {
+        if (window.confirm(t('common.confirmDelete'))) {
+            try {
+                await deleteDocument(id);
+                queryClient.invalidateQueries({ queryKey: ['documents'] });
+            } catch (error) {
+                console.error('Error deleting instruction:', error);
+                alert(t('common.errorDeleting'));
+            }
+        }
+    };
+
+    const handleEdit = (instruction: Document) => {
+        setEditingItem(instruction);
+        setIsModalOpen(true);
+    };
 
     const confirmDelete = async () => {
         if (itemToDelete) {
             const docToDelete = docs.find(d => d.id === itemToDelete);
 
             try {
-                if (docToDelete?.stationId) {
-                    await deleteStationInstruction(itemToDelete);
-                } else {
-                    await deleteLineDocument.mutateAsync(itemToDelete);
-                }
+                // The original logic had a specific deleteStationInstruction.
+                // Now using the generic deleteDocument.
+                await deleteDocument(itemToDelete);
                 // Invalidate to refresh the list
                 queryClient.invalidateQueries({ queryKey: ['documents'] });
             } catch (error) {
@@ -123,9 +135,12 @@ const AdminWorkInstructions: React.FC = () => {
     const DocumentList: React.FC = () => {
         // Filtrar docs: Categoria WorkInstruction e pertencentes à linha/estação selecionada
         const filteredDocs = docs.filter(doc => {
+            // Require a line to be selected
+            if (!selectedLine) return false;
+
             if (doc.category !== DocumentCategory.WorkInstruction) return false;
 
-            if (selectedLine && doc.lineId !== selectedLine.id) return false;
+            if (doc.lineId !== selectedLine.id) return false;
 
             if (selectedStationForFilter && doc.stationId !== selectedStationForFilter) return false;
 
@@ -261,16 +276,20 @@ const AdminWorkInstructions: React.FC = () => {
                 return;
             }
             if (!selectedStation) {
+                // If filtering by station, maybe auto-select? But for now require selection.
+                // Actually this is inside FormModal, so selectedStation state is there.
                 alert('Por favor, selecione uma estação de trabalho.');
                 return;
             }
+
+            let documentUrl = formData.url;
 
             if (uploadMode === 'upload' && selectedFile) {
                 try {
                     setUploadProgress(t('admin.uploading'));
                     const targetId = editingItem ? editingItem.id : `doc-${Date.now()}`;
                     const indexedDBUrl = await savePDF(selectedFile, targetId);
-                    formData.url = indexedDBUrl;
+                    documentUrl = indexedDBUrl;
                     setUploadProgress(t('admin.uploadComplete'));
                 } catch (error) {
                     alert(t('admin.uploadError'));
@@ -279,37 +298,46 @@ const AdminWorkInstructions: React.FC = () => {
                 }
             }
 
-            if (editingItem && editingItem.stationId) {
-                if (formData.url) {
+            if (editingItem) {
+                if (documentUrl || formData.title) {
                     try {
-                        await updateStationInstruction(
+                        const payload: any = {
+                            title: formData.title,
+                            version: formData.version ? Number(formData.version) : undefined,
+                            station_id: selectedStation?.id,
+                            updated_at: new Date().toISOString()
+                        };
+                        if (documentUrl) payload.document_url = documentUrl;
+
+                        await updateDocument(
                             editingItem.id,
-                            {
-                                title: formData.title,
-                                document_id: formData.url,
-                                version: formData.version?.toString(),
-                                station_id: selectedStation?.id
-                            }
+                            payload
                         );
                         queryClient.invalidateQueries({ queryKey: ['documents'] });
-                    } catch (e) { console.error(e); }
+                    } catch (e) {
+                        console.error(e);
+                        alert(t('common.errorSaving'));
+                    }
                 }
             } else {
                 // New Instruction
-                if (currentUser && formData.url && formData.title) {
+                if (currentUser && documentUrl && formData.title) {
                     try {
-                        await addStationInstruction(
-                            selectedStation.id,
-                            formData.url,
-                            formData.title,
-                            currentUser.id,
-                            formData.version?.toString(),
-                            { line_id: selectedLine.id, line_name: selectedLine.name, station_name: selectedStation.name }
-                        );
+                        await createDocument({
+                            line_id: selectedLine.id,
+                            station_id: selectedStation.id,
+                            category: 'work_instructions',
+                            title: formData.title,
+                            document_url: documentUrl,
+                            version: formData.version ? Number(formData.version) : 1,
+                            uploaded_by: currentUser.name || 'Admin', // Ensure string
+                            // metadata could be used for extra fields if API supports
+                        });
                         console.log('Instrução vinculada à estação com sucesso');
                         queryClient.invalidateQueries({ queryKey: ['documents'] });
                     } catch (error) {
                         console.error('Erro ao vincular instrução:', error);
+                        alert(t('common.errorSaving'));
                     }
                 }
             }
@@ -436,7 +464,7 @@ const AdminWorkInstructions: React.FC = () => {
                         <option value="">Todas as estações da linha</option>
                         {stations.map(station => (
                             <option key={station.id} value={station.id}>
-                                {station.position}. {station.name}
+                                {station.station_number}. {station.name}
                             </option>
                         ))}
                     </select>

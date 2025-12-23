@@ -1,70 +1,44 @@
-import { supabase } from './supabaseClient';
+import * as api from '../src/services/api';
 import { Plant, User } from '../types';
 
 /**
  * Buscar todas as plantas (para administradores)
  */
 export async function getAllPlants(): Promise<Plant[]> {
-    const { data, error } = await supabase
-        .from('plants')
-        .select('*')
-        .order('name');
-
-    if (error) {
+    try {
+        const data = await api.plants.getPlants();
+        return data;
+    } catch (error) {
         console.error('Error fetching all plants:', error);
         return [];
     }
-
-    return data || [];
 }
 
 /**
  * Buscar plantas ativas
- * A política RLS filtra automaticamente com base nas permissões do usuário
  */
 export async function getActivePlants(): Promise<Plant[]> {
-    const { data, error } = await supabase
-        .from('plants')
-        .select('*')
-        .eq('status', 'active')
-        .order('name');
-
-    if (error) {
+    try {
+        // Backend já filtra por status='active' por padrão
+        const data = await api.plants.getPlants();
+        return data.filter(p => p.status === 'active');
+    } catch (error) {
         console.error('Error fetching active plants:', error);
         return [];
     }
-
-    return data || [];
 }
 
 /**
- * Buscar plantas que o usuário tem acesso (uso explícito, embora RLS já trate)
+ * Buscar plantas que o usuário tem acesso
  */
 export async function getPlantsByUser(userId: string): Promise<Plant[]> {
-    // Busca usuário para pegar os IDs das plantas
-    const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('plant_ids')
-        .eq('id', userId)
-        .single();
-
-    if (userError || !userData || !userData.plant_ids || userData.plant_ids.length === 0) {
-        return [];
-    }
-
-    const { data, error } = await supabase
-        .from('plants')
-        .select('*')
-        .in('id', userData.plant_ids)
-        .eq('status', 'active')
-        .order('name');
-
-    if (error) {
+    try {
+        const data = await api.users.getUserPlants(userId);
+        return data.filter(p => p.status === 'active');
+    } catch (error) {
         console.error('Error fetching user plants:', error);
         return [];
     }
-
-    return data || [];
 }
 
 /**
@@ -72,23 +46,17 @@ export async function getPlantsByUser(userId: string): Promise<Plant[]> {
  */
 export async function createPlant(name: string, location: string, createdBy: string | undefined): Promise<{ success: boolean; data?: Plant; error?: string }> {
     try {
-        const { data, error } = await supabase
-            .from('plants')
-            .insert({
-                name,
-                location,
-                status: 'active',
-                created_by: createdBy
-            })
-            .select()
-            .single();
-
-        if (error) throw error;
+        const data = await api.plants.createPlant({
+            name,
+            location,
+            status: 'active',
+            created_by: createdBy || 'system'
+        });
 
         return { success: true, data };
     } catch (error: any) {
         console.error('Error creating plant:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: error.message || 'Failed to create plant' };
     }
 }
 
@@ -97,43 +65,27 @@ export async function createPlant(name: string, location: string, createdBy: str
  */
 export async function updatePlant(plantId: string, updates: Partial<Plant>): Promise<{ success: boolean; error?: string }> {
     try {
-        const { error } = await supabase
-            .from('plants')
-            .update({
-                name: updates.name,
-                location: updates.location,
-                status: updates.status,
-                shift_config: updates.shift_config,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', plantId);
-
-        if (error) throw error;
-
+        await api.plants.updatePlant(plantId, updates);
         return { success: true };
     } catch (error: any) {
         console.error('Error updating plant:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: error.message || 'Failed to update plant' };
     }
 }
 
 /**
  * 'Excluir' planta (soft delete ou marcar como inativa)
  */
+/**
+ * 'Excluir' planta (soft delete ou marcar como inativa)
+ */
 export async function deletePlant(plantId: string): Promise<{ success: boolean; error?: string }> {
     try {
-        // Opção 1: Soft delete (inativar)
-        const { error } = await supabase
-            .from('plants')
-            .update({ status: 'inactive', updated_at: new Date().toISOString() })
-            .eq('id', plantId);
-
-        if (error) throw error;
-
+        await api.plants.deletePlant(plantId);
         return { success: true };
     } catch (error: any) {
         console.error('Error deleting plant:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: error.message || 'Failed to delete plant' };
     }
 }
 
@@ -142,16 +94,20 @@ export async function deletePlant(plantId: string): Promise<{ success: boolean; 
  */
 export async function updateUserPlants(userId: string, plantIds: string[]): Promise<{ success: boolean; error?: string }> {
     try {
-        const { error } = await supabase
-            .from('users')
-            .update({ plant_ids: plantIds })
-            .eq('id', userId);
+        // Remove todas as associações atuais
+        const currentPlants = await api.users.getUserPlants(userId);
+        for (const plant of currentPlants) {
+            await api.users.removeUserFromPlant(userId, plant.id);
+        }
 
-        if (error) throw error;
+        // Adiciona novas associações
+        for (const plantId of plantIds) {
+            await api.users.assignUserToPlant(userId, plantId);
+        }
 
         return { success: true };
     } catch (error: any) {
         console.error('Error updating user plants:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: error.message || 'Failed to update user plants' };
     }
 }

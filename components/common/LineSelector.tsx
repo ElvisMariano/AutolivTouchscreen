@@ -11,7 +11,7 @@ const LineSelector: React.FC = () => {
 
     const filteredLines = React.useMemo(() => {
         if (!selectedPlantId) return lines;
-        return lines.filter(l => l.plantId === selectedPlantId);
+        return lines.filter(l => (l.plantId || (l as any).plant_id) === selectedPlantId);
     }, [lines, selectedPlantId]);
 
     if (isLoading || lines.length === 0) {

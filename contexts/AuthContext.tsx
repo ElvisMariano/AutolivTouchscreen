@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User as AuthUser, AuthResult, syncMsalUser, logAccess } from '../services/authService';
+import { User as AuthUser, syncMsalUser, logAccess } from '../src/services/api/users';
+import { AuthResult } from '../services/authService'; // Remove this if unused or redefine locally
 import { useMsal, useIsAuthenticated } from "@azure/msal-react";
 import { loginRequest } from "../src/authConfig";
 
@@ -24,15 +25,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const isAuthenticated = useIsAuthenticated();
 
     // Derived state
+    // Derived state
     const isAdmin = React.useMemo(() => {
-        if (!currentUser || !currentUser.role) return false;
-        const roleName = (typeof currentUser.role === 'string' ? currentUser.role : currentUser.role.name || '').toLowerCase();
+        if (!currentUser) return false;
+        // Backend returns `role_name` from JOIN, but we also support legacy `role` object/string
+        const roleSource = currentUser.role_name || currentUser.role;
+        if (!roleSource) return false;
+
+        const roleName = (typeof roleSource === 'string' ? roleSource : roleSource.name || '').toLowerCase();
         return roleName.startsWith('admin');
     }, [currentUser]);
 
     const isOperator = React.useMemo(() => {
-        if (!currentUser || !currentUser.role) return false;
-        const roleName = (typeof currentUser.role === 'string' ? currentUser.role : currentUser.role.name || '').toLowerCase();
+        if (!currentUser) return false;
+        const roleSource = currentUser.role_name || currentUser.role;
+        if (!roleSource) return false;
+
+        const roleName = (typeof roleSource === 'string' ? roleSource : roleSource.name || '').toLowerCase();
         return roleName === 'operador' || roleName === 'operator';
     }, [currentUser]);
 

@@ -1,0 +1,19 @@
+# Azure CLI Login - Instruções
+
+## 🔐 Código de Autenticação
+
+**Código**: `F7V29CC6P`
+
+## Passos:
+
+1. Abra https://microsoft.com/devicelogin
+2. Digite o código: **F7V29CC6P**
+3. Faça login com sua conta Microsoft/Azure
+4. Autorize o Azure CLI
+
+## Importante
+
+Use a mesma conta que tem permissão no SQL Server:
+- `digitals-documents.database.windows.net`
+
+Após completar o login, volte aqui e me avise!

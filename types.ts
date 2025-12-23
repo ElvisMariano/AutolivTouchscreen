@@ -24,7 +24,9 @@ export enum AdminSubPage {
     Roles = 'Gerenciamento de Roles',
     History = 'Histórico de Ações',
     Settings = 'Configurações',
+    L2LSync = 'Sincronização L2L',
 }
+
 
 export enum DocumentCategory {
     WorkInstruction = 'Instrução de Trabalho',
@@ -49,7 +51,10 @@ export interface ProductionLine {
     name: string;
     machines: Machine[];
     plantId?: string;
+    plant_id?: string; // Backend/DB field style
     plantName?: string;
+    external_id?: string;
+    description?: string;
 }
 
 export interface Document {
@@ -62,7 +67,9 @@ export interface Document {
     lineId?: string;
     stationId?: string;
     stationName?: string;
+    viewinfo?: string; // Data URL do PDF fornecido pelo PLM através da API L2L
 }
+
 
 export interface PowerBiReport {
     id: string;
@@ -136,6 +143,7 @@ export interface SystemSettings {
     gestureNavigation: boolean; // Enable gesture navigation
     gestureSensitivity: number; // Swipe threshold in pixels
     shiftCheckInterval: number; // in seconds
+    productionRefreshInterval: number; // in seconds
 }
 
 export interface ShiftConfig {
@@ -154,7 +162,9 @@ export interface Plant {
     updated_at: string;
     created_by?: string;
     shift_config?: ShiftConfig[];
+    external_id?: string; // ID do sistema Leading2Lean (L2L Site ID)
 }
+
 
 export const isAlertActive = (alert: QualityAlert): boolean => {
     const now = Date.now();

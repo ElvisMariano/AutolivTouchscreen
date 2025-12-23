@@ -1,0 +1,29 @@
+# Informações Necessárias para Criar SQL Server
+
+## 🔑 Defina uma Senha
+
+A senha deve ter:
+- Mínimo 8 caracteres
+- Letras maiúsculas e minúsculas
+- Números
+- Caracteres especiais (@, #, $, etc.)
+
+**Exemplo**: `AutolivDB@2024!`
+
+## 📋 Nomes Padrão (ou customize)
+
+- **SQL Server**: `autoliv-touchscreen-sql`
+- **Database**: `autoliv-touchscreen-db`
+- **Admin Username**: `sqladmin`
+- **Region**: `brazilsouth`
+
+## ✍️ Preencha:
+
+**Senha para sqladmin**: ___________________________
+
+**Quer mudar algum nome?** (deixe em branco para usar padrões)
+- SQL Server: ___________________________
+- Database: ___________________________
+- Admin Username: ___________________________
+
+Após preencher, me avise!

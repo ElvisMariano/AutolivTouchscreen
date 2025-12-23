@@ -5,7 +5,7 @@ import Modal from './common/Modal';
 import { PencilSquareIcon, TrashIcon, CheckCircleIcon, ExclamationTriangleIcon } from './common/Icons'; // Icons assumed to exist or need update
 import { useI18n } from '../contexts/I18nContext';
 import { useLine } from '../contexts/LineContext';
-import { addLineDocument, updateLineDocument } from '../services/lineService';
+import { createDocument as addLineDocument, updateDocument as updateLineDocument } from '../src/services/api/documents';
 import { useAuth } from '../contexts/AuthContext';
 
 const AdminPresentations: React.FC = () => {
@@ -191,8 +191,8 @@ const AdminPresentations: React.FC = () => {
                 try {
                     await updateLineDocument(editingItem.id, {
                         title: formData.title,
-                        document_id: extractedUrl,
-                        version: formData.version?.toString()
+                        document_url: extractedUrl,
+                        version: typeof formData.version === 'number' ? formData.version : (formData.version ? Number(formData.version) : undefined)
                     });
                 } catch (error) {
                     console.error('Erro ao atualizar apresentação:', error);
@@ -202,15 +202,14 @@ const AdminPresentations: React.FC = () => {
 
                 if (currentUser && extractedUrl && formData.title) {
                     try {
-                        await addLineDocument(
-                            selectedLine.id,
-                            'presentation',
-                            extractedUrl,
-                            formData.title,
-                            currentUser.id,
-                            formData.version?.toString() || '1',
-                            { line_name: selectedLine.name }
-                        );
+                        await addLineDocument({
+                            line_id: selectedLine.id,
+                            category: 'presentation',
+                            title: formData.title,
+                            document_url: extractedUrl, // Using extractedUrl for document_url
+                            version: typeof formData.version === 'number' ? formData.version : (formData.version ? Number(formData.version) : 1),
+                            uploaded_by: currentUser.name || 'Admin'
+                        });
                     } catch (error) {
                         console.error('Erro ao vincular:', error);
                     }

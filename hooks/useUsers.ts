@@ -1,16 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-    getAllUsers,
-    addUserToDB,
-    updateUserInDB,
-    deleteUserInDB,
-    restoreUserInDB
-} from '../services/authService';
-import { User } from '../services/authService'; // Note: authService has its own User interface, referencing permissions
-// But DataContext uses User from types.ts. We should align.
-// In authService: interface User { id, username, role: {id,name,allowed_resources} }
-// In types: interface User { id, name, username, role: {id,name,allowed_resources}, plant_ids... }
-// getAllUsers in authService returns mapping to match types.ts mostly. 
+    getUsers,
+    createUser as addUserApi,
+    updateUser as updateUserApi,
+    deleteUser as deleteUserApi
+} from '../src/services/api/users';
 import { User as AppUser } from '../types';
 
 export const useUsers = () => {
@@ -19,7 +13,7 @@ export const useUsers = () => {
     const query = useQuery({
         queryKey: ['users'],
         queryFn: async () => {
-            const users = await getAllUsers();
+            const users = await getUsers();
             return users as AppUser[];
         },
         staleTime: 1000 * 60 * 5,
@@ -27,7 +21,7 @@ export const useUsers = () => {
 
     const createUser = useMutation({
         mutationFn: async (user: any) => {
-            return await addUserToDB(user);
+            return await addUserApi(user);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -36,7 +30,8 @@ export const useUsers = () => {
 
     const updateUser = useMutation({
         mutationFn: async (user: AppUser) => {
-            return await updateUserInDB(user);
+            // Adapt AppUser to UpdateUserDTO if needed, but for now passing as is if API handles it
+            return await updateUserApi(user.id, user);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -45,16 +40,7 @@ export const useUsers = () => {
 
     const deleteUser = useMutation({
         mutationFn: async (id: string) => {
-            return await deleteUserInDB(id);
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['users'] });
-        }
-    });
-
-    const restoreUser = useMutation({
-        mutationFn: async ({ id, user }: { id: string; user: AppUser }) => {
-            return await restoreUserInDB(id);
+            return await deleteUserApi(id);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -66,7 +52,6 @@ export const useUsers = () => {
         isLoading: query.isLoading,
         createUser,
         updateUser,
-        deleteUser,
-        restoreUser
+        deleteUser
     };
 };

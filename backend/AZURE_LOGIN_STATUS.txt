@@ -1,0 +1,17 @@
+# ⏳ Aguardando az login
+
+## Status Atual
+
+Comando `az login` abriu o navegador.
+
+## ⚠️ IMPORTANTE
+
+**Selecione a conta CORRETA no navegador:**
+
+- ✅ Use a conta que tem acesso ao SQL Server: `digitals-documents.database.windows.net`
+- ❌ NÃO use `elvismariano@hotmail.com` (sem subscriptions Azure)
+- ✅ Use sua conta **corporativa/organizacional** do Azure
+
+## Próximo Passo
+
+Após completar o login no navegador, volte e avise que terminou!

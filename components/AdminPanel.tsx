@@ -13,6 +13,7 @@ import AdminChangeLog from './AdminChangeLog';
 import AdminAlertsManagement from './AdminAlertsManagement';
 import AdminLineManagement from './AdminLineManagement';
 import AdminPlantManagement from './AdminPlantManagement';
+import { AdminL2LSync } from './AdminL2LSync';
 import LineSelector from './common/LineSelector';
 import PlantSelector from './common/PlantSelector';
 import { getLatestBackup } from '../services/backup';
@@ -28,7 +29,8 @@ import {
     CogIcon,
     BuildingOfficeIcon,
     ArrowRightOnRectangleIcon,
-    UserGroupIcon
+    UserGroupIcon,
+    ArrowPathIcon,
 } from './common/Icons';
 
 
@@ -154,6 +156,16 @@ const AdminSettings: React.FC = () => {
                             type="number"
                             value={settings.shiftCheckInterval || 60}
                             onChange={(e) => updateSetting('shiftCheckInterval', parseInt(e.target.value) || 60)}
+                            className="w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-3 rounded-lg text-xl border border-gray-300 dark:border-gray-600 focus:border-cyan-500 focus:outline-none transition-colors"
+                        />
+                    </div>
+                    {/* Production Refresh Interval */}
+                    <div>
+                        <label className="block text-xl mb-2">Intervalo Atualização Produção (segundos)</label>
+                        <input
+                            type="number"
+                            value={settings.productionRefreshInterval || 300}
+                            onChange={(e) => updateSetting('productionRefreshInterval', parseInt(e.target.value) || 300)}
                             className="w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-3 rounded-lg text-xl border border-gray-300 dark:border-gray-600 focus:border-cyan-500 focus:outline-none transition-colors"
                         />
                     </div>
@@ -289,14 +301,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
     const { currentUser, logout } = useAuth();
 
     useEffect(() => {
-        const hasAdminAccess = currentUser?.role.name === 'Admin' || currentUser?.role.allowed_resources?.includes('view:admin_access_button');
+        const roleName = currentUser?.role_name || currentUser?.role?.name;
+        const resources = currentUser?.role?.allowed_resources || [];
+
+        const hasAdminAccess = roleName === 'Admin' || resources.includes('view:admin_access_button');
         if (hasAdminAccess && !isAdmin) {
             setIsAdmin(true);
         }
     }, [currentUser, isAdmin, setIsAdmin]);
 
     // Se o usuário já está logado como admin ou tem permissão, permitir acesso direto
-    const hasAdminAccess = currentUser?.role.name === 'Admin' || currentUser?.role.allowed_resources?.includes('view:admin_access_button');
+    const roleName = currentUser?.role_name || currentUser?.role?.name;
+    const resources = currentUser?.role?.allowed_resources || [];
+    const hasAdminAccess = roleName === 'Admin' || resources.includes('view:admin_access_button');
+
     if (!isAdmin && !hasAdminAccess) {
         return <LoginScreen onUnlock={() => setIsAdmin(true)} requireRole='admin' />;
     }
@@ -327,6 +345,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
                 return <AdminLineManagement />;
             case AdminSubPage.Plants:
                 return <AdminPlantManagement />;
+            case AdminSubPage.L2LSync:
+                return <AdminL2LSync />;
             default:
                 return <AdminSettings />;
         }
@@ -373,6 +393,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
             case AdminSubPage.Plants: return t('admin.plantManagement');
             case AdminSubPage.History: return t('admin.logs');
             case AdminSubPage.Settings: return t('admin.settings');
+            case AdminSubPage.L2LSync: return 'Sincronização L2L';
             default: return page;
         }
     };
@@ -391,13 +412,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
         { page: AdminSubPage.Roles, icon: UserGroupIcon, permission: 'admin:view_roles' },
         { page: AdminSubPage.History, icon: ClockIcon, permission: 'admin:view_history' },
         { page: AdminSubPage.Settings, icon: CogIcon, permission: 'admin:view_settings' },
+        { page: AdminSubPage.L2LSync, icon: ArrowPathIcon, permission: 'admin:view_settings' },
     ];
 
     // Filter menu items based on user permissions
     const filteredMenuItems = menuItems.filter(item => {
         if (!item.permission) return true; // Se não tem permissão definida, é público dentro do admin
-        const userResources = currentUser?.role.allowed_resources || [];
-        return userResources.includes(item.permission) || currentUser?.role.name === 'Admin'; // Admin sempre vê tudo (fallback)
+        const userResources = currentUser?.role?.allowed_resources || [];
+        const roleName = currentUser?.role_name || currentUser?.role?.name;
+        return userResources.includes(item.permission) || roleName === 'Admin'; // Admin sempre vê tudo (fallback)
     });
 
     return (

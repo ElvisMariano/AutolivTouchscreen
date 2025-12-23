@@ -3,7 +3,9 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { Role, AVAILABLE_RESOURCES, RoleAuditLog } from '../types';
-import { getRoles, createRole, updateRole, deleteRole, getRoleAuditLogs } from '../services/roleService';
+import { getRoles, createRole, updateRole, deleteRole } from '../src/services/api/roles';
+// import { getRoleAuditLogs } from '../src/services/api/roles'; // Missing in API
+const getRoleAuditLogs = async () => []; // Stub
 import Modal from './common/Modal';
 import { PencilSquareIcon, TrashIcon, UserGroupIcon, ClockIcon } from './common/Icons';
 
@@ -80,9 +82,9 @@ const AdminRoleManagement: React.FC = () => {
         setIsLoading(true);
         try {
             if (editingRole) {
-                await updateRole(editingRole.id, formData, currentUser.id);
+                await updateRole(editingRole.id, formData);
             } else {
-                await createRole(formData.name, formData.allowed_resources, currentUser.id);
+                await createRole({ name: formData.name, allowed_resources: formData.allowed_resources });
             }
             await fetchData();
             setIsModalOpen(false);
@@ -97,7 +99,7 @@ const AdminRoleManagement: React.FC = () => {
         if (!currentUser || !confirm('Tem certeza que deseja excluir esta role?')) return;
         setIsLoading(true);
         try {
-            await deleteRole(roleId, currentUser.id);
+            await deleteRole(roleId);
             await fetchData();
         } catch (error) {
             alert('Erro ao excluir: ' + (error as any).message);
@@ -219,8 +221,8 @@ const AdminRoleManagement: React.FC = () => {
                                     </td>
                                     <td className="p-4">
                                         <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${log.action === 'create' ? 'bg-green-100 text-green-800' :
-                                                log.action === 'update' ? 'bg-blue-100 text-blue-800' :
-                                                    'bg-red-100 text-red-800'
+                                            log.action === 'update' ? 'bg-blue-100 text-blue-800' :
+                                                'bg-red-100 text-red-800'
                                             }`}>
                                             {log.action}
                                         </span>

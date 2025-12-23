@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLine } from '../../contexts/LineContext';
 import { useI18n } from '../../contexts/I18nContext';
-import { getStationsByLine, WorkStation } from '../../services/stationService';
+import { getStations as getStationsByLine, WorkStation } from '../../src/services/api/stations';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
 
 interface StationSelectorProps {
@@ -90,24 +90,25 @@ const StationSelector: React.FC<StationSelectorProps> = ({ selectedStation, onSt
                     required
                 >
                     <option value="">{t('admin.selectStationPlaceholder')}</option>
-                    {stations.map(station => (
-                        <option key={station.id} value={station.id}>
-                            {station.position}. {station.name}
-                        </option>
-                    ))}
+                    {stations
+                        .sort((a, b) => (a.station_number || 0) - (b.station_number || 0))
+                        .map(station => (
+                            <option key={station.id} value={station.id}>
+                                {station.station_number}. {station.name}
+                            </option>
+                        ))}
                 </select>
                 <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500 dark:text-green-400 pointer-events-none" />
             </div>
             {selectedStation && (
                 <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                    <p className="text-sm text-green-700 dark:text-green-300">
-                        ✓ Estação selecionada: <strong>{selectedStation.position}. {selectedStation.name}</strong>
-                    </p>
-                    {selectedStation.description && (
-                        <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                            {selectedStation.description}
-                        </p>
-                    )}
+                    <div className="text-sm text-green-700 dark:text-green-300">
+                        ✓ Estação selecionada:
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="font-medium text-gray-900 dark:text-gray-100">{selectedStation.name}</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">#{selectedStation.station_number}</span>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

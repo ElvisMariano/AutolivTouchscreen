@@ -3,14 +3,7 @@ import { LogProvider, useLog } from '../../../contexts/LogContext';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 
-// Mock Supabase client
-vi.mock('../../../services/supabaseClient', () => ({
-    supabase: {
-        from: () => ({
-            insert: vi.fn(),
-        })
-    }
-}));
+
 
 // Mock useAuth
 vi.mock('../../../contexts/AuthContext', () => ({

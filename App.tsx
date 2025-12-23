@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { I18nProvider } from './contexts/I18nContext';
 import { LogProvider } from './contexts/LogContext';
 import { SettingsProvider, useSettings } from './contexts/SettingsContext';
+import { ToastProvider } from './contexts/ToastContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AdminSubPage, Page } from './types'; // Page still used for ordering logic if needed, or remove
 import useInactivityTimer from './hooks/useInactivityTimer';
@@ -19,6 +20,7 @@ import QualityAlerts from './components/QualityAlerts';
 import AdminPanel from './components/AdminPanel';
 import Header from './components/common/Header';
 import GestureWrapper from './components/common/GestureWrapper';
+import ToastContainer from './components/common/ToastContainer';
 
 import LoginScreen from './components/LoginScreen';
 import UnauthorizedScreen from './components/UnauthorizedScreen';
@@ -173,6 +175,7 @@ const AppRoutes: React.FC = () => {
 
     return (
         <div className="flex flex-col h-screen w-screen bg-gray-100 dark:bg-gray-900 font-sans text-gray-900 dark:text-white transition-colors duration-300">
+            <ToastContainer />
             <Header />
             <main className="flex-1 overflow-hidden relative p-4 md:p-8">
                 <div key={location.pathname} className="absolute p-4 inset-0 overflow-auto pb-5">
@@ -225,9 +228,11 @@ const App: React.FC = () => {
                         <DataProvider>
                             <I18nProvider>
                                 <LineProvider>
-                                    <HashRouter>
-                                        <AppContent />
-                                    </HashRouter>
+                                    <ToastProvider>
+                                        <HashRouter>
+                                            <AppContent />
+                                        </HashRouter>
+                                    </ToastProvider>
                                 </LineProvider>
                             </I18nProvider>
                         </DataProvider>

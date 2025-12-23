@@ -2,8 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { useLine } from '../contexts/LineContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
-import { createLine, updateLine, deleteLine, getAllLines } from '../services/lineService';
-import { getStationsByLine, createStation, deleteStation, updateStation, WorkStation } from '../services/stationService';
+import { createLine, updateLine, deleteLine, getLines as getAllLines } from '../src/services/api/lines';
+import { getStations as getStationsByLine, createStation, deleteStation, updateStation, WorkStation } from '../src/services/api/stations';
 import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useData } from '../contexts/DataContext';
 
@@ -32,12 +32,12 @@ const getLineDescription = (line: { name: string; description?: string }) => {
 
     // Valida descrição normal
     if (!line.description) return null;
-    
+
     // Filtra se for UUID (bug anterior onde ID do usuário foi salvo como descrição)
     if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(line.description)) {
         return null;
     }
-    
+
     return line.description;
 };
 
@@ -57,12 +57,13 @@ const AdminLineManagement: React.FC = () => {
     // Form states
     const [lineName, setLineName] = useState('');
     const [lineDescription, setLineDescription] = useState('');
+    const [externalId, setExternalId] = useState('');
     const [stationName, setStationName] = useState('');
     const [stationDescription, setStationDescription] = useState('');
 
     const filteredLines = useMemo(() => {
         if (!selectedPlantId) return lines;
-        return lines.filter(l => l.plantId === selectedPlantId);
+        return lines.filter(l => l.plant_id === selectedPlantId);
     }, [lines, selectedPlantId]);
 
     const handleUpdateLine = async (e: React.FormEvent) => {
@@ -70,11 +71,16 @@ const AdminLineManagement: React.FC = () => {
         if (!editingLine || !lineName.trim()) return;
 
         try {
-            await updateLine(editingLine, { name: lineName, description: lineDescription });
+            await updateLine(editingLine, {
+                name: lineName,
+                external_id: externalId || undefined
+                // description not supported in new API
+            });
             await refreshLines();
             setEditingLine(null);
             setLineName('');
             setLineDescription('');
+            setExternalId('');
         } catch (error) {
             console.error('Error updating line:', error);
             alert('Erro ao atualizar linha');
@@ -85,6 +91,7 @@ const AdminLineManagement: React.FC = () => {
         setEditingLine(line.id);
         setLineName(getLineName(line.name));
         setLineDescription(getLineDescription(line) || '');
+        setExternalId(line.external_id || '');
         setIsCreatingLine(false);
     };
 
@@ -92,6 +99,7 @@ const AdminLineManagement: React.FC = () => {
         setEditingLine(null);
         setLineName('');
         setLineDescription('');
+        setExternalId('');
     };
 
     const handleCreateLine = async (e: React.FormEvent) => {
@@ -103,10 +111,15 @@ const AdminLineManagement: React.FC = () => {
         }
 
         try {
-            await createLine(lineName, lineDescription, currentUser.id, selectedPlantId);
+            await createLine({
+                name: lineName,
+                plant_id: selectedPlantId,
+                external_id: externalId || undefined
+            });
             await refreshLines();
             setLineName('');
             setLineDescription('');
+            setExternalId('');
             setIsCreatingLine(false);
         } catch (error) {
             console.error('Error creating line:', error);
@@ -149,8 +162,8 @@ const AdminLineManagement: React.FC = () => {
                 await updateStation(editingStationId, {
                     line_id: selectedLineForStations,
                     name: stationName,
-                    position: stations.find(s => s.id === editingStationId)?.position || stations.length + 1,
-                    description: stationDescription
+                    station_number: stations.find(s => s.id === editingStationId)?.station_number || stations.length + 1,
+                    // description not supported
                 });
                 setEditingStationId(null);
             } else {
@@ -159,9 +172,9 @@ const AdminLineManagement: React.FC = () => {
                 await createStation({
                     line_id: selectedLineForStations,
                     name: stationName,
-                    position: nextPosition,
-                    description: stationDescription
-                }, currentUser.id);
+                    station_number: nextPosition,
+                    // description not supported
+                });
             }
 
             await loadStations(selectedLineForStations);
@@ -176,7 +189,7 @@ const AdminLineManagement: React.FC = () => {
     const startEditingStation = (station: WorkStation) => {
         setEditingStationId(station.id);
         setStationName(station.name);
-        setStationDescription(station.description || '');
+        // setStationDescription(station.description || ''); // Not supported
     };
 
     const cancelEditingStation = () => {
@@ -235,6 +248,18 @@ const AdminLineManagement: React.FC = () => {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    ID Externo (Leading2Lean)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={externalId}
+                                    onChange={(e) => setExternalId(e.target.value)}
+                                    placeholder="Ex: 902B01"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                     Descrição
                                 </label>
                                 <textarea
@@ -257,6 +282,7 @@ const AdminLineManagement: React.FC = () => {
                                             setIsCreatingLine(false);
                                             setLineName('');
                                             setLineDescription('');
+                                            setExternalId('');
                                         }
                                     }}
                                     className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
@@ -279,9 +305,14 @@ const AdminLineManagement: React.FC = () => {
                                     <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                                         {getLineName(line.name)}
                                     </h3>
-                                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                    {/* <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                                         {line.station_count || 0} estações
-                                    </span>
+                                    </span> */}
+                                    {line.external_id && (
+                                        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                                            ID: {line.external_id}
+                                        </span>
+                                    )}
                                 </div>
                                 {getLineDescription(line) ? (
                                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{getLineDescription(line)}</p>
@@ -372,13 +403,14 @@ const AdminLineManagement: React.FC = () => {
                                             <div key={station.id} className="flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-800 rounded">
                                                 <div>
                                                     <span className="text-gray-700 dark:text-gray-300 font-medium">
-                                                        {station.position}. {station.name}
+                                                        {station.station_number}. {station.name}
                                                     </span>
+                                                    {/* Description not supported
                                                     {station.description && (
                                                         <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
                                                             - {station.description}
                                                         </span>
-                                                    )}
+                                                    )} */}
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <button

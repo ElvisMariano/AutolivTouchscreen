@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getDocumentAcknowledgments } from '../services/lineService';
+import { getDocumentAcknowledgments } from '../src/services/api/acknowledgments';
 
 export const useAcknowledgments = (documentIds: string[], shift: string) => {
     return useQuery({

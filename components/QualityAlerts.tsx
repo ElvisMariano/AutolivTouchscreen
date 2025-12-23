@@ -56,7 +56,10 @@ const QualityAlerts: React.FC = () => {
     }, [autoOpenDocId, alerts, setAutoOpenDocId]);
 
     const filteredAlerts = useMemo(() => {
-        let result = alerts.filter(a => !selectedLineId || a.lineId === selectedLineId);
+        // Don't show any alerts if no line is selected
+        if (!selectedLineId) return [];
+
+        let result = alerts.filter(a => a.lineId === selectedLineId);
         result = result.filter(isAlertActive);
         if (severityFilter !== 'all') {
             result = result.filter(alert => alert.severity === severityFilter);
@@ -168,57 +171,67 @@ const QualityAlerts: React.FC = () => {
             </div>
 
             <div className="flex-1 overflow-y-auto pr-2">
-                <ul className="space-y-4">
-                    {filteredAlerts.length > 0 ? filteredAlerts.map(alert => {
-                        const activeUnread = isUnread(alert);
-                        return (
-                            <li key={alert.id}>
-                                <button
-                                    onClick={() => handleAlertClick(alert)}
-                                    className={`
-                                        w-full text-left p-4 rounded-lg flex items-start gap-4 transition-all duration-300
-                                        ${activeUnread
-                                            ? 'bg-red-50 dark:bg-red-900/10 border-2 border-red-500 shadow-lg shadow-red-500/10 hover:bg-red-100 dark:hover:bg-red-900/20'
-                                            : 'bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 border-none'
-                                        }
-                                    `}
-                                >
-                                    {activeUnread && (
-                                        <div className="absolute top-2 right-2 flex h-3 w-3">
-                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                                        </div>
-                                    )}
-
-                                    {!alert.isRead && !activeUnread && <div className="w-4 h-4 bg-yellow-400 rounded-full mt-2 flex-shrink-0"></div>}
-
-                                    <div className="flex-1 relative">
-                                        <div className="flex justify-between items-center">
-                                            <h3 className={`text-2xl font-bold ${activeUnread ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
-                                                {alert.title}
-                                            </h3>
-                                            <span
-                                                className={`px-3 py-1 text-sm font-bold rounded-full text-white ${getSeverityClass(alert.severity)}`}
-                                            >
-                                                {alert.severity}
-                                            </span>
-                                        </div>
-                                        <p className="text-gray-700 dark:text-gray-300 mt-1">{alert.description}</p>
-                                        <p className="text-sm text-gray-600 dark:text-gray-500 mt-2">
-                                            {t('common.created')}: {new Date(alert.createdAt).toLocaleString(locale)} |
-                                            {t('qualityAlerts.validUntil')}: {new Date(alert.expiresAt).toLocaleString(locale)}
-                                            {alert.pdfUrl && <span className="ml-2 text-cyan-400 font-bold">📎 {t('qualityAlerts.pdfAttached')}</span>}
-                                        </p>
-                                    </div>
-                                </button>
-                            </li>
-                        );
-                    }) : (
-                        <div className="text-center py-10">
-                            <p className="text-2xl text-gray-600 dark:text-gray-500">{t('qualityAlerts.noAlerts')}</p>
+                {!selectedLineId ? (
+                    <div className="flex items-center justify-center h-full">
+                        <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm max-w-md">
+                            <div className="text-gray-400 mb-4 text-6xl">⚠️</div>
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('qualityAlerts.noLineSelected')}</h3>
+                            <p className="text-gray-500 dark:text-gray-400">{t('qualityAlerts.selectLineFirst')}</p>
                         </div>
-                    )}
-                </ul>
+                    </div>
+                ) : (
+                    <ul className="space-y-4">
+                        {filteredAlerts.length > 0 ? filteredAlerts.map(alert => {
+                            const activeUnread = isUnread(alert);
+                            return (
+                                <li key={alert.id}>
+                                    <button
+                                        onClick={() => handleAlertClick(alert)}
+                                        className={`
+                                            w-full text-left p-4 rounded-lg flex items-start gap-4 transition-all duration-300
+                                            ${activeUnread
+                                                ? 'bg-red-50 dark:bg-red-900/10 border-2 border-red-500 shadow-lg shadow-red-500/10 hover:bg-red-100 dark:hover:bg-red-900/20'
+                                                : 'bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 border-none'
+                                            }
+                                        `}
+                                    >
+                                        {activeUnread && (
+                                            <div className="absolute top-2 right-2 flex h-3 w-3">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                            </div>
+                                        )}
+
+                                        {!alert.isRead && !activeUnread && <div className="w-4 h-4 bg-yellow-400 rounded-full mt-2 flex-shrink-0"></div>}
+
+                                        <div className="flex-1 relative">
+                                            <div className="flex justify-between items-center">
+                                                <h3 className={`text-2xl font-bold ${activeUnread ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
+                                                    {alert.title}
+                                                </h3>
+                                                <span
+                                                    className={`px-3 py-1 text-sm font-bold rounded-full text-white ${getSeverityClass(alert.severity)}`}
+                                                >
+                                                    {alert.severity}
+                                                </span>
+                                            </div>
+                                            <p className="text-gray-700 dark:text-gray-300 mt-1">{alert.description}</p>
+                                            <p className="text-sm text-gray-600 dark:text-gray-500 mt-2">
+                                                {t('common.created')}: {new Date(alert.createdAt).toLocaleString(locale)} |
+                                                {t('qualityAlerts.validUntil')}: {new Date(alert.expiresAt).toLocaleString(locale)}
+                                                {alert.pdfUrl && <span className="ml-2 text-cyan-400 font-bold">📎 {t('qualityAlerts.pdfAttached')}</span>}
+                                            </p>
+                                        </div>
+                                    </button>
+                                </li>
+                            );
+                        }) : (
+                            <div className="text-center py-10">
+                                <p className="text-2xl text-gray-600 dark:text-gray-500">{t('qualityAlerts.noAlerts')}</p>
+                            </div>
+                        )}
+                    </ul>
+                )}
             </div>
 
             <Modal isOpen={!!selectedAlert} onClose={() => setSelectedAlert(null)} title={selectedAlert?.title || ''} size="full">
@@ -293,7 +306,7 @@ const QualityAlerts: React.FC = () => {
                             <div className="flex items-center gap-4">
                                 {currentShift && (
                                     <div className="hidden md:flex flex-col items-end mr-4">
-                                        <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-bold">Turno Atual</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-bold">{t('common.currentShift')}</span>
                                         <span className="text-sm font-medium text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
                                             {currentShift}
                                         </span>

@@ -6,7 +6,11 @@ import DocumentNotification from './DocumentNotification';
 import useUpdateCheck from '../../hooks/useUpdateCheck';
 import { useI18n } from '../../contexts/I18nContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSettings } from '../../contexts/SettingsContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+
+import { useLine } from '../../contexts/LineContext';
+import { useHourlyProduction } from '../../hooks/useHourlyProduction';
 
 interface HeaderProps {
     // navigateTo removed
@@ -14,30 +18,29 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = () => {
-    const { alerts, selectedLineId } = useData();
+    const { alerts } = useData();
+    const { selectedLine } = useLine();
     const { hasUpdate } = useUpdateCheck(60000);
     const { t, locale } = useI18n();
     const { isAdmin } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+    const { settings } = useSettings();
 
-    // Helper to map location.pathname to Page enum (optional, or just use paths directly in navigation)
-    // Page enum values are string 'Dashboard', 'WorkInstructions'. 
-    // We should map them to paths: /dashboard, /work-instructions or just use strings as paths?
-    // Implementation Plan said: /dashboard, /work-instructions.
-
-    // For now, let's assume we pass strings to navigate().
-    // But page enum is used for Title.
-
-    // Note: navigateTo in props took Page enum. Now we navigate to paths.
-    // Dashboard -> '/'
+    // Use configured refresh interval or default to 300 seconds (5 minutes)
+    const refreshInterval = settings.productionRefreshInterval || 300;
+    // Fetch production data for the selected line
+    const { production, loading: productionLoading } = useHourlyProduction(selectedLine?.external_id, refreshInterval);
 
     const activeAlertsCount = React.useMemo(() => {
+        // Don't show any alerts if no line is selected
+        if (!selectedLine?.id) return 0;
+
         return alerts
-            .filter(alert => (!selectedLineId || alert.lineId === selectedLineId))
+            .filter(alert => alert.lineId === selectedLine.id)
             .filter(isAlertActive)
             .length;
-    }, [alerts, selectedLineId]);
+    }, [alerts, selectedLine]);
 
     const Clock: React.FC = () => {
         const [time, setTime] = React.useState(new Date());
@@ -78,6 +81,20 @@ const Header: React.FC<HeaderProps> = () => {
             </div>
 
             <div className="flex items-center space-x-2 md:space-x-6">
+                {/* Production Counters Gadget */}
+                {selectedLine && (production !== null || productionLoading) && (
+                    <div className="bg-white dark:bg-gray-900 px-3 py-1 md:px-5 md:py-2 rounded-xl border border-blue-200 dark:border-blue-900 shadow-sm flex flex-col items-center justify-center min-w-[100px] md:min-w-[140px]">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-bold">{t('common.hourlyProduction')}</span>
+                        {productionLoading ? (
+                            <div className="h-6 w-16 bg-gray-200 dark:bg-gray-800 animate-pulse rounded mt-1"></div>
+                        ) : (
+                            <span className="text-lg md:text-2xl font-bold text-blue-600 dark:text-blue-400 font-mono">
+                                {production}
+                            </span>
+                        )}
+                    </div>
+                )}
+
                 {hasUpdate && (
                     <button onClick={() => window.location.reload()} className="px-2 py-1 md:px-4 md:py-2 bg-green-600 rounded-lg hover:bg-green-700 transition-colors animate-pulse font-bold shadow-lg text-white text-xs md:text-base">
                         {t('common.update')}

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../../contexts/DataContext';
+import { useLine } from '../../contexts/LineContext';
+import { useUnreadDocuments } from '../../hooks/useUnreadDocuments';
 import { BellIcon, EyeIcon } from './Icons';
 import Modal from './Modal';
 import { DocumentCategory } from '../../types';
@@ -10,7 +12,13 @@ interface DocumentNotificationProps {
 }
 
 const DocumentNotification: React.FC<DocumentNotificationProps> = () => {
-    const { unreadDocuments, setAutoOpenDocId } = useData();
+    const { setAutoOpenDocId, currentShift, activeShifts } = useData();
+    const { selectedLine } = useLine();
+    const selectedLineId = selectedLine?.id || null;
+
+    // Use hook that respects LineContext instead of DataContext auto-selection
+    const unreadDocuments = useUnreadDocuments(selectedLineId, currentShift, activeShifts);
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const navigate = useNavigate();
 
@@ -42,7 +50,7 @@ const DocumentNotification: React.FC<DocumentNotificationProps> = () => {
         navigate(targetPath);
     };
 
-    if (unreadDocuments.length === 0) return null;
+    if (!selectedLineId || unreadDocuments.length === 0) return null;
 
     return (
         <>
@@ -97,15 +105,6 @@ const DocumentNotification: React.FC<DocumentNotificationProps> = () => {
                                 </div>
                             </div>
                         ))}
-                    </div>
-
-                    <div className="mt-6 flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <button
-                            onClick={() => setIsModalOpen(false)}
-                            className="px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                        >
-                            Fechar (Decidir depois)
-                        </button>
                     </div>
                 </div>
             </Modal>

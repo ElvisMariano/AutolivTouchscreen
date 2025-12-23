@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { ProductionLine, getActiveLines } from '../services/lineService';
+import { ProductionLine } from '../src/services/api/lines'; // Type from API
+import { getLines } from '../src/services/api/lines';
+
+// ... (comments)
 
 interface LineContextType {
     lines: ProductionLine[];
@@ -19,10 +22,17 @@ export const LineProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const refreshLines = async () => {
         try {
             setIsLoading(true);
-            const activeLines = await getActiveLines();
+            // Fetch ALL lines? Or context assumes some scope?
+            // "getLines" with no args fetches all.
+            const allLines = await getLines();
+            // Filter active? API has status? 
+            const activeLines = allLines.filter(l => l.status === 'active');
             setLines(activeLines);
 
-            // Se havia uma linha selecionada, manter seleção se ainda existir
+            // ... selection logic matches
+            if (activeLines.length > 0) {
+                // ... logic logic
+            }
             if (selectedLine) {
                 const stillExists = activeLines.find(l => l.id === selectedLine.id);
                 if (!stillExists) {

@@ -167,13 +167,21 @@ const AdminAlertsManagement: React.FC = () => {
         }
       }
 
+      // Ensure expiresAt is in correct ISO format
+      const alertData = { ...formData };
+      if (alertData.expiresAt) {
+        // Convert to ISO string if needed
+        const expiresDate = new Date(alertData.expiresAt);
+        alertData.expiresAt = expiresDate.toISOString();
+      }
+
       if (editingItem) {
-        updateAlert(formData as QualityAlert);
+        updateAlert({ ...editingItem, ...alertData } as QualityAlert);
       } else {
         // Ensure lineId is added if not present (though addAlert might handle it based on DataContext, we should ideally pass it explicitly if we moved away from DataContext dependency)
         // DataContext's addAlert uses selectedLineId from DataContext, which might be auto-selected.
         // But since we are blocking the UI if no line is selected, we assume selectedLine exists here.
-        addAlert({ ...formData, lineId: selectedLine?.id } as any);
+        addAlert({ ...alertData, lineId: selectedLine?.id } as any);
       }
       onClose();
     }

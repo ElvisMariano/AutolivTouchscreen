@@ -1,0 +1,17 @@
+[
+  {
+    "COLUMN_NAME": "id"
+  },
+  {
+    "COLUMN_NAME": "document_id"
+  },
+  {
+    "COLUMN_NAME": "user_id"
+  },
+  {
+    "COLUMN_NAME": "acknowledged_at"
+  },
+  {
+    "COLUMN_NAME": "shift"
+  }
+]

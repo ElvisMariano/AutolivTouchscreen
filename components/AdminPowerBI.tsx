@@ -5,14 +5,16 @@ import Modal from './common/Modal';
 import { PencilSquareIcon, TrashIcon } from './common/Icons';
 import { useI18n } from '../contexts/I18nContext';
 import { useLine } from '../contexts/LineContext';
-import { addLineDocument, updateLineDocument } from '../services/lineService';
+import { createDocument as addLineDocument, updateDocument as updateLineDocument } from '../src/services/api/documents';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 
 const AdminPowerBI: React.FC = () => {
     const { biReports, addBiReport, updateBiReport, deleteBiReport } = useData();
     const { t } = useI18n();
     const { selectedLine } = useLine(); // Retrieve selectedLine
     const { currentUser } = useAuth(); // Retrieve currentUser here
+    const toast = useToast();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<PowerBiReport | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -127,48 +129,42 @@ const AdminPowerBI: React.FC = () => {
             e.preventDefault();
 
             if (!selectedLine) {
-                alert('Por favor, selecione uma linha de produção primeiro.');
+                toast.warning('Por favor, selecione uma linha de produção primeiro.');
                 return;
             }
             if (editingItem) {
-                updateBiReport({ ...editingItem, ...formData } as PowerBiReport);
-
+                // Update report via API (don't use updateBiReport to avoid duplicate update)
                 try {
                     await updateLineDocument(editingItem.id, {
                         title: formData.name,
-                        document_id: formData.embedUrl,
-                        version: '1'
+                        document_url: formData.embedUrl,
+                        version: 1
                     });
                     console.log('Relatório atualizado no banco.');
+                    toast.success(t('common.success'));
                 } catch (error) {
                     console.error('Erro ao atualizar relatório:', error);
+                    toast.error(t('common.error'));
                 }
             } else {
 
                 if (currentUser && formData.embedUrl && formData.name) {
                     try {
-                        const newReport: any = {
-                            id: Date.now().toString(), // Temporary ID until refresh
-                            name: formData.name,
-                            embedUrl: formData.embedUrl,
-                            lineId: selectedLine.id
-                        };
-
-                        // Update local state immediately
-                        addBiReport(newReport);
-
-                        await addLineDocument(
-                            selectedLine.id,
-                            'report',
-                            formData.embedUrl,
-                            formData.name,
-                            currentUser.id,
-                            '1',
-                            { line_name: selectedLine.name }
-                        );
+                        // Create document via API (don't use addBiReport to avoid duplicate insertion)
+                        await addLineDocument({
+                            line_id: selectedLine.id,
+                            category: 'report',
+                            title: formData.name,
+                            document_url: formData.embedUrl,
+                            version: 1,
+                            uploaded_by: currentUser.id,
+                            metadata: { line_name: selectedLine.name }
+                        });
                         console.log('Relatório vinculado à linha');
+                        toast.success(t('common.success'));
                     } catch (error) {
                         console.error('Erro ao vincular:', error);
+                        toast.error(t('common.error'));
                     }
                 }
             }
@@ -257,35 +253,35 @@ const AdminPowerBI: React.FC = () => {
 
                             try {
                                 if (sqdcmReport) {
-                                    // Update
-                                    const updated = { ...sqdcmReport, embedUrl: sqdcmLink };
-                                    updateBiReport(updated);
-                                    await updateLineDocument(sqdcmReport.id, {
-                                        document_id: sqdcmLink
+                                    // Update SQDCM report via API (don't use updateBiReport to avoid duplicate update)
+                                    const updated = await updateLineDocument(sqdcmReport.id, {
+                                        document_url: sqdcmLink
                                     });
+                                    // Update local state with the new data
+                                    setSqdcmReport({ ...sqdcmReport, embedUrl: sqdcmLink });
                                 } else {
-                                    // Create
-                                    const newReport: any = {
-                                        id: Date.now().toString(),
+                                    // Create SQDCM report via API (don't use addBiReport to avoid duplicate insertion)
+                                    const created = await addLineDocument({
+                                        line_id: selectedLine.id,
+                                        category: 'report',
+                                        title: 'SQDCM',
+                                        document_url: sqdcmLink,
+                                        version: 1,
+                                        uploaded_by: currentUser.id,
+                                        metadata: { line_name: selectedLine.name }
+                                    });
+                                    // Update local state with the created document (with real ID from DB)
+                                    setSqdcmReport({
+                                        id: created.id,
                                         name: 'SQDCM',
                                         embedUrl: sqdcmLink,
                                         lineId: selectedLine.id
-                                    };
-                                    addBiReport(newReport);
-                                    await addLineDocument(
-                                        selectedLine.id,
-                                        'report',
-                                        sqdcmLink,
-                                        'SQDCM',
-                                        currentUser.id,
-                                        '1',
-                                        { line_name: selectedLine.name }
-                                    );
+                                    });
                                 }
-                                alert(t('common.success'));
+                                toast.success(t('common.success'));
                             } catch (err) {
-                                console.error(err);
-                                alert(t('common.error'));
+                                console.error('Erro ao vincular/atualizar SQDCM:', err);
+                                toast.error(t('common.error'));
                             }
                         }}
                         disabled={!selectedLine || !sqdcmLink.trim()}

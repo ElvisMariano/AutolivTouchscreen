@@ -25,6 +25,34 @@ import {
     Plant
 } from '../types';
 
+/**
+ * DataContext - Gerenciamento de Dados da Aplicação
+ * 
+ * @description
+ * Contexto responsável por gerenciar todos os dados da aplicação incluindo:
+ * - Linhas de produção, plantas, documentos, alertas
+ * - Dados de usuários, relatórios BI, apresentações
+ * - Cálculo de documentos não lidos (unreadDocuments)
+ * 
+ * @important
+ * COMPORTAMENTO AUTO-SELECT: Este contexto SEMPRE auto-seleciona a primeira linha
+ * disponível quando nenhuma está selecionada. Isso garante que dados sempre
+ * estejam disponíveis para operações de negócio.
+ * 
+ * @usage
+ * Use este contexto para:
+ * - Acessar dados de documentos, alertas, relatórios
+ * - Operações CRUD em entidades
+ * - Lógica de negócio que requer dados
+ * 
+ * NÃO use para:
+ * - Verificar se usuário selecionou uma linha na UI (use LineContext)
+ * - Renderização condicional baseada em seleção de usuário (use LineContext)
+ * 
+ * @see LineContext Para gerenciamento de seleção de linha na UI
+ */
+
+
 interface DataContextType {
     lines: ProductionLine[];
     plants: Plant[];
@@ -82,7 +110,7 @@ interface DataContextType {
     deleteAlert: (id: string) => void;
     // CRUD Plants
     addPlant: (name: string, location: string) => Promise<{ success: boolean; data?: Plant; error?: string }>;
-    updatePlant: (id: string, updates: Partial<Plant>) => Promise<boolean>;
+    updatePlant: (id: string, updates: Partial<Plant>) => Promise<{ success: boolean; error?: any }>;
     deletePlant: (id: string) => Promise<boolean>;
     // Machine Management
     addMachine: (lineId: string, machineData: Partial<Machine> & { name: string }) => void;
@@ -215,8 +243,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             await updatePlantMutation.mutateAsync({ id, updates });
             logEvent('plant', 'update', id, 'Plant');
-            return true;
-        } catch (e) { return false; }
+            return { success: true };
+        } catch (e: any) {
+            console.error('Update plant error:', e);
+            return { success: false, error: e.message || e };
+        }
     };
     const deletePlantFn = async (id: string) => {
         try {
@@ -335,17 +366,25 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const updateAlert = (alert: QualityAlert) => {
         // This is tricky as updateDocMutation is generic. 
         // But updateLineDocument in backend updates metadata too.
+        // Don't send document_url if it's from metadata (pdfUrl in alert)
+        const updates: any = {
+            title: alert.title,
+            metadata: {
+                severity: alert.severity,
+                description: alert.description,
+                expiresAt: alert.expiresAt,
+                pdfName: alert.pdfName
+            }
+        };
+
+        // Only include document_url if pdfUrl exists
+        if (alert.pdfUrl) {
+            updates.document_url = alert.pdfUrl;
+        }
+
         updateDocMutation.mutate({
             id: alert.id,
-            updates: {
-                title: alert.title,
-                metadata: {
-                    severity: alert.severity,
-                    description: alert.description,
-                    expiresAt: alert.expiresAt,
-                    pdfName: alert.pdfName
-                }
-            }
+            updates
         });
         logEvent('alert', 'update', alert.id, 'Alert');
     };
@@ -406,12 +445,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // activeShifts is now from hook
 
     // Calculate unread docs for selected line
-    const selectedLineDocs = docs.filter(d => d.lineId === selectedLineId);
+    const selectedLineDocs = docs.filter(d => {
+        // Strict filtering: must have lineId and it must match selectedLineId
+        if (!d.lineId || !selectedLineId) return false;
+        return String(d.lineId) === String(selectedLineId);
+    });
 
     // Filter active alerts for selected line
     const selectedLineAlerts = alerts.filter(a => {
         const isActive = new Date(a.expiresAt).getTime() > Date.now();
-        return (a.lineId === selectedLineId || !a.lineId) && isActive;
+        if (!isActive) return false;
+
+        // Strict filtering: must have lineId and it must match selectedLineId
+        if (!a.lineId || !selectedLineId) return false;
+        return String(a.lineId) === String(selectedLineId);
     });
 
     // Dependencies need to be stable

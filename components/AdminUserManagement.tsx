@@ -4,7 +4,7 @@ import { User } from '../types';
 import Modal from './common/Modal';
 import { PencilSquareIcon, TrashIcon } from './common/Icons';
 import { useI18n } from '../contexts/I18nContext';
-import { getRoles } from '../services/authService';
+import { getRoles } from '../src/services/api/roles';
 
 const AdminUserManagement: React.FC = () => {
     const { users, plants, addUser, updateUser, deleteUser } = useData();
