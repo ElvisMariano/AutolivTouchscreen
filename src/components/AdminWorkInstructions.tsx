@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { Document, DocumentCategory } from '../types';
 import Modal from './common/Modal';
+import ConfirmationModal from './common/ConfirmationModal';
 import { PencilSquareIcon, TrashIcon } from './common/Icons';
 
 import { cacheUrl, hasCache, putBlob } from '../services/offlineCache';
@@ -92,15 +93,8 @@ const AdminWorkInstructions: React.FC = () => {
     };
 
     const handleDelete = async (id: string) => {
-        if (window.confirm(t('common.confirmDelete'))) {
-            try {
-                await deleteDocument(id);
-                queryClient.invalidateQueries({ queryKey: ['documents'] });
-            } catch (error) {
-                console.error('Error deleting instruction:', error);
-                alert(t('common.errorDeleting'));
-            }
-        }
+        setItemToDelete(id);
+        setIsDeleteModalOpen(true);
     };
 
     const handleEdit = (instruction: Document) => {
@@ -476,15 +470,15 @@ const AdminWorkInstructions: React.FC = () => {
 
             {isModalOpen && <FormModal onClose={closeModal} />}
 
-            <Modal isOpen={isDeleteModalOpen} onClose={cancelDelete} title={t('admin.confirmDelete')}>
-                <div className="space-y-6">
-                    <p className="text-xl text-gray-800 dark:text-gray-300">{t('admin.deleteInstructionConfirm')}</p>
-                    <div className="flex justify-end space-x-4">
-                        <button onClick={cancelDelete} className="px-6 py-3 bg-gray-600 rounded-lg text-xl hover:bg-gray-500 text-white">{t('common.cancel')}</button>
-                        <button onClick={confirmDelete} className="px-6 py-3 bg-red-600 rounded-lg text-xl hover:bg-red-500 text-white">{t('common.delete')}</button>
-                    </div>
-                </div>
-            </Modal>
+            <ConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={cancelDelete}
+                onConfirm={confirmDelete}
+                title={t('admin.confirmDelete')}
+                message={t('admin.deleteInstructionConfirm')}
+                confirmText={t('common.delete')}
+                variant="danger"
+            />
         </div>
     );
 };

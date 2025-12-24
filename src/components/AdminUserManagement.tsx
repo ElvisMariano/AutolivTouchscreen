@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { User } from '../types';
 import Modal from './common/Modal';
+import ConfirmationModal from './common/ConfirmationModal';
 import { PencilSquareIcon, TrashIcon } from './common/Icons';
 import { useI18n } from '../contexts/I18nContext';
 import { getRoles } from '@/services/api/roles';
@@ -12,6 +13,8 @@ const AdminUserManagement: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [roles, setRoles] = useState<Array<{ id: string; name: string }>>([]);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
     const openModal = (user: User | null = null) => {
         setEditingUser(user);
@@ -32,9 +35,21 @@ const AdminUserManagement: React.FC = () => {
     }, []);
 
     const handleDelete = (id: string) => {
-        if (window.confirm(t('admin.deleteUserConfirm'))) {
-            deleteUser(id);
+        setUserToDelete(id);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (userToDelete) {
+            await deleteUser(userToDelete);
+            setIsDeleteModalOpen(false);
+            setUserToDelete(null);
         }
+    };
+
+    const cancelDelete = () => {
+        setIsDeleteModalOpen(false);
+        setUserToDelete(null);
     };
 
     const getPlantNames = (plantIds?: string[]) => {
@@ -222,6 +237,16 @@ const AdminUserManagement: React.FC = () => {
                 </table>
             </div>
             {isModalOpen && <UserFormModal onClose={closeModal} />}
+
+            <ConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={cancelDelete}
+                onConfirm={confirmDelete}
+                title={t('admin.confirmDelete')}
+                message={t('admin.deleteUserConfirm')}
+                confirmText={t('common.delete')}
+                variant="danger"
+            />
         </div>
     );
 };
