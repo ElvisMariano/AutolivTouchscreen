@@ -87,38 +87,54 @@ app.get('/api/l2l/test-connection', l2lRouter); // Apenas test-connection é pú
 
 const axios = require('axios');
 app.use('/api/1.0', async (req, res) => {
-    // Check if method is GET, otherwise call next() or handle?
-    // Let's forward GET only for now as requested, or all?
+    // Only allow GET requests for now
     if (req.method !== 'GET') return res.status(405).send('only GET allowed for proxy');
 
     try {
         const l2lBaseUrl = process.env.API_LEADING2LEAN_BASE_URL || 'https://autoliv-mx.leading2lean.com';
-        // Remove '/api/1.0' prefix from request path as it is part of l2lBaseUrl or we construct full url
-        // Frontend calls: /api/1.0/lines/?parameters...
-        // We want to call: https://autoliv-mx.leading2lean.com/api/1.0/lines/?parameters...
+        const apiKey = process.env.L2L_API_KEY;
+
+        if (!apiKey) {
+            console.error('❌ L2L_API_KEY not configured in backend');
+            return res.status(500).json({ error: 'Server configuration error' });
+        }
 
         // Construct target URL
-        // If l2lBaseUrl ends with /api/1.0, we just append the path residue
-        // BUT env variable is usually full base URL: https://autoliv-mx.leading2lean.com/api/1.0/
+        // req.originalUrl is like /api/1.0/lines/?site=902...
+        // We want to forward to https://.../api/1.0/lines/?auth=KEY&site=902...
 
-        // Let's assume process.env.API_LEADING2LEAN_BASE_URL is the root or api root.
-        // It's safer to just reconstruct using URL object if possible, but simple string replacement works too.
+        // Remove the local prefix /api/1.0 to get the relative path and query
+        // But keep the structure as L2L expects /api/1.0/...
+        // The simplest way:
+        // 1. Get the path after /api/1.0
+        // req.path is like /lines/ (without query params in express router usage usually, but here app.use on path mount)
+        // With app.use('/api/1.0'), req.url is relative to the mount point.
+        // e.g. req.url is /lines/?site=902
 
-        // req.originalUrl includes query params: /api/1.0/lines/?auth=...
-        const targetPath = req.originalUrl.replace('/api/1.0', '/api/1.0'); // No-op, effectively matches structure
+        const endpoint = req.url; // /lines/?site=... or /pitches/...
 
-        // Actually, we just need to prepend the external domain.
-        // Extract /api/1.0/... from req.originalUrl
-        const path = req.originalUrl; // /api/1.0/lines/?...
+        // Construct full L2L URL
+        // l2lBaseUrl usually includes /api/1.0? No, let's assume it's just the domain or domain+api root
+        // If env L2L_API_BASE_URL is 'https://autoliv-mx.leading2lean.com', then we need to append /api/1.0
 
-        // Base domain
-        const domain = 'https://autoliv-mx.leading2lean.com';
+        // Let's rely on standard L2L API structure. 
+        // We will treat l2lBaseUrl as the root domain if it doesn't end with /api/1.0
 
-        const targetUrl = `${domain}${path}`;
+        let targetBase = l2lBaseUrl;
+        if (!targetBase.endsWith('/api/1.0') && !targetBase.endsWith('/api/1.0/')) {
+            // Append /api/1.0 if missing
+            targetBase = targetBase.replace(/\/+$/, '') + '/api/1.0';
+        }
 
-        console.log(`🔀 Proxying L2L: ${path} -> ${targetUrl}`);
+        // Final URL construction
+        const targetUrlObj = new URL(targetBase + endpoint);
 
-        const response = await axios.get(targetUrl);
+        // Inject Auth
+        targetUrlObj.searchParams.append('auth', apiKey);
+
+        console.log(`🔀 Proxying L2L: ${endpoint} -> ${targetUrlObj.origin}${targetUrlObj.pathname}`);
+
+        const response = await axios.get(targetUrlObj.toString());
         res.json(response.data);
     } catch (error) {
         console.error('❌ Proxy Error:', error.message);

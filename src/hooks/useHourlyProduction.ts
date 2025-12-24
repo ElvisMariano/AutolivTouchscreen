@@ -7,7 +7,6 @@ const API_BASE_URL = env.VITE_BACKEND_URL || 'http://localhost:3001';
 // L2L is now proxied via the Backend
 const BASE_URL = API_BASE_URL;
 
-const API_KEY = env.VITE_API_LEADING2LEAN_KEY;
 
 interface PitchData {
     id: number;
@@ -46,21 +45,13 @@ export const useHourlyProduction = (lineExternalId: string | undefined, refreshI
         }
 
         try {
-            const url = new URL('/api/1.0/lines/', BASE_URL); // Assumes BASE_URL includes domain
-            // If BASE_URL is full path including /api/..., we need to adjust.
-            // Original script: process.env.API_LEADING2LEAN_BASE_URL
-            // env content: https://autoliv-mx.leading2lean.com/api/1.0/documents/list_bycategory/?auth=
-            // Wait, the env BASE_URL seems to point to a specific endpoint! 
-            // The original script used: 
-            // const BASE_URL = process.env.API_LEADING2LEAN_BASE_URL;
-            // const endpoint = '/api/1.0/pitches/';
-            // const linesEndpoint = '/api/1.0/lines/';
-            // 
-            // And constructed: new URL(linesEndpoint, BASE_URL);
+            // Frontend calls /api/1.0/lines/ directly relative to BASE_URL (backend)
+            // Backend will proxy this to L2L and inject auth
             const targetUrl = new URL('/api/1.0/lines/', BASE_URL);
-            targetUrl.searchParams.append('auth', API_KEY);
             targetUrl.searchParams.append('site', SITE_ID);
             targetUrl.searchParams.append('externalid', externalId);
+
+            console.log("🚀 Fetching Internal Line ID from:", targetUrl.toString());
 
             const response = await fetch(targetUrl.toString());
             if (!response.ok) {
@@ -106,7 +97,7 @@ export const useHourlyProduction = (lineExternalId: string | undefined, refreshI
             const pitchStart = `${YYYY}-${MM}-${DD} ${HH}:00:00`;
 
             const targetUrl = new URL('/api/1.0/pitches/', BASE_URL);
-            targetUrl.searchParams.append('auth', API_KEY);
+            // Auth is injected by backend proxy
             targetUrl.searchParams.append('site', SITE_ID);
             targetUrl.searchParams.append('line', internalId.toString());
             targetUrl.searchParams.append('pitch_start', pitchStart);
