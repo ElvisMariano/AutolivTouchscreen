@@ -439,7 +439,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
                         <li key={`menu-item-${page}`}>
                             <button
                                 onClick={() => setSubPage(page)}
-                                className={`w-full flex items-center gap-3 p-4 rounded-md transition-colors text-lg ${subPage === page
+                                className={`w-full flex items-center gap-2 p-3 rounded-md transition-colors text-lg ${subPage === page
                                     ? 'bg-cyan-600 text-white font-bold'
                                     : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
                                     }`}
@@ -461,7 +461,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
                                 window.location.reload();
                             }
                         }}
-                        className="w-full flex items-center gap-3 p-4 rounded-md transition-colors text-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        className="w-full flex items-center gap-3 p-2 rounded-md transition-colors text-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                     >
                         <ArrowRightOnRectangleIcon className="h-6 w-6 flex-shrink-0" />
                         <span className="text-left">{t('common.logout') || 'Sair'}</span>
@@ -470,7 +470,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
             </div>
             <div
                 ref={contentRef}
-                className="flex-1 min-h-0 bg-white dark:bg-gray-800 p-8 rounded-lg overflow-auto cursor-grab active:cursor-grabbing transition-colors duration-300 shadow-lg"
+                className="flex-1 min-h-0 bg-white dark:bg-gray-800 p-4 rounded-lg overflow-auto cursor-grab active:cursor-grabbing transition-colors duration-300 shadow-lg"
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
