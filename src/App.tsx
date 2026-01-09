@@ -58,12 +58,15 @@ const AppRoutes: React.FC = () => {
     useInactivityTimer(handleTimeout, settings.inactivityTimeout * 1000);
 
     // Stand-by timeout (apenas se habilitado e linha selecionada)
+    // Stand-by timeout (apenas se habilitado, linha selecionada E na dashboard)
     const handleStandbyTimeout = useCallback(() => {
-        if (settings.standbyEnabled && selectedLine && selectedPlant) {
+        const isDashboard = location.pathname === '/' || location.pathname === '/index.html';
+
+        if (settings.standbyEnabled && selectedLine && selectedPlant && isDashboard) {
             console.log("Stand-by timeout. Showing standby screen.");
             setShowStandby(true);
         }
-    }, [settings.standbyEnabled, selectedLine, selectedPlant]);
+    }, [settings.standbyEnabled, selectedLine, selectedPlant, location.pathname]);
 
     useInactivityTimer(handleStandbyTimeout, settings.standbyTimeout * 1000);
 
