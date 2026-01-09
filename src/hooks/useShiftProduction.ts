@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+import apiClient from '../services/apiClient';
 
 export interface ShiftProductionData {
     target: number;
@@ -49,62 +48,49 @@ export const useShiftProduction = (
         setError(null);
 
         try {
-            // Primeiro, obter o ID interno da linha usando external_id
-            // A API L2L usa IDs internos numéricos, não external_id
-            const linesUrl = new URL('/api/1.0/lines/', API_BASE_URL);
-            linesUrl.searchParams.append('site', siteId);
-            linesUrl.searchParams.append('externalid', lineId);
-
             console.log(`🔄 [useShiftProduction] Buscando ID interno para external_id: ${lineId}`);
 
-            const linesResponse = await fetch(linesUrl.toString());
+            // Busca linhas usando apiClient (já inclui autenticação se necessário, e base URL)
+            const linesResponse = await apiClient.get('/1.0/lines/', {
+                params: {
+                    site: siteId,
+                    externalid: lineId
+                }
+            });
 
-            if (!linesResponse.ok) {
-                throw new Error(`Falha ao buscar ID da linha: ${linesResponse.status}`);
-            }
-
-            const linesJson = await linesResponse.json();
-
-            if (!linesJson.success || !linesJson.data || linesJson.data.length === 0) {
+            // Verifica sucesso da resposta (apiClient joga erro se status != 2xx)
+            // A API retorna { success: true, data: [...] }
+            if (!linesResponse.data?.success || !linesResponse.data?.data || linesResponse.data.data.length === 0) {
                 throw new Error(`Linha não encontrada com external_id: ${lineId}`);
             }
 
-            const internalLineId = linesJson.data[0].id; // ID numérico interno
-
+            const internalLineId = linesResponse.data.data[0].id;
             console.log(`✅ [useShiftProduction] Convertido ${lineId} → ID interno: ${internalLineId}`);
 
-            // Agora buscar os dados do turno com o ID interno
-            const targetUrl = new URL('/api/l2l/shift-production', API_BASE_URL);
-            targetUrl.searchParams.append('lineId', internalLineId.toString());
-            targetUrl.searchParams.append('siteId', siteId);
-            targetUrl.searchParams.append('shiftStart', shiftStart);
-            targetUrl.searchParams.append('shiftEnd', shiftEnd);
+            // Busca produção
+            console.log(`🔄 [useShiftProduction] Buscando dados do turno (ID: ${internalLineId})`);
 
-            console.log(`🔄 [useShiftProduction] Buscando dados do turno:`, {
-                internalLineId,
-                siteId,
-                shiftStart,
-                shiftEnd
+            const response = await apiClient.get('/l2l/shift-production', {
+                params: {
+                    lineId: internalLineId,
+                    siteId,
+                    shiftStart,
+                    shiftEnd
+                }
             });
 
-            const response = await fetch(targetUrl.toString());
-
-            if (!response.ok) {
-                throw new Error(`HTTP Error ${response.status}`);
-            }
-
-            const json = await response.json();
-
-            if (json.success && json.data) {
-                setData(json.data);
+            if (response.data?.success && response.data?.data) {
+                setData(response.data.data);
                 setLastUpdated(new Date());
-                console.log(`✅ [useShiftProduction] Dados recebidos:`, json.data);
+                console.log(`✅ [useShiftProduction] Dados recebidos:`, response.data.data);
             } else {
-                throw new Error(json.error || 'Erro ao buscar dados do turno');
+                throw new Error(response.data?.error || 'Erro ao buscar dados do turno');
             }
+
         } catch (err: any) {
-            setError(err.message || 'Erro ao buscar dados de produção do turno');
             console.error('❌ [useShiftProduction] Erro:', err);
+            // apiClient errors are thrown as Error objects with message
+            setError(err.message || 'Erro ao buscar dados de produção do turno');
         } finally {
             setLoading(false);
         }
