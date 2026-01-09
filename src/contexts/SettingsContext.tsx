@@ -19,6 +19,8 @@ const DEFAULT_SETTINGS: SystemSettings = {
     gestureSensitivity: 100,
     shiftCheckInterval: 60,
     productionRefreshInterval: 300, // 5 minutes default
+    standbyEnabled: false,
+    standbyTimeout: 300, // 5 minutes default
 };
 
 interface SettingsContextType {

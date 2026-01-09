@@ -23,4 +23,7 @@ router.post('/sync/all', l2lController.syncAll);
 // GET /api/l2l/logs - Obter logs de sincronização
 router.get('/logs', l2lController.getLogs);
 
+// GET /api/l2l/shift-production - Obter dados de produção do turno
+router.get('/shift-production', l2lController.getShiftProductionData);
+
 module.exports = router;

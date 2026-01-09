@@ -8,6 +8,7 @@ import { hasCache } from '../services/offlineCache';
 import { useDocuments } from '../hooks/useDocuments';
 import { useUnreadDocuments } from '../hooks/useUnreadDocuments';
 import { useLine } from '../contexts/LineContext';
+import { useShift } from '../contexts/ShiftContext';
 import { useLog } from '../contexts/LogContext';
 
 const AcceptanceCriteria: React.FC = () => {
@@ -23,9 +24,10 @@ const AcceptanceCriteria: React.FC = () => {
     const {
         autoOpenDocId,
         setAutoOpenDocId,
-        currentShift,
-        activeShifts // Needed for unread hook
     } = useData();
+
+    // Shift Logic
+    const { currentShift, activeShifts } = useShift();
 
     // 3. Derived Data
     const unreadDocuments = useUnreadDocuments(selectedLineId, currentShift, activeShifts);

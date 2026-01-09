@@ -135,6 +135,28 @@ async function getDocumentViewInfo(documentId, siteId) {
 }
 
 /**
+ * Buscar dados de produção do turno atual
+ * Endpoint: /pitches/
+ * Retorna array de pitches do turno para agregação
+ * @param {string} lineId - ID interno da linha (não external_id)
+ * @param {string} shiftStartTime - Data/hora de início do turno (formato: YYYY-MM-DD HH:MM:SS)
+ * @param {string} shiftEndTime - Data/hora de fim do turno (formato: YYYY-MM-DD HH:MM:SS)
+ * @param {string} siteId - ID do site
+ * @returns {Promise<Array>} Array de pitches do turno
+ */
+async function getShiftProduction(lineId, shiftStartTime, shiftEndTime, siteId) {
+    const params = {
+        site: siteId,
+        line: lineId,
+        pitch_start__gte: shiftStartTime,
+        pitch_end__lte: shiftEndTime,
+        limit: 2000 // Limite máximo da API
+    };
+
+    return fetchFromL2L('/pitches/', params);
+}
+
+/**
  * Testar conexão com API L2L
  */
 async function testConnection() {
@@ -154,5 +176,6 @@ module.exports = {
     getDocuments,
     getDocumentsByCategory,
     getDocumentViewInfo,
+    getShiftProduction,
     testConnection,
 };

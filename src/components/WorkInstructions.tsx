@@ -19,7 +19,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useDocuments } from '../hooks/useDocuments';
 import { useUnreadDocuments } from '../hooks/useUnreadDocuments';
 import { useLine } from '../contexts/LineContext'; // Use LineContext for selection
-import { useShiftLogic } from '../hooks/useShiftLogic';
+import { useShift } from '../contexts/ShiftContext';
 
 // Lazy load PdfViewer
 const PdfViewer = React.lazy(() => import('./common/PdfViewer'));
@@ -36,7 +36,9 @@ const WorkInstructions: React.FC = () => {
     // DataContext has plants. We might need usePlants logic or get plant from Line?
     // selectedLine has plant_id.
     // Let's use DataContext for getDocumentById fallback and legacy state for now to minimize breakage
-    const { getDocumentById, autoOpenDocId, setAutoOpenDocId, activeShifts, currentShift, plants } = useData();
+    // Let's use DataContext for getDocumentById fallback and legacy state for now to minimize breakage
+    const { getDocumentById, autoOpenDocId, setAutoOpenDocId, plants } = useData();
+    const { currentShift, activeShifts } = useShift();
     // Warning: we are trying to remove useData. 
     // `currentShift` can be got from useShiftLogic but needs plant. 
     // `autoOpenDocId` -> should be in URL/Router eventually.

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Page, isAlertActive } from '../../types';
-import { useData } from '../../contexts/DataContext';
+import { useDocuments } from '../../hooks/useDocuments';
+// import { useData } from '../../contexts/DataContext';
 import { HomeIcon, Cog6ToothIcon, ExclamationTriangleIcon } from './Icons';
 import DocumentNotification from './DocumentNotification';
 import useUpdateCheck from '../../hooks/useUpdateCheck';
@@ -10,6 +11,7 @@ import { useSettings } from '../../contexts/SettingsContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 import { useLine } from '../../contexts/LineContext';
+import { useShift } from '../../contexts/ShiftContext';
 import { useHourlyProduction } from '../../hooks/useHourlyProduction';
 
 interface HeaderProps {
@@ -18,8 +20,11 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = () => {
-    const { alerts } = useData();
+    const { data: unifiedDocs } = useDocuments();
+    const alerts = unifiedDocs?.alerts || [];
+    // const { alerts } = useData(); // Removed in refactor
     const { selectedLine } = useLine();
+    const { currentShift } = useShift();
     const { hasUpdate } = useUpdateCheck(60000);
     const { t, locale } = useI18n();
     const { isAdmin } = useAuth();

@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { useData } from '../contexts/DataContext';
+import { useData } from '../contexts/DataContext'; // Still need useData for selectedPlantId
+import { useLines } from '../hooks/useLines';
+import { useStations } from '../hooks/useDocuments'; // useStations lives here currently
 import { Machine } from '../types';
 import {
     PlusIcon,
@@ -13,24 +15,44 @@ import Modal from './common/Modal';
 import { useI18n } from '../contexts/I18nContext';
 
 const ProductionLineEditor: React.FC = () => {
-    const {
-        lines,
-        selectedPlantId,
-        addMachine,
-        updateMachine,
-        deleteMachine,
-        moveMachine,
-        docs,
-    } = useData();
+    const { selectedPlantId } = useData();
+    const { lines } = useLines(selectedPlantId ? [selectedPlantId] : []);
     const { t } = useI18n();
 
-    // Filter lines based on selectedPlantId
-    const filteredLines = useMemo(() => {
-        if (!selectedPlantId) return lines;
-        return lines.filter(l => l.plantId === selectedPlantId);
-    }, [lines, selectedPlantId]);
+    // Filter lines based on selectedPlantId (Although useLines already does it, keeping for consistent behavior if useLines fetches globally)
+    // useLines implementation fetches exactly for plantIds. So 'lines' is already filtered.
+    const filteredLines = lines;
 
-    const [selectedLineId, setSelectedLineId] = useState<string>(filteredLines[0]?.id || '');
+    // We need to manage selectedLineId.
+    const [localSelectedLineId, setLocalSelectedLineId] = useState<string>('');
+
+    // Auto-select first line if none selected
+    useEffect(() => {
+        if (filteredLines.length > 0 && !localSelectedLineId) {
+            setLocalSelectedLineId(filteredLines[0].id);
+        }
+    }, [filteredLines, localSelectedLineId]);
+
+    const selectedLineId = localSelectedLineId || filteredLines[0]?.id;
+
+    // Use useStations for the selected line
+    const { stations, createStation, updateStation, deleteStation } = useStations(selectedLineId || '');
+
+    // Merge stations into selectedLine logic?
+    // The UI expects 'selectedLine.machines'. 
+    // We can reconstruct a 'selectedLine' object or adapt the UI to use 'stations'.
+    // Adapting the UI is cleaner but more work.
+    // Let's create a proxy 'selectedLine' object that includes the fetched stations.
+
+    const selectedLine = useMemo(() => {
+        const line = filteredLines.find(l => l.id === selectedLineId);
+        if (!line) return null;
+        return {
+            ...line,
+            machines: stations // override machines with fetched stations
+        };
+    }, [filteredLines, selectedLineId, stations]);
+
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -41,46 +63,36 @@ const ProductionLineEditor: React.FC = () => {
     const [machineName, setMachineName] = useState('');
     const [machineInstructionId, setMachineInstructionId] = useState('');
 
-    const selectedLine = useMemo(() => {
-        // Look in filtered list first
-        const found = filteredLines.find(l => l.id === selectedLineId);
-        // Fallback to first filtered line if selection invalid
-        if (!found && filteredLines.length > 0) return filteredLines[0];
-        return found;
-    }, [filteredLines, selectedLineId]);
-
-    // Effect to reset selectedLineId if filteredLines changes and current selection is gone
-    // (Handled implicitly by selectedLine useMemo logic falling back, but maybe explicit set is better)
-    React.useEffect(() => {
-        if (filteredLines.length > 0 && (!selectedLineId || !filteredLines.find(l => l.id === selectedLineId))) {
-            setSelectedLineId(filteredLines[0].id);
+    const handleAddMachine = async () => {
+        if (!selectedLineId) return;
+        try {
+            await createStation.mutateAsync({
+                name: machineName,
+                position: (stations.length || 0) + 1,
+                userId: 'admin' // TODO: Get real user
+            });
+            setIsAddModalOpen(false);
+            resetForm();
+        } catch (error) {
+            console.error(error);
         }
-    }, [filteredLines, selectedLineId]);
-
-
-    const handleAddMachine = () => {
-        if (!selectedLine) return;
-        // Create new machine with default position (appended)
-        const newIndex = selectedLine.machines.length;
-        addMachine(selectedLine.id, {
-            name: machineName,
-            instructionId: machineInstructionId || undefined,
-            position: { x: newIndex * 10, y: 10 }, // Dummy position
-            type: 'station'
-        });
-        setIsAddModalOpen(false);
-        resetForm();
     };
 
-    const handleEditMachine = () => {
-        if (!selectedLine || !editingMachine) return;
-        updateMachine(selectedLine.id, editingMachine.id, {
-            name: machineName,
-            instructionId: machineInstructionId || undefined
-        });
-        setIsEditModalOpen(false);
-        setEditingMachine(null);
-        resetForm();
+    const handleEditMachine = async () => {
+        if (!editingMachine) return;
+        try {
+            await updateStation.mutateAsync({
+                id: editingMachine.id,
+                updates: {
+                    name: machineName
+                }
+            });
+            setIsEditModalOpen(false);
+            setEditingMachine(null);
+            resetForm();
+        } catch (error) {
+            console.error(error);
+        }
     };
 
     const handleDeleteMachine = (machine: Machine) => {
@@ -88,11 +100,15 @@ const ProductionLineEditor: React.FC = () => {
         setIsDeleteModalOpen(true);
     };
 
-    const confirmDelete = () => {
-        if (!selectedLine || !deletingMachine) return;
-        deleteMachine(selectedLine.id, deletingMachine.id);
-        setIsDeleteModalOpen(false);
-        setDeletingMachine(null);
+    const confirmDelete = async () => {
+        if (!deletingMachine) return;
+        try {
+            await deleteStation.mutateAsync(deletingMachine.id);
+            setIsDeleteModalOpen(false);
+            setDeletingMachine(null);
+        } catch (error) {
+            console.error(error);
+        }
     };
 
     const openEditModal = (machine: Machine) => {
@@ -121,7 +137,7 @@ const ProductionLineEditor: React.FC = () => {
                 <div className="flex items-center gap-4">
                     <select
                         value={selectedLine?.id || ''}
-                        onChange={(e) => setSelectedLineId(e.target.value)}
+                        onChange={(e) => setLocalSelectedLineId(e.target.value)}
                         className="bg-gray-800 text-white border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 outline-none"
                     >
                         {filteredLines.map(line => (

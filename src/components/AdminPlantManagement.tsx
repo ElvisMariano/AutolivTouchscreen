@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useData } from '../contexts/DataContext';
+// import { useData } from '../contexts/DataContext';
+import { usePlants } from '../hooks/usePlants';
 import { useAuth } from '../contexts/AuthContext';
 import { Plant } from '../types';
 import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
@@ -7,15 +8,18 @@ import { useSettings } from '../contexts/SettingsContext';
 import Modal from './common/Modal'; // Importando Modal
 
 const AdminPlantManagement: React.FC = () => {
-    const { plants, addPlant, updatePlant, deletePlant } = useData();
-    const { settings } = useSettings();
     const { currentUser } = useAuth();
+    // Use usePlants directly instead of DataContext wrappers
+    const { plants: apiPlants, createPlant, updatePlant, deletePlant } = usePlants(true, currentUser?.id);
+    const plants = apiPlants as Plant[]; // Cast if necessary depending on hook typing, or fix hook typing later.
+
+    const { settings } = useSettings();
     const [isAdding, setIsAdding] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [formData, setFormData] = useState<{
         name: string;
         location: string;
-        external_id: string; // Novo campo
+        external_id: string;
         shift_config: { name: string; startTime: string; endTime: string; isActive: boolean }[];
     }>({
         name: '',
@@ -75,40 +79,53 @@ const AdminPlantManagement: React.FC = () => {
 
         try {
             if (isAdding) {
-                const success = await addPlant(formData.name, formData.location);
-                if (success && success.data) {
-                    // Update generic fields including external_id and shift_config
-                    const updateResult = await updatePlant(success.data.id, {
-                        shift_config: formData.shift_config,
-                        external_id: formData.external_id || null
-                    });
+                // Create Plant
+                // usePlants createPlant signature: mutateAsync({ name, location }) -> returns Object or throws
+                let newPlant: Plant | undefined;
+                try {
+                    newPlant = await createPlant.mutateAsync({
+                        name: formData.name,
+                        location: formData.location
+                    }) as unknown as Plant;
+                } catch (err: any) {
+                    setError('Falha ao criar planta: ' + (err.message || String(err)));
+                    return;
+                }
 
-                    if (updateResult.success) {
+                if (newPlant) {
+                    // Update details
+                    try {
+                        await updatePlant.mutateAsync({
+                            id: newPlant.id,
+                            updates: {
+                                shift_config: formData.shift_config,
+                                external_id: formData.external_id || null
+                            }
+                        });
                         resetForm();
-                    } else {
-                        // Se falhar o update (ex: duplicidade), deletamos a planta criada para não ficar lixo ou avisamos?
-                        // Melhor avisar e deixar editar.
-                        if (updateResult.error && String(updateResult.error).includes('duplicate key')) {
+                    } catch (err: any) {
+                        const errorMsg = String(err.message || err);
+                        if (errorMsg.includes('duplicate key')) {
                             setError('Este Contexto/Site ID já está em uso por outra planta.');
-                            // Setamos o editingId para a planta recém criada para permitir correção
-                            setEditingId(success.data.id);
+                            setEditingId(newPlant.id); // Allow user to fix
                             setIsAdding(false);
-                            // Mas precisamos recarregar os dados ou manter o formData?
-                            // O formData já tem os dados.
                         } else {
-                            setError('Planta criada, mas falha ao salvar detalhes (Site ID/Turnos).');
+                            setError('Planta criada, mas falha ao salvar detalhes: ' + errorMsg);
                         }
                     }
                 }
-                else setError('Falha ao criar planta');
             } else if (editingId) {
-                const updateResult = await updatePlant(editingId, {
-                    ...formData,
-                    external_id: formData.external_id || null
-                });
-                if (updateResult.success) resetForm();
-                else {
-                    const errorMsg = String(updateResult.error || '');
+                try {
+                    await updatePlant.mutateAsync({
+                        id: editingId,
+                        updates: {
+                            ...formData,
+                            external_id: formData.external_id || null
+                        }
+                    });
+                    resetForm();
+                } catch (err: any) {
+                    const errorMsg = String(err.message || err);
                     if (errorMsg.includes('duplicate key') || errorMsg.includes('IX_plants_external_id')) {
                         setError('Este Site ID já está em uso por outra planta.');
                     } else {
@@ -126,10 +143,8 @@ const AdminPlantManagement: React.FC = () => {
         if (!plantToDelete) return;
 
         try {
-            const success = await deletePlant(plantToDelete.id);
-            if (!success) {
-                setError('Falha ao inativar planta.');
-            }
+            await deletePlant.mutateAsync(plantToDelete.id);
+            // Success is implied if no error thrown
         } catch (err) {
             console.error('Erro ao inativar:', err);
             setError('Erro ao inativar planta.');

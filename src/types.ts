@@ -145,6 +145,8 @@ export interface SystemSettings {
     gestureSensitivity: number; // Swipe threshold in pixels
     shiftCheckInterval: number; // in seconds
     productionRefreshInterval: number; // in seconds
+    standbyEnabled: boolean; // Enable standby screen
+    standbyTimeout: number; // Standby activation time in seconds
 }
 
 export interface ShiftConfig {

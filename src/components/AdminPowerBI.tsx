@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useData } from '../contexts/DataContext';
+// import { useData } from '../contexts/DataContext';
+import { useDocuments } from '../hooks/useDocuments';
 import { PowerBiReport, Document } from '../types';
 import Modal from './common/Modal';
 import { PencilSquareIcon, TrashIcon } from './common/Icons';
@@ -12,7 +13,30 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 
 const AdminPowerBI: React.FC = () => {
-    const { biReports, addBiReport, updateBiReport, deleteBiReport } = useData();
+    const {
+        data: unifiedDocs,
+        createDocument: createDocMutation,
+        // updateDocument: updateDocMutation, 
+        deleteDocument: deleteDocMutation
+    } = useDocuments();
+
+    // Filter reports from unifiedDocs
+    const biReports = unifiedDocs?.reports || [];
+    const deleteBiReport = (id: string) => deleteDocMutation.mutate(id);
+    // addBiReport and updateBiReport logic will be handled inline or via helpers if needed
+    // The component below largely handles its own API calls (createDocument/updateDocument from services), 
+    // but we should standardize to use the hook if possible, OR keep using services if that was the meaningful intent.
+    // Looking at the code, it imports `createDocument` as `addLineDocument` from services.
+    // The previous code had `useData` providing `biReports` list, `addBiReport` etc.
+    // But lines 139 and 156 were using direct API calls `updateLineDocument` and `addLineDocument`!
+    // So `addBiReport` from useData was UNUSED or REDUNDANT in `handleSubmit`? 
+    // Let's check the original code again.
+    // Line 15: const { biReports, addBiReport, updateBiReport, deleteBiReport } = useData();
+    // Line 138-140 says: // Update report via API (don't use updateBiReport to avoid duplicate update)
+    // So the previous code explicitly AVOIDED using useData wrappers for mutations in `handleSubmit`.
+    // It ONLY used `deleteBiReport` in `confirmDelete`.
+    // And it used `biReports` for listing.
+    // So we just need `biReports` and `deleteBiReport`.
     const { t } = useI18n();
     const { selectedLine } = useLine(); // Retrieve selectedLine
     const { currentUser } = useAuth(); // Retrieve currentUser here

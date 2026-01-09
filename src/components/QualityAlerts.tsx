@@ -15,6 +15,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useDocuments } from '../hooks/useDocuments';
 import { useUnreadDocuments } from '../hooks/useUnreadDocuments';
 import { useLine } from '../contexts/LineContext';
+import { useShift } from '../contexts/ShiftContext';
 
 const QualityAlerts: React.FC = () => {
     // Global State from Hooks
@@ -28,13 +29,14 @@ const QualityAlerts: React.FC = () => {
     const alerts = unifiedDocs?.alerts || [];
     const docs = unifiedDocs?.docs || [];
 
-    // Pending Legacy State/Logic from DataContext (for Shift & AutoOpen)
+    // Pending Legacy State/Logic from DataContext (for AutoOpen)
     const {
         autoOpenDocId,
         setAutoOpenDocId,
-        currentShift,
-        activeShifts // Needed for unread calculation
     } = useData();
+
+    // Use specific unread hook
+    const { currentShift, activeShifts } = useShift();
 
     // Use specific unread hook
     const unreadDocuments = useUnreadDocuments(selectedLineId, currentShift, activeShifts);

@@ -239,6 +239,37 @@ const AdminSettings: React.FC = () => {
                         </div>
                     )}
                 </div>
+
+                {/* Stand-by Settings */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <label className="flex items-center gap-4 p-4 bg-white dark:bg-gray-900 rounded-lg cursor-pointer border border-gray-300 dark:border-gray-700 hover:border-cyan-500 transition-colors">
+                        <input
+                            type="checkbox"
+                            checked={settings.standbyEnabled || false}
+                            onChange={(e) => updateSetting('standbyEnabled', e.target.checked)}
+                            className="w-6 h-6 accent-cyan-500"
+                        />
+                        <span className="text-xl text-gray-900 dark:text-white">{t('admin.enableStandby')}</span>
+                    </label>
+
+                    {settings.standbyEnabled && (
+                        <div className="p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-700">
+                            <label className="block text-xl mb-2 text-gray-900 dark:text-white">
+                                {t('admin.standbyTimeout')}: <span className="font-bold text-cyan-500">{settings.standbyTimeout || 300}s</span>
+                            </label>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{t('admin.standbyTimeoutDescription')}</p>
+                            <input
+                                type="number"
+                                min="30"
+                                max="3600"
+                                step="30"
+                                value={settings.standbyTimeout || 300}
+                                onChange={(e) => updateSetting('standbyTimeout', parseInt(e.target.value) || 300)}
+                                className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white p-3 rounded-lg text-xl border border-gray-300 dark:border-gray-600 focus:border-cyan-500 focus:outline-none transition-colors"
+                            />
+                        </div>
+                    )}
+                </div>
             </div>
             <div className="mt-10 border-t border-gray-300 dark:border-gray-700 pt-6">
                 <h3 className="text-2xl font-bold text-gray-700 dark:text-gray-300 mb-4">{t('admin.backup')}</h3>

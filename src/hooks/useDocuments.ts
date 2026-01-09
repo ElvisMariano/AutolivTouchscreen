@@ -206,9 +206,29 @@ export const useStations = (lineId: string) => {
         }
     });
 
+    const update = useMutation({
+        mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
+            return await updateStation(id, updates);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['stations', lineId] });
+        }
+    });
+
+    const remove = useMutation({
+        mutationFn: async (id: string) => {
+            return await deleteStation(id);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['stations', lineId] });
+        }
+    });
+
     return {
         stations: query.data || [],
         isLoading: query.isLoading,
-        createStation: create
+        createStation: create,
+        updateStation: update,
+        deleteStation: remove
     };
 };

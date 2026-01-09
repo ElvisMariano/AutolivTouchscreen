@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { I18nProvider } from './contexts/I18nContext';
 import { LogProvider } from './contexts/LogContext';
 import { SettingsProvider, useSettings } from './contexts/SettingsContext';
+import { ShiftProvider } from './contexts/ShiftContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AdminSubPage, Page } from './types'; // Page still used for ordering logic if needed, or remove
@@ -21,29 +22,33 @@ import AdminPanel from './components/AdminPanel';
 import Header from './components/common/Header';
 import GestureWrapper from './components/common/GestureWrapper';
 import ToastContainer from './components/common/ToastContainer';
+import StandbyScreen from './components/StandbyScreen';
 
 import LoginScreen from './components/LoginScreen';
 import UnauthorizedScreen from './components/UnauthorizedScreen';
+import { useLine } from './contexts/LineContext';
+import { useShiftLogic } from './hooks/useShiftLogic';
 
 
 const AppRoutes: React.FC = () => {
     const { currentUser, unauthorizedUser, isLoading } = useAuth();
     const { settings } = useSettings();
-    const { logEvent } = useData();
+    const { logEvent, selectedPlantId, plants } = useData();
     const navigate = useNavigate();
     const location = useLocation();
+    const { selectedLine } = useLine();
+    const selectedPlant = plants.find(p => p.id === selectedPlantId);
+    const { currentShift } = useShiftLogic(selectedPlant);
 
     const [isAdmin, setIsAdmin] = useState(false);
     const [adminSubPage, setAdminSubPage] = useState<AdminSubPage>(AdminSubPage.Settings);
-    // Remove selectedMachineId if not used globally or handle differently.
-    // Dashboard usually sets it. If it's ephemeral, might belong in Dashboard or context.
-    // Existing App logic had it. Let's keep it locally if needed, but Dashboard handles its own navigation?
-    // Looking at previous code, selectedMachineId seemed unused in global scope except for clearing it on navigation.
+    const [showStandby, setShowStandby] = useState(false);
 
     // Hooks must be called unconditionally
     const isKioskEnabled = settings.kioskMode || (currentUser?.role?.allowed_resources?.includes('system:kiosk_mode') ?? false);
     useKioskMode(isKioskEnabled);
 
+    // Inactivity timeout para retornar ao dashboard
     const handleTimeout = useCallback(() => {
         console.log("Inactivity timeout. Returning to dashboard.");
         navigate('/');
@@ -51,6 +56,69 @@ const AppRoutes: React.FC = () => {
     }, [navigate]);
 
     useInactivityTimer(handleTimeout, settings.inactivityTimeout * 1000);
+
+    // Stand-by timeout (apenas se habilitado e linha selecionada)
+    const handleStandbyTimeout = useCallback(() => {
+        if (settings.standbyEnabled && selectedLine && selectedPlant) {
+            console.log("Stand-by timeout. Showing standby screen.");
+            setShowStandby(true);
+        }
+    }, [settings.standbyEnabled, selectedLine, selectedPlant]);
+
+    useInactivityTimer(handleStandbyTimeout, settings.standbyTimeout * 1000);
+
+    // Handler para sair do stand-by
+    const handleExitStandby = useCallback(() => {
+        setShowStandby(false);
+    }, []);
+
+    // Calcular parâmetros do turno para o stand-by
+    const getShiftTimeframes = useCallback(() => {
+        if (!selectedPlant || !selectedPlant.shift_config) {
+            return { shiftStart: '', shiftEnd: '' };
+        }
+
+        const shiftConfig = selectedPlant.shift_config.find(s => s.name === currentShift);
+        if (!shiftConfig) {
+            return { shiftStart: '', shiftEnd: '' };
+        }
+
+        const now = new Date();
+        const [startH, startM] = shiftConfig.startTime.split(':').map(Number);
+        const [endH, endM] = shiftConfig.endTime.split(':').map(Number);
+
+        const shiftStartDate = new Date(now);
+        shiftStartDate.setHours(startH, startM, 0, 0);
+
+        const shiftEndDate = new Date(now);
+        shiftEndDate.setHours(endH, endM, 0, 0);
+
+        // Se o fim é menor que o início, o turno cruza meia-noite
+        if (endH < startH || (endH === startH && endM < startM)) {
+            // Se estamos após o início, o fim é no próximo dia
+            if (now.getHours() >= startH) {
+                shiftEndDate.setDate(shiftEndDate.getDate() + 1);
+            } else {
+                // Se estamos antes do fim, o início foi no dia anterior
+                shiftStartDate.setDate(shiftStartDate.getDate() - 1);
+            }
+        }
+
+        const formatDateTime = (date: Date): string => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        };
+
+        return {
+            shiftStart: formatDateTime(shiftStartDate),
+            shiftEnd: formatDateTime(shiftEndDate)
+        };
+    }, [selectedPlant, currentShift]);
 
     // Theme Management
     useEffect(() => {
@@ -173,6 +241,24 @@ const AppRoutes: React.FC = () => {
         )
     }
 
+    // Se stand-by está ativo e temos dados necessários, mostrar stand-by
+    if (showStandby && selectedLine && selectedPlant) {
+        const { shiftStart, shiftEnd } = getShiftTimeframes();
+        const siteId = selectedPlant.external_id || '902'; // Default site ID
+        const lineId = selectedLine.external_id || selectedLine.id;
+
+        return (
+            <StandbyScreen
+                lineId={lineId}
+                lineName={selectedLine.name}
+                siteId={siteId}
+                shiftStart={shiftStart}
+                shiftEnd={shiftEnd}
+                onExit={handleExitStandby}
+            />
+        );
+    }
+
     return (
         <div className="flex flex-col h-screen w-screen bg-gray-100 dark:bg-gray-900 font-sans text-gray-900 dark:text-white transition-colors duration-300">
             <ToastContainer />
@@ -228,11 +314,13 @@ const App: React.FC = () => {
                         <DataProvider>
                             <I18nProvider>
                                 <LineProvider>
-                                    <ToastProvider>
-                                        <HashRouter>
-                                            <AppContent />
-                                        </HashRouter>
-                                    </ToastProvider>
+                                    <ShiftProvider>
+                                        <ToastProvider>
+                                            <HashRouter>
+                                                <AppContent />
+                                            </HashRouter>
+                                        </ToastProvider>
+                                    </ShiftProvider>
                                 </LineProvider>
                             </I18nProvider>
                         </DataProvider>

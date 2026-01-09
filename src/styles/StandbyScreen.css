@@ -1,0 +1,236 @@
+/* Standby Screen Styles */
+
+.standby-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    display: flex;
+    flex-direction: column;
+    z-index: 9999;
+    cursor: pointer;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Header */
+.standby-header {
+    background: linear-gradient(90deg, #2e7d32 0%, #43a047 100%);
+    padding: 1.5rem 3rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.standby-status {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.status-indicator {
+    width: 20px;
+    height: 20px;
+    background-color: #fff;
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(1.1);
+    }
+}
+
+.status-text {
+    font-size: 2rem;
+    font-weight: bold;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.standby-time {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: white;
+    font-family: 'Courier New', monospace;
+}
+
+/* Content */
+.standby-content {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 3rem;
+}
+
+.standby-loading,
+.standby-error {
+    text-align: center;
+    color: white;
+}
+
+.spinner {
+    width: 60px;
+    height: 60px;
+    border: 6px solid rgba(255, 255, 255, 0.2);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.standby-error p {
+    font-size: 1.5rem;
+    color: #ff5252;
+}
+
+/* Metrics Grid */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+    width: 100%;
+    max-width: 1400px;
+}
+
+.metric-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 3rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.metric-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+.metric-label {
+    font-size: 1.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 1.5rem;
+    color: white;
+}
+
+.metric-value {
+    font-size: 5rem;
+    font-weight: bold;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Metric-specific colors */
+.metric-target {
+    border-color: rgba(46, 125, 50, 0.5);
+}
+
+.metric-target .metric-label {
+    color: #66bb6a;
+}
+
+.metric-target .metric-value {
+    color: #a5d6a7;
+}
+
+.metric-actuals {
+    border-color: rgba(46, 125, 50, 0.5);
+}
+
+.metric-actuals .metric-label {
+    color: #66bb6a;
+}
+
+.metric-actuals .metric-value {
+    color: #81c784;
+}
+
+.metric-efficiency {
+    border-color: rgba(46, 125, 50, 0.5);
+}
+
+.metric-efficiency .metric-label {
+    color: #66bb6a;
+}
+
+.metric-efficiency .metric-value {
+    color: #4caf50;
+}
+
+.metric-downtime {
+    border-color: rgba(211, 47, 47, 0.5);
+}
+
+.metric-downtime .metric-label {
+    color: #ef5350;
+}
+
+.metric-downtime .metric-value {
+    color: #ff5252;
+}
+
+/* Hint */
+.standby-hint {
+    text-align: center;
+    padding: 2rem;
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.6);
+    font-style: italic;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1366px) {
+    .metric-value {
+        font-size: 4rem;
+    }
+    
+    .metric-label {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 1024px) {
+    .metrics-grid {
+        gap: 1.5rem;
+    }
+    
+    .metric-card {
+        padding: 2rem;
+    }
+    
+    .metric-value {
+        font-size: 3.5rem;
+    }
+}

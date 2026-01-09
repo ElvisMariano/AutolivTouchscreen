@@ -99,6 +99,14 @@ export default {
         currentShift: "Turno Actual",
         hourlyProduction: "Producción por Hora",
     },
+    standby: {
+        lineStatus: "Línea en Operación",
+        target: "Meta",
+        actuals: "Realizado",
+        efficiency: "Eficiencia",
+        shiftDowntime: "Tiempo de Inactividad del Turno",
+        tapToReturn: "Toque la pantalla para volver al tablero"
+    },
     dashboard: {
         title: "",
         workInstructions: "P1 - Instrucciones de Trabajo",
@@ -288,6 +296,10 @@ export default {
         roleManagement: "Gestión de Roles",
         plantManagement: "Registro de Plantas",
         productionLines: "Líneas de Producción",
+        standbySettings: "Pantalla de Espera",
+        enableStandby: "Habilitar pantalla de espera",
+        standbyTimeout: "Tiempo de inactividad para espera (segundos)",
+        standbyTimeoutDescription: "Tiempo sin interacción antes de mostrar pantalla de espera",
     },
     modal: {
         close: "Cerrar",

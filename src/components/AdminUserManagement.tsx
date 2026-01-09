@@ -1,14 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { useData } from '../contexts/DataContext';
-import { User } from '../types';
-import Modal from './common/Modal';
-import ConfirmationModal from './common/ConfirmationModal';
-import { PencilSquareIcon, TrashIcon } from './common/Icons';
-import { useI18n } from '../contexts/I18nContext';
-import { getRoles } from '@/services/api/roles';
+import { useUsers } from '../hooks/useUsers';
+import { usePlants } from '../hooks/usePlants';
 
 const AdminUserManagement: React.FC = () => {
-    const { users, plants, addUser, updateUser, deleteUser } = useData();
+    const {
+        users,
+        createUser: createUserMutation,
+        updateUser: updateUserMutation,
+        deleteUser: deleteUserMutation
+    } = useUsers();
+
+    // Admin usually sees ALL plants to assign
+    const { plants: apiPlants } = usePlants(true);
+    const plants = apiPlants as any[]; // cast because types might mismatch slightly or usePlants returns simplified objects
+
+    // Helper wrappers
+    const addUser = async (data: any) => {
+        try {
+            return await createUserMutation.mutateAsync(data);
+        } catch (e) { console.error(e); return null; }
+    };
+    const updateUser = (data: any) => updateUserMutation.mutate(data);
+    const deleteUser = (id: string) => deleteUserMutation.mutate(id);
     const { t } = useI18n();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);

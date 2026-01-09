@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { useLine } from '../../contexts/LineContext';
+import { useShift } from '../../contexts/ShiftContext';
 import { useUnreadDocuments } from '../../hooks/useUnreadDocuments';
 import { BellIcon, EyeIcon } from './Icons';
 import Modal from './Modal';
@@ -12,7 +13,8 @@ interface DocumentNotificationProps {
 }
 
 const DocumentNotification: React.FC<DocumentNotificationProps> = () => {
-    const { setAutoOpenDocId, currentShift, activeShifts } = useData();
+    const { setAutoOpenDocId } = useData();
+    const { currentShift, activeShifts } = useShift();
     const { selectedLine } = useLine();
     const selectedLineId = selectedLine?.id || null;
 

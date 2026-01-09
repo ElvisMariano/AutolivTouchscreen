@@ -99,6 +99,14 @@ export default {
         currentShift: "Current Shift",
         hourlyProduction: "Hourly Production",
     },
+    standby: {
+        lineStatus: "Line Running",
+        target: "Target",
+        actuals: "Actuals",
+        efficiency: "Efficiency",
+        shiftDowntime: "Shift Downtime",
+        tapToReturn: "Tap screen to return to dashboard"
+    },
     dashboard: {
         title: "",
         workInstructions: "P1 - Work Instructions",
@@ -288,6 +296,10 @@ export default {
         roleManagement: "Role Management",
         plantManagement: "Plant Registration",
         productionLines: "Production Lines",
+        standbySettings: "Standby Screen",
+        enableStandby: "Enable standby screen",
+        standbyTimeout: "Standby inactivity timeout (seconds)",
+        standbyTimeoutDescription: "Time without interaction before displaying standby screen",
     },
     modal: {
         close: "Close",

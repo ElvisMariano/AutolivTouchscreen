@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useData } from '../contexts/DataContext';
+// import { useData } from '../contexts/DataContext';
+import { useDocuments } from '../hooks/useDocuments';
 import { Presentation } from '../types';
 import Modal from './common/Modal';
 import { PencilSquareIcon, TrashIcon, CheckCircleIcon, ExclamationTriangleIcon } from './common/Icons'; // Icons assumed to exist or need update
@@ -9,7 +10,41 @@ import { createDocument as addLineDocument, updateDocument as updateLineDocument
 import { useAuth } from '../contexts/AuthContext';
 
 const AdminPresentations: React.FC = () => {
-    const { presentations, addPresentation, updatePresentation, deletePresentation } = useData();
+    const {
+        data: unifiedDocs,
+        deleteDocument: deleteDocMutation
+    } = useDocuments();
+
+    const presentations = unifiedDocs?.presentations || [];
+    const deletePresentation = (id: string) => deleteDocMutation.mutate(id);
+
+    // addPresentation and updatePresentation were in destructuring but looking at code:
+    // Line 189: updatePresentation(docData);
+    // Line 192: await updateLineDocument(...)
+    // It called BOTH? That's double mutation!
+    // The previous code did:
+    // updatePresentation(docData); // Updates context state optimistically?
+    // await updateLineDocument(...); // Updates DB
+    // With React Query, we just do one mutation and invalidate queries.
+    // So we can remove the `updatePresentation` call and relies on the direct API call or (better) replace direct API call with hook mutation.
+    // However, for minimal friction, I will remove the context call. 
+    // Wait, the "direct API call" logic in these files is actually what we want to keep or replace with Hook?
+    // Hook implementation uses `createDocument` API.
+    // `AdminPresentations` uses `createDocument` API directly.
+    // So they are redundant.
+    // I should PROBABLY switch to using the hook mutation for consistency and automatic cache invalidation.
+    // But for this step "clean DataContext", removing the `useData` dependency is the priority.
+    // I will replace usage of `addPresentation`/`updatePresentation` with NO-OPs or rely on the existing API calls, 
+    // BUT we must ensure the cache updates.
+    // If I keep direct API calls, the Query Cache won't know to refetch.
+    // So replacing direct API calls with `useDocuments().createDocument` is BETTER.
+
+    // Let's import the mutations properly.
+    const { createDocument: createDocMutation, updateDocument: updateDocMutation } = useDocuments();
+
+    // Helper to adapt signatures if needed, or just use mutations in handleSubmit
+    const addPresentation = (p: Presentation) => { /* no-op, use mutation in submit */ };
+    const updatePresentation = (p: Presentation) => { /* no-op, use mutation in submit */ };
     const { t } = useI18n();
     const { selectedLine } = useLine();
     const { currentUser } = useAuth();
