@@ -12,11 +12,11 @@ $env_vars = @{
     "PORT"                      = "8080"
     "DB_SERVER"                 = "digitals-documents-sql.database.windows.net"
     "DB_DATABASE"               = "digitals-documents-db"
-    "DB_USER"                   = "" # PREENCHER
-    "DB_PASSWORD"               = "" # PREENCHER  
-    "API_LEADING2LEAN_KEY"      = "" # PREENCHER
+    "DB_USER"                   = "sqladmin" # PREENCHER
+    "DB_PASSWORD"               = "El91711306@" # PREENCHER  
+    "API_LEADING2LEAN_KEY"      = "FZDz8iarUYWpZrXkrbsowo95bmaoQqZV" # PREENCHER
     "API_LEADING2LEAN_BASE_URL" = "https://autoliv-mx.leading2lean.com"
-    "JWT_SECRET"                = "" # PREENCHER (gerar aleatório)
+    "JWT_SECRET"                = "agsdgjghhajja00015as5as6666a856a1" # PREENCHER (gerar aleatório)
     "CORS_ORIGIN"               = "https://brave-water-0e3f7b110.azurestaticapps.net"
 }
 
