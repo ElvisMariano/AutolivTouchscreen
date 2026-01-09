@@ -129,7 +129,7 @@ async function getShiftProductionData(req, res, next) {
         console.log(`🔄 [Shift Production] Buscando dados do turno para linha ${lineId}, turno ${shiftStart} - ${shiftEnd}`);
 
         // Buscar todos os pitches do turno
-        const pitches = await l2lApiService.getShiftProduction(l
+        const pitches = await l2lApiService.getShiftProduction(
             lineId,
             shiftStart,
             shiftEnd,
