@@ -17,7 +17,7 @@ const AdminAlertsManagement: React.FC = () => {
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   // Filter alerts for the selected line
-  const filteredAlerts = alerts.filter(a => selectedLine && a.lineId === selectedLine.id);
+  const filteredAlerts = (alerts || []).filter(a => selectedLine && a.lineId === selectedLine.id);
 
   const openModal = (item: QualityAlert | null = null) => {
     setEditingItem(item);
