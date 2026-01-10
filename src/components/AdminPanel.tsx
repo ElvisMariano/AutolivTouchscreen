@@ -333,7 +333,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
 
     useEffect(() => {
         const roleName = currentUser?.role_name || currentUser?.role?.name;
-        const resources = currentUser?.role?.allowed_resources || [];
+        const resources = currentUser?.allowed_resources || currentUser?.role?.allowed_resources || [];
 
         const hasAdminAccess = roleName === 'Admin' || resources.includes('view:admin_access_button');
         if (hasAdminAccess && !isAdmin) {
@@ -343,7 +343,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
 
     // Se o usuário já está logado como admin ou tem permissão, permitir acesso direto
     const roleName = currentUser?.role_name || currentUser?.role?.name;
-    const resources = currentUser?.role?.allowed_resources || [];
+    const resources = currentUser?.allowed_resources || currentUser?.role?.allowed_resources || [];
     const hasAdminAccess = roleName === 'Admin' || resources.includes('view:admin_access_button');
 
     if (!isAdmin && !hasAdminAccess) {

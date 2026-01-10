@@ -10,7 +10,8 @@ async function getAllUsers() {
             SELECT 
                 u.id, u.name, u.email, u.role_id, u.status,
                 u.created_at, u.updated_at,
-                r.name as role_name
+                r.name as role_name,
+                r.allowed_resources
             FROM users u
             LEFT JOIN roles r ON u.role_id = r.id
             WHERE u.status = 'active'
