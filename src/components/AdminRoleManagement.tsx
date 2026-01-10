@@ -184,7 +184,7 @@ const AdminRoleManagement: React.FC = () => {
                                     <span className="font-semibold">Permissões:</span> {role.allowed_resources?.length || 0}
                                 </p>
                                 <div className="flex flex-wrap gap-2 mt-2">
-                                    {(role.allowed_resources || []).slice(0, 5).map(res => (
+                                    {(Array.isArray(role.allowed_resources) ? role.allowed_resources : []).slice(0, 5).map(res => (
                                         <span key={res} className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-xs truncate max-w-[150px]">
                                             {AVAILABLE_RESOURCES[res as keyof typeof AVAILABLE_RESOURCES] || res}
                                         </span>

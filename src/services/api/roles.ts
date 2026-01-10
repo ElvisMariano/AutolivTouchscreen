@@ -28,12 +28,21 @@ export async function getRoles(): Promise<Role[]> {
     try {
         const response = await apiClient.get('/roles');
         const raw = getData<any[]>(response);
-        return raw.map(r => ({
-            ...r,
-            allowed_resources: typeof r.allowed_resources === 'string'
-                ? JSON.parse(r.allowed_resources || '[]')
-                : r.allowed_resources
-        }));
+        return raw.map(r => {
+            let parsed = r.allowed_resources;
+            if (typeof r.allowed_resources === 'string') {
+                try {
+                    parsed = JSON.parse(r.allowed_resources);
+                } catch (e) {
+                    console.warn('Falha ao fazer parse de allowed_resources para role:', r.id, e);
+                    parsed = [];
+                }
+            }
+            return {
+                ...r,
+                allowed_resources: Array.isArray(parsed) ? parsed : []
+            };
+        });
     } catch (error) {
         return handleApiError(error);
     }
