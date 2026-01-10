@@ -73,8 +73,8 @@ app.get('/api/test-db', async (req, res) => {
 // ============================================
 
 // Rotas PÚBLICAS (sem autenticação)
+// Routes import moved to top or handled later
 const l2lRouter = require('./routes/l2l');
-app.get('/api/l2l/test-connection', l2lRouter); // Apenas test-connection é público
 
 // PROXY L2L (Para useHourlyProduction e outros)
 // Encaminha requisições do frontend (/api/1.0/...) para a API L2L real
@@ -192,9 +192,9 @@ if (AUTH_ENABLED) {
     app.use('/api/roles', rolesRouter);
 }
 
-// L2L Sync (requer permissão específica)
+// L2L Routes (Permissions handled inside router)
 if (AUTH_ENABLED) {
-    app.use('/api/l2l', requirePermission('l2l_sync'), l2lRouter);
+    app.use('/api/l2l', l2lRouter);
 } else {
     app.use('/api/l2l', l2lRouter);
 }
