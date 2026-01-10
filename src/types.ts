@@ -261,6 +261,7 @@ export const AVAILABLE_RESOURCES = {
 
     // Qualidade e Alertas
     'view:quality_alerts': 'Visualizar Alertas (Dashboard)',
+    'view:standby_screen': 'Visualizar Tela de Stand-by',
     'admin:view_quality_alerts': 'Ver Gestão de Alertas',
     'admin:manage_quality_alerts': 'Gerenciar Alertas',
 
@@ -273,6 +274,8 @@ export const AVAILABLE_RESOURCES = {
     // Configurações e Sistema
     'admin:view_settings': 'Ver Configurações',
     'admin:manage_settings': 'Alterar Configurações',
+    'admin:view_l2l_sync': 'Ver Sincronização L2L',
+    'admin:manage_l2l_sync': 'Gerenciar Sincronização L2L',
     'admin:view_history': 'Ver Histórico de Ações',
     'admin:backup_view': 'Acessar Área de Backup',
     'admin:backup_create': 'Criar Backup',

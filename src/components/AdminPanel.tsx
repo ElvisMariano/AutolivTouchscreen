@@ -443,7 +443,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
         { page: AdminSubPage.Roles, icon: UserGroupIcon, permission: 'admin:view_roles' },
         { page: AdminSubPage.History, icon: ClockIcon, permission: 'admin:view_history' },
         { page: AdminSubPage.Settings, icon: CogIcon, permission: 'admin:view_settings' },
-        { page: AdminSubPage.L2LSync, icon: ArrowPathIcon, permission: 'admin:view_settings' },
+        { page: AdminSubPage.L2LSync, icon: ArrowPathIcon, permission: 'admin:view_l2l_sync' },
     ];
 
     // Filter menu items based on user permissions
