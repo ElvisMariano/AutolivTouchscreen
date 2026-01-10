@@ -72,9 +72,14 @@ app.get('/api/test-db', async (req, res) => {
 // API Routes - Configuração de Autenticação
 // ============================================
 
+const l2lController = require('./controllers/l2lController');
+
 // Rotas PÚBLICAS (sem autenticação)
 // Routes import moved to top or handled later
 const l2lRouter = require('./routes/l2l');
+
+// Explicitly public L2L routes (must be before global auth)
+app.get('/api/l2l/shift-production', l2lController.getShiftProductionData);
 
 // PROXY L2L (Para useHourlyProduction e outros)
 // Encaminha requisições do frontend (/api/1.0/...) para a API L2L real
