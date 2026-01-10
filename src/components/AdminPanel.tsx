@@ -46,6 +46,7 @@ import { useLog } from '../contexts/LogContext';
 
 const AdminSettings: React.FC = () => {
     const { exportAll, importAll } = useData();
+    const { currentUser } = useAuth();
     const { logEvent } = useLog();
     const { settings, updateSetting } = useSettings();
     const { t } = useI18n();
@@ -271,17 +272,27 @@ const AdminSettings: React.FC = () => {
                     )}
                 </div>
             </div>
-            <div className="mt-10 border-t border-gray-300 dark:border-gray-700 pt-6">
-                <h3 className="text-2xl font-bold text-gray-700 dark:text-gray-300 mb-4">{t('admin.backup')}</h3>
-                <div className="flex items-center gap-4 flex-wrap">
-                    <button onClick={handleExport} className="px-6 py-3 bg-blue-600 rounded-lg text-xl hover:bg-blue-500 text-white">{t('admin.export')}</button>
-                    <label className="px-6 py-3 bg-green-600 rounded-lg text-xl hover:bg-green-500 cursor-pointer text-white">
-                        {t('admin.import')}
-                        <input type="file" accept="application/json" onChange={handleImport} className="hidden" />
-                    </label>
-                    <button onClick={restoreSettingsBackup} className="px-6 py-3 bg-gray-600 rounded-lg text-xl hover:bg-gray-500 text-white">{t('admin.restore')}</button>
-                </div>
-            </div>
+            {(currentUser?.allowed_resources?.includes('admin:backup_view') || currentUser?.role?.allowed_resources?.includes('admin:backup_view') ||
+                currentUser?.allowed_resources?.includes('admin:backup_create') || currentUser?.role?.allowed_resources?.includes('admin:backup_create') ||
+                currentUser?.allowed_resources?.includes('admin:backup_restore') || currentUser?.role?.allowed_resources?.includes('admin:backup_restore')) && (
+                    <div className="mt-10 border-t border-gray-300 dark:border-gray-700 pt-6">
+                        <h3 className="text-2xl font-bold text-gray-700 dark:text-gray-300 mb-4">{t('admin.backup')}</h3>
+                        <div className="flex items-center gap-4 flex-wrap">
+                            {(currentUser?.allowed_resources?.includes('admin:backup_create') || currentUser?.role?.allowed_resources?.includes('admin:backup_create')) && (
+                                <button onClick={handleExport} className="px-6 py-3 bg-blue-600 rounded-lg text-xl hover:bg-blue-500 text-white">{t('admin.export')}</button>
+                            )}
+                            {(currentUser?.allowed_resources?.includes('admin:backup_restore') || currentUser?.role?.allowed_resources?.includes('admin:backup_restore')) && (
+                                <>
+                                    <label className="px-6 py-3 bg-green-600 rounded-lg text-xl hover:bg-green-500 cursor-pointer text-white">
+                                        {t('admin.import')}
+                                        <input type="file" accept="application/json" onChange={handleImport} className="hidden" />
+                                    </label>
+                                    <button onClick={restoreSettingsBackup} className="px-6 py-3 bg-gray-600 rounded-lg text-xl hover:bg-gray-500 text-white">{t('admin.restore')}</button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                )}
             <div className="mt-10 border-t border-gray-300 dark:border-gray-700 pt-6">
                 <h3 className="text-2xl font-bold text-gray-700 dark:text-gray-300 mb-4">Testes</h3>
                 <div className="flex items-center gap-4 flex-wrap">

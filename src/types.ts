@@ -278,10 +278,11 @@ export const AVAILABLE_RESOURCES = {
     'admin:manage_l2l_sync': 'Gerenciar Sincronização L2L',
     'admin:view_history': 'Ver Histórico de Ações',
     'admin:backup_view': 'Acessar Área de Backup',
-    'admin:backup_create': 'Criar Backup',
-    'admin:backup_restore': 'Restaurar Backup',
+    'admin:backup_create': 'Criar/Exportar Backup',
+    'admin:backup_restore': 'Restaurar/Importar Backup',
     'system:debug_tools': 'Ferramentas de Debug',
-    'system:kiosk_mode': 'Iniciar aplicativo em modo Kiosk',
+    'system:kiosk_mode': 'Forçar Modo Kiosk (Tela Cheia)',
+    'system:enable_standby': 'Forçar Modo Stand-by (Descanso)',
 };
 
 declare global {
