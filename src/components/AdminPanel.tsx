@@ -449,7 +449,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
     // Filter menu items based on user permissions
     const filteredMenuItems = menuItems.filter(item => {
         if (!item.permission) return true; // Se não tem permissão definida, é público dentro do admin
-        const userResources = currentUser?.role?.allowed_resources || [];
+        const userResources = currentUser?.allowed_resources || currentUser?.role?.allowed_resources || [];
         const roleName = currentUser?.role_name || currentUser?.role?.name;
         return userResources.includes(item.permission) || roleName === 'Admin'; // Admin sempre vê tudo (fallback)
     });
