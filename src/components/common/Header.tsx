@@ -130,7 +130,7 @@ const Header: React.FC<HeaderProps> = () => {
                     <Clock />
                 </div>
 
-                {(isAdmin || (useAuth().currentUser?.role?.allowed_resources?.includes('view:admin_access_button'))) && (
+                {(isAdmin || (useAuth().currentUser?.allowed_resources?.includes('view:admin_access_button')) || (useAuth().currentUser?.role?.allowed_resources?.includes('view:admin_access_button'))) && (
                     <button onClick={() => navigate('/admin')} className="p-2 md:p-3 bg-gray-300 dark:bg-gray-700 rounded-xl hover:bg-gray-400 dark:hover:bg-gray-600 transition-all hover:scale-105 shadow-md group">
                         <Cog6ToothIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-600 dark:text-gray-400 group-hover:text-gray-800 dark:group-hover:text-white transition-colors" />
                     </button>
