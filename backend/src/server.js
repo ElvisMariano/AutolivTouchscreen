@@ -180,7 +180,7 @@ app.use('/api/acknowledgments', acknowledgmentsRouter);
 // Rotas ADMINISTRATIVAS (requerem permissões específicas)
 const usersRouter = require('./routes/users');
 if (AUTH_ENABLED) {
-    app.use('/api/users', requirePermission('users'), usersRouter);
+    app.use('/api/users', usersRouter);
 } else {
     app.use('/api/users', usersRouter);
 }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUsers } from '@/hooks/useUsers';
 import { useI18n } from '@/contexts/I18nContext';
 import { UserRole } from '@/types';
 import { UserIcon, LockClosedIcon } from '@heroicons/react/24/outline'; // Adjust import based on what's available
@@ -33,7 +34,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onUnlock, requireRole }) => {
 
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const { users } = useData();
+    const { users } = useUsers(); // Changed from useData
     const { setCurrentUser } = useAuth();
     const { t } = useI18n();
 
