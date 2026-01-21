@@ -1,0 +1,48 @@
+{
+  "id": 57953178,
+  "dispatchnumber": 82195,
+  "lineid": 7947,
+  "linecode": "LW06",
+  "lineabbreviation": "LW06 #SA !STW",
+  "areacode": "AMG4",
+  "machineid": 77672,
+  "machinecode": "LW06-070",
+  "machinedescription": "Sewing",
+  "technology": "Bancada",
+  "description": "E7453102 - MANTA DESPLACANDO",
+  "machinegroup": null,
+  "downtime": 348299,
+  "open": "T",
+  "techniciancount": 0,
+  "machinecount": 9,
+  "sigdowntime": 90,
+  "deleted": "F",
+  "tradecode": "Lider da Linha",
+  "valuestreamcode": "AMC1",
+  "externalid": null,
+  "created": "2025-05-18 01:04:54",
+  "lastupdated": "2026-01-14 22:04:44",
+  "createdby": "yokoten_launcher",
+  "lastupdatedby": "0048-1",
+  "reported": "2025-05-17 22:04:54",
+  "dispatched": null,
+  "completed": null,
+  "dispatchtype": "Alerta da Qualidade",
+  "dispatchtypeid": 3675,
+  "currentstatus": {
+    "dispatchstatus_id": -1,
+    "dispatchstatus_description": "New"
+  },
+  "reasoncode": null,
+  "shiftreported": "",
+  "shiftcompleted": "",
+  "technicians": [],
+  "assigned_technicians": [],
+  "actioncomponents": [
+    {
+      "actiondescription": "Abrir",
+      "componentdescription": "Documentação"
+    }
+  ],
+  "external_costs": []
+}

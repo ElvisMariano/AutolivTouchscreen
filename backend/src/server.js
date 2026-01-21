@@ -160,6 +160,18 @@ if (AUTH_ENABLED) {
     app.use('/api', authenticate); // Aplica autenticação a todas as rotas /api/*
 } else {
     console.warn('⚠️ Autenticação JWT DESATIVADA - Apenas para desenvolvimento!');
+    // Middleware Mock de Autenticação para Desenvolvimento
+    app.use('/api', (req, res, next) => {
+        req.user = {
+            id: '00000000-0000-0000-0000-000000000000',
+            email: 'dev@local.host',
+            name: 'Desenvolvedor',
+            roleName: 'Admin',
+            allowedResources: '*' // Super Admin
+        };
+        console.log('🔓 Mock User Injected:', req.user.email);
+        next();
+    });
 }
 
 // Rotas de LEITURA (acesso básico autenticado)

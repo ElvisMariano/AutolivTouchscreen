@@ -15,12 +15,14 @@ export interface CreateLineDTO {
     name: string;
     plant_id: string;
     external_id?: string;
+    metadata?: any;
 }
 
 export interface UpdateLineDTO {
     name?: string;
     plant_id?: string;
     external_id?: string;
+    metadata?: any;
 }
 
 /**

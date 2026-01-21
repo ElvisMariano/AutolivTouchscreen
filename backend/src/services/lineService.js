@@ -8,7 +8,7 @@ async function getAllLines(plantId = null) {
 
     let query = `
         SELECT 
-            l.id, l.name, l.plant_id, l.status, l.external_id,
+            l.id, l.name, l.plant_id, l.status, l.external_id, l.metadata,
             l.created_at, l.updated_at,
             p.name as plant_name
         FROM production_lines l
@@ -40,7 +40,7 @@ async function getLineById(id) {
         .input('id', sql.UniqueIdentifier, id)
         .query(`
             SELECT 
-                l.id, l.name, l.plant_id, l.status, l.external_id,
+                l.id, l.name, l.plant_id, l.status, l.external_id, l.metadata,
                 l.created_at, l.updated_at,
                 p.name as plant_name
             FROM production_lines l
@@ -59,10 +59,11 @@ async function createLine(lineData) {
         .input('name', sql.NVarChar(200), lineData.name)
         .input('plant_id', sql.UniqueIdentifier, lineData.plant_id)
         .input('external_id', sql.NVarChar(100), lineData.external_id || null)
+        .input('metadata', sql.NVarChar(sql.MAX), lineData.metadata ? JSON.stringify(lineData.metadata) : null)
         .query(`
-            INSERT INTO production_lines (name, plant_id, external_id, status)
+            INSERT INTO production_lines (name, plant_id, external_id, status, metadata)
             OUTPUT INSERTED.*
-            VALUES (@name, @plant_id, @external_id, 'active')
+            VALUES (@name, @plant_id, @external_id, 'active', @metadata)
         `);
     return result.recordset[0];
 }
@@ -72,21 +73,52 @@ async function createLine(lineData) {
  */
 async function updateLine(id, lineData) {
     const pool = await getPool();
-    const result = await pool.request()
-        .input('id', sql.UniqueIdentifier, id)
-        .input('name', sql.NVarChar(200), lineData.name)
-        .input('plant_id', sql.UniqueIdentifier, lineData.plant_id)
-        .input('external_id', sql.NVarChar(100), lineData.external_id || null)
-        .query(`
-            UPDATE production_lines
-            SET 
-                name = @name,
-                plant_id = @plant_id,
-                external_id = @external_id,
-                updated_at = SYSDATETIMEOFFSET()
-            OUTPUT INSERTED.*
-            WHERE id = @id
-        `);
+
+    // Construir query dinâmica para suportar atualizações parciais
+    const fields = [];
+    const request = pool.request();
+    request.input('id', sql.UniqueIdentifier, id);
+
+    if (lineData.name !== undefined) {
+        fields.push('name = @name');
+        request.input('name', sql.NVarChar(200), lineData.name);
+    }
+
+    if (lineData.plant_id !== undefined) {
+        fields.push('plant_id = @plant_id');
+        request.input('plant_id', sql.UniqueIdentifier, lineData.plant_id);
+    }
+
+    if (lineData.external_id !== undefined) {
+        fields.push('external_id = @external_id');
+        request.input('external_id', sql.NVarChar(100), lineData.external_id || null);
+    }
+
+    if (lineData.metadata !== undefined) {
+        fields.push('metadata = @metadata');
+        request.input('metadata', sql.NVarChar(sql.MAX), lineData.metadata ? JSON.stringify(lineData.metadata) : null);
+    }
+
+    if (lineData.status !== undefined) {
+        fields.push('status = @status');
+        request.input('status', sql.NVarChar(50), lineData.status);
+    }
+
+    if (fields.length === 0) {
+        // Nada para atualizar, retornar o registro atual
+        return getLineById(id);
+    }
+
+    fields.push('updated_at = SYSDATETIMEOFFSET()');
+
+    const query = `
+        UPDATE production_lines
+        SET ${fields.join(', ')}
+        OUTPUT INSERTED.*
+        WHERE id = @id
+    `;
+
+    const result = await request.query(query);
     return result.recordset[0];
 }
 

@@ -176,7 +176,7 @@ const AdminAlertsManagement: React.FC = () => {
       }
 
       if (editingItem) {
-        updateAlert({ ...editingItem, ...alertData } as QualityAlert);
+        updateAlert({ ...editingItem, ...alertData, lineId: selectedLine?.id || editingItem.lineId } as QualityAlert);
       } else {
         // Ensure lineId is added if not present (though addAlert might handle it based on DataContext, we should ideally pass it explicitly if we moved away from DataContext dependency)
         // DataContext's addAlert uses selectedLineId from DataContext, which might be auto-selected.
@@ -222,6 +222,28 @@ const AdminAlertsManagement: React.FC = () => {
           <label className="text-xl block text-gray-900 dark:text-white">{t('admin.expiresAt')}
             <input name="expiresAt" type="datetime-local" value={formData.expiresAt ? new Date(formData.expiresAt).toISOString().slice(0, 16) : ''} onChange={handleChange} className={commonClass} required />
           </label>
+
+          <div className="flex items-center gap-2 mt-4">
+            <input
+              type="checkbox"
+              id="isStandbyActiveAlert"
+              name="is_standby_active"
+              checked={formData.metadata?.is_standby_active || false}
+              onChange={(e) => {
+                setFormData(prev => ({
+                  ...prev,
+                  metadata: {
+                    ...prev.metadata,
+                    is_standby_active: e.target.checked
+                  }
+                }));
+              }}
+              className="w-5 h-5 text-cyan-600 bg-gray-100 border-gray-300 rounded focus:ring-cyan-500 dark:focus:ring-cyan-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+            />
+            <label htmlFor="isStandbyActiveAlert" className="text-xl text-gray-900 dark:text-white">
+              {t('admin.showInStandby') || 'Exibir no Stand-by'}
+            </label>
+          </div>
 
           <div className="mt-6 border-t border-gray-300 dark:border-gray-700 pt-4">
             <h4 className="text-xl font-bold mb-4 text-cyan-600 dark:text-cyan-400">{t('admin.attachPdf')}</h4>

@@ -122,31 +122,67 @@ async function createDocument(documentData) {
  */
 async function updateDocument(id, documentData) {
     const pool = await getPool();
-    const result = await pool.request()
-        .input('id', sql.UniqueIdentifier, id)
-        .input('line_id', sql.UniqueIdentifier, documentData.line_id || null)
-        .input('station_id', sql.UniqueIdentifier, documentData.station_id || null)
-        .input('title', sql.NVarChar(500), documentData.title)
-        .input('document_url', sql.NVarChar(sql.MAX), documentData.document_url)
-        .input('viewinfo', sql.NVarChar(sql.MAX), documentData.viewinfo || null)
-        .input('category', sql.NVarChar(100), documentData.category)
-        .input('version', sql.Int, documentData.version || 1)
-        .input('metadata', sql.NVarChar(sql.MAX), documentData.metadata ? JSON.stringify(documentData.metadata) : null)
-        .query(`
-            UPDATE line_documents
-            SET 
-                line_id = @line_id,
-                station_id = @station_id,
-                title = @title,
-                document_url = @document_url,
-                viewinfo = @viewinfo,
-                category = @category,
-                version = @version,
-                metadata = @metadata,
-                updated_at = SYSDATETIMEOFFSET()
-            OUTPUT INSERTED.*
-            WHERE id = @id
-        `);
+
+    // Construir query dinâmica para suportar atualizações parciais
+    const fields = [];
+    const request = pool.request();
+    request.input('id', sql.UniqueIdentifier, id);
+
+    if (documentData.line_id !== undefined) {
+        fields.push('line_id = @line_id');
+        request.input('line_id', sql.UniqueIdentifier, documentData.line_id || null);
+    }
+
+    if (documentData.station_id !== undefined) {
+        fields.push('station_id = @station_id');
+        request.input('station_id', sql.UniqueIdentifier, documentData.station_id || null);
+    }
+
+    if (documentData.title !== undefined) {
+        fields.push('title = @title');
+        request.input('title', sql.NVarChar(500), documentData.title);
+    }
+
+    if (documentData.document_url !== undefined) {
+        fields.push('document_url = @document_url');
+        request.input('document_url', sql.NVarChar(sql.MAX), documentData.document_url);
+    }
+
+    if (documentData.viewinfo !== undefined) {
+        fields.push('viewinfo = @viewinfo');
+        request.input('viewinfo', sql.NVarChar(sql.MAX), documentData.viewinfo || null);
+    }
+
+    if (documentData.category !== undefined) {
+        fields.push('category = @category');
+        request.input('category', sql.NVarChar(100), documentData.category);
+    }
+
+    if (documentData.version !== undefined) {
+        fields.push('version = @version');
+        request.input('version', sql.Int, documentData.version || 1);
+    }
+
+    if (documentData.metadata !== undefined) {
+        fields.push('metadata = @metadata');
+        request.input('metadata', sql.NVarChar(sql.MAX), documentData.metadata ? JSON.stringify(documentData.metadata) : null);
+    }
+
+    if (fields.length === 0) {
+        // Nada para atualizar
+        return getDocumentById(id);
+    }
+
+    fields.push('updated_at = SYSDATETIMEOFFSET()');
+
+    const query = `
+        UPDATE line_documents
+        SET ${fields.join(', ')}
+        OUTPUT INSERTED.*
+        WHERE id = @id
+    `;
+
+    const result = await request.query(query);
     return result.recordset[0];
 }
 

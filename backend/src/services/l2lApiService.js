@@ -169,6 +169,31 @@ async function testConnection() {
     }
 }
 
+/**
+ * Buscar dados de evento de um dispatch específico
+ * Endpoint: /dispatches/get_event_data/
+ * @param {Object} params - Parâmetros da busca (dispatch_id, dispatch_number, etc)
+ */
+async function getEventData(params = {}) {
+    return fetchFromL2L('/dispatches/get_event_data/', params);
+}
+
+/**
+ * Iniciar exportação de dispatches (Async)
+ * Endpoint: /dispatches/data_export/
+ */
+async function startDispatchExport(params = {}) {
+    return fetchFromL2L('/dispatches/data_export/', params);
+}
+
+/**
+ * Verificar status de job assíncrono
+ * Endpoint: /sites/asyncjob_status/
+ */
+async function getAsyncJobStatus(jobId) {
+    return fetchFromL2L('/sites/asyncjob_status/', { jobid: jobId });
+}
+
 module.exports = {
     getSites,
     getLines,
@@ -177,5 +202,8 @@ module.exports = {
     getDocumentsByCategory,
     getDocumentViewInfo,
     getShiftProduction,
+    getEventData,
+    startDispatchExport,
+    getAsyncJobStatus,
     testConnection,
 };

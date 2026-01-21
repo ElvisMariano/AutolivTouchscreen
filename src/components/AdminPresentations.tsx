@@ -8,6 +8,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { useLine } from '../contexts/LineContext';
 import { createDocument as addLineDocument, updateDocument as updateLineDocument } from '@/services/api/documents';
 import { useAuth } from '../contexts/AuthContext';
+import { usePDFStorage } from '../hooks/usePDFStorage';
 
 const AdminPresentations: React.FC = () => {
     const {
@@ -149,21 +150,62 @@ const AdminPresentations: React.FC = () => {
     const FormModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         const { selectedLine } = useLine();
         const { currentUser } = useAuth();
-        const [formData, setFormData] = useState<Partial<Presentation>>(editingItem || {});
+        const { createDocument: createDocMutation, updateDocument: updateDocMutation } = useDocuments(); // Moved here or used from parent
+
+        const [formData, setFormData] = useState<Partial<Presentation>>(editingItem || {
+            metadata: {
+                show_in_dashboard: true,
+                is_standby_active: true,
+                page_duration: 10
+            }
+        });
         const [embedCode, setEmbedCode] = useState('');
         const [extractedUrl, setExtractedUrl] = useState<string | null>(editingItem?.url || null);
-        const [error, setError] = useState<string | null>(null);
+
+        // Standby File State
+        const [selectedFile, setSelectedFile] = useState<File | null>(null);
+        const [uploadProgress, setUploadProgress] = useState<string>('');
+        const [existingPdfUrl, setExistingPdfUrl] = useState<string | null>(editingItem?.metadata?.pdf_url || null);
+        const { savePDF } = usePDFStorage();
 
         useEffect(() => {
-            if (editingItem?.url) {
-                // If editing, try to reconstruct an iframe code representation or just leave empty instructions
-                setExtractedUrl(editingItem.url);
+            // Initialize metadata defaults if missing
+            if (editingItem) {
+                setFormData(prev => ({
+                    ...prev,
+                    metadata: {
+                        show_in_dashboard: true,
+                        is_standby_active: false,
+                        page_duration: 10,
+                        ...editingItem.metadata
+                    }
+                }));
+                setExistingPdfUrl(editingItem.metadata?.pdf_url || null);
             }
         }, [editingItem]);
 
+
+        const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+
+            if (file.type !== 'application/pdf') {
+                alert(t('admin.onlyPdf'));
+                return;
+            }
+
+            const maxSize = 50 * 1024 * 1024; // 50MB
+            if (file.size > maxSize) {
+                alert(t('admin.fileTooLarge'));
+                return;
+            }
+
+            setSelectedFile(file);
+            setUploadProgress(`${t('admin.fileSelected')}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+        };
+
         const extractUrlFromEmbed = (code: string) => {
             setEmbedCode(code);
-            setError(null);
 
             if (!code.trim()) {
                 setExtractedUrl(null);
@@ -175,25 +217,14 @@ const AdminPresentations: React.FC = () => {
 
             if (srcMatch && srcMatch[1]) {
                 const url = srcMatch[1];
-                // Verify if it looks like a valid URL
                 if (url.startsWith('http')) {
                     setExtractedUrl(url);
                     setFormData(prev => ({ ...prev, url: url }));
-                } else {
-                    setError('A URL extraída parece inválida.');
-                    setExtractedUrl(null);
                 }
-            } else {
-                // If user pasted a direct URL instead of iframe code, we might want to warn them
-                // But per requirements "Only Embed Code", we should enforce it.
-                // Checking if input itself is a URL
-                if (code.trim().startsWith('http')) {
-                    setError('Por favor, cole o código HTML completo do iframe (<iframe src="...">).');
-                    setExtractedUrl(null);
-                } else {
-                    setError('Código de incorporação inválido. Certifique-se de copiar o tag <iframe> completo.');
-                    setExtractedUrl(null);
-                }
+            } else if (code.trim().startsWith('http')) {
+                // Allow direct URL if verified
+                setExtractedUrl(code.trim());
+                setFormData(prev => ({ ...prev, url: code.trim() }));
             }
         };
 
@@ -210,47 +241,69 @@ const AdminPresentations: React.FC = () => {
                 return;
             }
 
-            if (!extractedUrl) {
-                alert('URL da apresentação inválida.');
+            // 1. Handle Standby PDF Upload
+            let finalPdfUrl = existingPdfUrl;
+            if (selectedFile) {
+                try {
+                    setUploadProgress(t('admin.uploading'));
+                    const targetId = editingItem ? editingItem.id : `pres-${Date.now()}`;
+                    // Append suffix to avoid collision if basic logic is used, though savePDF takes ID. 
+                    // Ideally use a unique name or specific bucket path logic.
+                    // usePDFStorage handles ID-based keys.
+                    const indexedDBUrl = await savePDF(selectedFile, `${targetId}_pdf`); // Suffix to differentiate
+                    finalPdfUrl = indexedDBUrl;
+                    setUploadProgress(t('admin.uploadComplete'));
+                } catch (error) {
+                    alert(t('admin.uploadError'));
+                    console.error('Upload error:', error);
+                    return;
+                }
+            }
+
+            // 2. Prepare Data
+            // Dashboard URL: extractedUrl (Preferred) -> formData.url -> fallback to pdfUrl if iframe should display PDF too
+            const dashboardUrl = extractedUrl || formData.url || finalPdfUrl;
+
+            if (!dashboardUrl) {
+                alert('É necessário fornecer pelo menos um link ou arquivo PDF.');
                 return;
             }
 
             const docData = {
                 ...formData,
-                url: extractedUrl
+                url: dashboardUrl, // Main URL used by Dashboard Iframe
+                metadata: {
+                    ...formData.metadata,
+                    pdf_url: finalPdfUrl // Specific URL for Standby PDF Viewer
+                }
             } as Presentation;
 
-            if (editingItem) {
-                updatePresentation(docData);
+            const payload = {
+                line_id: selectedLine?.id || editingItem?.lineId,
+                title: formData.title,
+                document_url: dashboardUrl,
+                category: 'presentation',
+                version: typeof formData.version === 'number' ? formData.version : 1,
+                metadata: docData.metadata
+            };
 
-                try {
-                    await updateLineDocument(editingItem.id, {
-                        title: formData.title,
-                        document_url: extractedUrl,
-                        version: typeof formData.version === 'number' ? formData.version : (formData.version ? Number(formData.version) : undefined)
-                    });
-                } catch (error) {
-                    console.error('Erro ao atualizar apresentação:', error);
-                }
-            } else {
-                addPresentation({ ...docData, lineId: selectedLine.id });
-
-                if (currentUser && extractedUrl && formData.title) {
-                    try {
+            // 3. Submit
+            try {
+                if (editingItem) {
+                    await updateLineDocument(editingItem.id, payload);
+                } else {
+                    if (currentUser?.id) {
                         await addLineDocument({
-                            line_id: selectedLine.id,
-                            category: 'presentation',
-                            title: formData.title,
-                            document_url: extractedUrl, // Using extractedUrl for document_url
-                            version: typeof formData.version === 'number' ? formData.version : (formData.version ? Number(formData.version) : 1),
-                            uploaded_by: currentUser.name || 'Admin'
+                            ...payload,
+                            uploaded_by: currentUser.id
                         });
-                    } catch (error) {
-                        console.error('Erro ao vincular:', error);
                     }
                 }
+                onClose();
+            } catch (error) {
+                console.error('Erro ao salvar:', error);
+                alert('Erro ao salvar apresentação.');
             }
-            onClose();
         }
 
         return (
@@ -258,12 +311,11 @@ const AdminPresentations: React.FC = () => {
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {!selectedLine && (
                         <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                            <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                                ⚠️ Selecione uma linha no seletor acima.
-                            </p>
+                            <p className="text-sm text-yellow-700 dark:text-yellow-300">⚠️ Selecione uma linha no seletor acima.</p>
                         </div>
                     )}
 
+                    {/* Title */}
                     <div className="space-y-2">
                         <label className="text-xl block text-gray-900 dark:text-white">
                             {t('common.title')} <span className="text-red-500">*</span>
@@ -277,52 +329,104 @@ const AdminPresentations: React.FC = () => {
                         />
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-xl block text-gray-900 dark:text-white">
-                            {t('admin.embedCode')} (SharePoint Embed) <span className="text-red-500">*</span>
-                        </label>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                            Copie o código completo em <b>Arquivo {'>'} Compartilhar {'>'} Incorporar</b> no SharePoint.
-                        </p>
-                        <textarea
-                            rows={4}
-                            value={embedCode}
-                            onChange={(e) => extractUrlFromEmbed(e.target.value)}
-                            placeholder='<iframe src="https://..." width="..." ...></iframe>'
-                            className={`w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-3 rounded-lg text-sm font-mono border-2 focus:outline-none transition-colors ${error ? 'border-red-500 focus:border-red-500' :
-                                extractedUrl ? 'border-green-500 focus:border-green-500' : 'border-gray-300 dark:border-gray-600 focus:border-cyan-500'
-                                }`}
-                        />
-                        {error && (
-                            <p className="text-red-500 text-sm flex items-center gap-1">
-                                <ExclamationTriangleIcon className="w-4 h-4" /> {error}
-                            </p>
-                        )}
-                        {extractedUrl && (
-                            <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                                <p className="text-sm text-green-700 dark:text-green-300 flex items-center gap-2">
-                                    <CheckCircleIcon className="w-5 h-5" />
-                                    Link extraído com sucesso!
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
-                                    {extractedUrl}
-                                </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* LEFT COLUMN: Dashboard Config */}
+                        <div className="space-y-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+                            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 border-b pb-2 border-gray-300 dark:border-gray-600 mb-2">
+                                🖥️ Dashboard (Iframe)
+                            </h3>
+
+                            <div className="flex items-center gap-2 mb-2">
+                                <input
+                                    type="checkbox"
+                                    id="showInDashboard"
+                                    checked={formData.metadata?.show_in_dashboard !== false}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, metadata: { ...prev.metadata, show_in_dashboard: e.target.checked } }))}
+                                    className="w-5 h-5 text-cyan-600 cursor-pointer"
+                                />
+                                <label htmlFor="showInDashboard" className="text-base text-gray-900 dark:text-white cursor-pointer select-none">
+                                    Exibir no Dashboard
+                                </label>
                             </div>
-                        )}
+
+                            <div className="space-y-2">
+                                <label className="text-sm block text-gray-700 dark:text-gray-400">
+                                    Link / Embed Code
+                                </label>
+                                <textarea
+                                    rows={3}
+                                    value={embedCode}
+                                    onChange={(e) => extractUrlFromEmbed(e.target.value)}
+                                    placeholder='<iframe src="..." ...></iframe> ou https://...'
+                                    className="w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-3 rounded-lg text-sm border focus:outline-none border-gray-300 dark:border-gray-600 focus:border-cyan-500"
+                                />
+                                <p className="text-xs text-gray-500">Iframe do SharePoint ou Link direto.</p>
+                            </div>
+                        </div>
+
+                        {/* RIGHT COLUMN: Standby Config */}
+                        <div className="space-y-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+                            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 border-b pb-2 border-gray-300 dark:border-gray-600 mb-2">
+                                📺 Stand-by (PDF)
+                            </h3>
+
+                            <div className="flex items-center gap-2 mb-2">
+                                <input
+                                    type="checkbox"
+                                    id="isStandbyActive"
+                                    checked={formData.metadata?.is_standby_active || false}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, metadata: { ...prev.metadata, is_standby_active: e.target.checked } }))}
+                                    className="w-5 h-5 text-cyan-600 cursor-pointer"
+                                />
+                                <label htmlFor="isStandbyActive" className="text-base text-gray-900 dark:text-white cursor-pointer select-none">
+                                    Exibir no Stand-by
+                                </label>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm block text-gray-700 dark:text-gray-400">
+                                    Upload PDF (Prioritário)
+                                </label>
+                                <input
+                                    type="file"
+                                    accept=".pdf,application/pdf"
+                                    onChange={handleFileSelect}
+                                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100"
+                                />
+                                {existingPdfUrl && !selectedFile && (
+                                    <p className="text-xs text-green-600 mt-1">✓ PDF já existe. Envie novo para substituir.</p>
+                                )}
+                                {uploadProgress && <p className="text-xs text-cyan-600 animate-pulse">{uploadProgress}</p>}
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm block text-gray-700 dark:text-gray-400">
+                                    Tempo por Página (segundos)
+                                </label>
+                                <input
+                                    type="number"
+                                    min="3"
+                                    max="300"
+                                    value={formData.metadata?.page_duration || 10}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, metadata: { ...prev.metadata, page_duration: Number(e.target.value) } }))}
+                                    className="w-full bg-white dark:bg-gray-900 p-2 rounded border border-gray-300 dark:border-gray-600"
+                                />
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="flex justify-end space-x-4 pt-4">
-                        <button type="button" onClick={onClose} className="px-6 py-3 bg-gray-600 rounded-lg text-xl hover:bg-gray-500 text-white">{t('common.cancel')}</button>
+                    <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <button type="button" onClick={onClose} className="px-6 py-2 bg-gray-600 rounded-lg hover:bg-gray-500 text-white transition-colors">{t('common.cancel')}</button>
                         <button
                             type="submit"
-                            disabled={!extractedUrl || !selectedLine || !formData.title}
-                            className="px-6 py-3 bg-cyan-600 rounded-lg text-xl hover:bg-cyan-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={(!extractedUrl && !formData.url && !existingPdfUrl && !selectedFile) || !selectedLine || !formData.title}
+                            className="px-6 py-2 bg-cyan-600 rounded-lg hover:bg-cyan-500 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-bold shadow-md"
                         >
                             {t('common.save')}
                         </button>
                     </div>
                 </form>
-            </Modal>
+            </Modal >
         )
     }
 

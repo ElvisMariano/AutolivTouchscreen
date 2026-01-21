@@ -83,7 +83,10 @@ const Dashboard: React.FC<DashboardProps> = () => {
     );
 
     const filteredPresentations = React.useMemo(() =>
-        presentations.filter(pres => !pres.lineId || pres.lineId === selectedLineId),
+        presentations.filter(pres =>
+            (!pres.lineId || pres.lineId === selectedLineId) &&
+            pres.metadata?.show_in_dashboard !== false
+        ),
         [presentations, selectedLineId]
     );
 

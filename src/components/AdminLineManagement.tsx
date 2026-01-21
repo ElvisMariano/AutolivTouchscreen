@@ -58,6 +58,10 @@ const AdminLineManagement: React.FC = () => {
     const [lineName, setLineName] = useState('');
     const [lineDescription, setLineDescription] = useState('');
     const [externalId, setExternalId] = useState('');
+    const [showProductionInStandby, setShowProductionInStandby] = useState(true);
+    const [productionDuration, setProductionDuration] = useState(15);
+    const [presentationDuration, setPresentationDuration] = useState(20);
+    const [alertDuration, setAlertDuration] = useState(15);
     const [stationName, setStationName] = useState('');
     const [stationDescription, setStationDescription] = useState('');
 
@@ -70,17 +74,28 @@ const AdminLineManagement: React.FC = () => {
         e.preventDefault();
         if (!editingLine || !lineName.trim()) return;
 
+        const currentLine = lines.find(l => l.id === editingLine);
+
         try {
             await updateLine(editingLine, {
                 name: lineName,
-                external_id: externalId || undefined
-                // description not supported in new API
+                plant_id: currentLine?.plant_id, // Explicitly keep existing plant_id
+                external_id: externalId || undefined,
+                metadata: {
+                    standby_config: {
+                        show_production: showProductionInStandby,
+                        production_duration: productionDuration,
+                        presentation_duration: presentationDuration,
+                        alert_duration: alertDuration
+                    }
+                }
             });
             await refreshLines();
             setEditingLine(null);
             setLineName('');
             setLineDescription('');
             setExternalId('');
+            setShowProductionInStandby(true);
         } catch (error) {
             console.error('Error updating line:', error);
             alert('Erro ao atualizar linha');
@@ -92,6 +107,17 @@ const AdminLineManagement: React.FC = () => {
         setLineName(getLineName(line.name));
         setLineDescription(getLineDescription(line) || '');
         setExternalId(line.external_id || '');
+
+        // Load standby config
+        if (line.metadata?.standby_config?.show_production !== undefined) {
+            setShowProductionInStandby(line.metadata.standby_config.show_production);
+        } else {
+            setShowProductionInStandby(true); // Default
+        }
+        setProductionDuration(line.metadata?.standby_config?.production_duration || 15);
+        setPresentationDuration(line.metadata?.standby_config?.presentation_duration || 20);
+        setAlertDuration(line.metadata?.standby_config?.alert_duration || 15);
+
         setIsCreatingLine(false);
     };
 
@@ -100,6 +126,7 @@ const AdminLineManagement: React.FC = () => {
         setLineName('');
         setLineDescription('');
         setExternalId('');
+        setShowProductionInStandby(true);
     };
 
     const handleCreateLine = async (e: React.FormEvent) => {
@@ -114,12 +141,25 @@ const AdminLineManagement: React.FC = () => {
             await createLine({
                 name: lineName,
                 plant_id: selectedPlantId,
-                external_id: externalId || undefined
+                external_id: externalId || undefined,
+                metadata: {
+                    standby_config: {
+                        show_production: showProductionInStandby,
+                        production_duration: productionDuration,
+                        presentation_duration: presentationDuration,
+                        alert_duration: alertDuration
+                    }
+                }
             });
             await refreshLines();
             setLineName('');
             setLineDescription('');
             setExternalId('');
+            setExternalId('');
+            setShowProductionInStandby(true);
+            setProductionDuration(15);
+            setPresentationDuration(20);
+            setAlertDuration(15);
             setIsCreatingLine(false);
         } catch (error) {
             console.error('Error creating line:', error);
@@ -269,6 +309,58 @@ const AdminLineManagement: React.FC = () => {
                                     rows={3}
                                 />
                             </div>
+
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    id="showProductionInStandby"
+                                    checked={showProductionInStandby}
+                                    onChange={(e) => setShowProductionInStandby(e.target.checked)}
+                                    className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                                />
+                                <label htmlFor="showProductionInStandby" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {t('admin.showProductionInStandby') || 'Exibir Métricas de Produção na Tela de Stand-by'}
+                                </label>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4 border-gray-200 dark:border-gray-700">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Tempo Produção (s)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="5"
+                                        value={productionDuration}
+                                        onChange={(e) => setProductionDuration(Number(e.target.value))}
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Tempo Apresentação (s)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="5"
+                                        value={presentationDuration}
+                                        onChange={(e) => setPresentationDuration(Number(e.target.value))}
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Tempo Alerta (s)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="5"
+                                        value={alertDuration}
+                                        onChange={(e) => setAlertDuration(Number(e.target.value))}
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                    />
+                                </div>
+                            </div>
                             <div className="flex gap-2">
                                 <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
                                     {editingLine ? 'Salvar Alterações' : 'Criar'}
@@ -283,6 +375,11 @@ const AdminLineManagement: React.FC = () => {
                                             setLineName('');
                                             setLineDescription('');
                                             setExternalId('');
+                                            setExternalId('');
+                                            setShowProductionInStandby(true);
+                                            setProductionDuration(15);
+                                            setPresentationDuration(20);
+                                            setAlertDuration(15);
                                         }
                                     }}
                                     className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"

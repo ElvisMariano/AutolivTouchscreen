@@ -34,13 +34,15 @@ export const useDocuments = () => {
                         embedUrl: d.document_url || d.document_id, // Ensure we check document_url too
                         lineId: d.line_id
                     });
-                } else if (docCategory === 'presentation') {
+                } else if (docCategory?.toLowerCase() === 'presentation') {
+                    const metadata = typeof d.metadata === 'string' ? JSON.parse(d.metadata) : d.metadata;
                     presentations.push({
                         id: d.id,
                         title: d.title,
                         url: d.document_url || d.document_id,
                         version: d.version,
-                        lineId: d.line_id
+                        lineId: d.line_id,
+                        metadata: metadata
                     });
                 } else {
                     let category: DocumentCategory;
@@ -61,7 +63,8 @@ export const useDocuments = () => {
                             createdAt: d.created_at || d.uploaded_at,
                             pdfUrl: (d.document_url || d.document_id)?.startsWith('http') ? (d.document_url || d.document_id) : undefined,
                             pdfName: metadata?.pdfName,
-                            lineId: d.line_id
+                            lineId: d.line_id,
+                            metadata: metadata
                         };
                         alerts.push(alert);
                         return; // Skip adding to docs array
@@ -82,6 +85,8 @@ export const useDocuments = () => {
                         category = docCategory as DocumentCategory;
                     }
 
+                    const metadata = typeof d.metadata === 'string' ? JSON.parse(d.metadata) : d.metadata;
+
                     docs.push({
                         id: d.id,
                         title: d.title,
@@ -91,7 +96,8 @@ export const useDocuments = () => {
                         lineId: d.line_id,
                         stationId: d.station_id, // Map station_id
                         stationName: d.station_name, // Map station_name
-                        lastUpdated: d.updated_at || d.created_at || d.uploaded_at
+                        lastUpdated: d.updated_at || d.created_at || d.uploaded_at,
+                        metadata: metadata
                     });
                 }
             });

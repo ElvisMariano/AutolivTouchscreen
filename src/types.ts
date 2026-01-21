@@ -56,6 +56,15 @@ export interface ProductionLine {
     plantName?: string;
     external_id?: string;
     description?: string;
+    metadata?: {
+        standby_config?: {
+            show_production?: boolean;
+            production_duration?: number;
+            presentation_duration?: number;
+            alert_duration?: number;
+        };
+        [key: string]: any;
+    };
 }
 
 export interface Document {
@@ -69,6 +78,10 @@ export interface Document {
     stationId?: string;
     stationName?: string;
     viewinfo?: string; // Data URL do PDF fornecido pelo PLM através da API L2L
+    metadata?: {
+        is_standby_active?: boolean;
+        [key: string]: any;
+    };
 }
 
 
@@ -86,6 +99,13 @@ export interface Presentation {
     version?: number;
     lineId?: string;
     slides?: string[];
+    metadata?: {
+        is_standby_active?: boolean;
+        show_in_dashboard?: boolean; // Novo: controlar visibilidade no dashboard
+        pdf_url?: string;            // Novo: URL específica para o PDF (upload)
+        page_duration?: number;      // Novo: duração em segundos por página no standby
+        [key: string]: any;
+    };
 }
 
 
@@ -128,6 +148,10 @@ export interface QualityAlert {
     pdfUrl?: string; // URL do PDF específico do alerta (opcional)
     pdfName?: string; // Nome do arquivo PDF
     lineId?: string; // ID da linha de produção associada
+    metadata?: {
+        is_standby_active?: boolean;
+        [key: string]: any;
+    };
 }
 
 export interface SystemSettings {

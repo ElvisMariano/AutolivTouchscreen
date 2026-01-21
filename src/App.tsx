@@ -64,7 +64,11 @@ const AppRoutes: React.FC = () => {
         const forceStandby = currentUser?.allowed_resources?.includes('system:enable_standby') || currentUser?.role?.allowed_resources?.includes('system:enable_standby');
         const isStandbyEnabled = settings.standbyEnabled || forceStandby;
 
-        if (isStandbyEnabled && selectedLine && selectedPlant && isDashboard) {
+        // Check if a modal is open by looking for the modal overlay/container in the DOM
+        // The Modal component uses a div with these specific classes
+        const isModalOpen = document.querySelectorAll('.fixed.inset-0.z-50').length > 0;
+
+        if (isStandbyEnabled && selectedLine && selectedPlant && isDashboard && !isModalOpen) {
             console.log("Stand-by timeout. Showing standby screen.");
             setShowStandby(true);
         }
@@ -255,6 +259,7 @@ const AppRoutes: React.FC = () => {
         return (
             <StandbyScreen
                 lineId={lineId}
+                dbLineId={selectedLine.id} // Pass internal ID for DB filtering
                 lineName={selectedLine.name}
                 siteId={siteId}
                 shiftStart={shiftStart}
