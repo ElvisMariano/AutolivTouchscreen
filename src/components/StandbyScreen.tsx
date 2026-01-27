@@ -367,7 +367,7 @@ const StandbyScreen: React.FC<StandbyScreenProps> = ({
 
                 {/* Right: Time & Date */}
                 <div className="flex flex-col items-end">
-                    <div className="text-4xl md:text-6xl font-black font-mono tracking-wider text-white leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
+                    <div className="text-4xl md:text-6xl pr-8 font-black font-mono tracking-wider text-white leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
                         {formatTime(currentTime)}
                     </div>
                     <div className="text-sm md:text-xl text-cyan-100/70 font-medium mt-1 uppercase tracking-[0.2em]">
@@ -379,10 +379,10 @@ const StandbyScreen: React.FC<StandbyScreenProps> = ({
             {/* Exit Button (X) */}
             <button
                 onClick={(e) => { e.stopPropagation(); onExit(); }}
-                className="absolute top-24 right-4 md:top-4 md:right-4 z-50 p-3 md:p-4 bg-red-600/80 hover:bg-red-600 text-white rounded-full shadow-lg backdrop-blur transition-transform active:scale-95 flex items-center justify-center group"
+                className="absolute top-10 right-4 md:top-2 md:right-2 z-50 p-3 md:p-4 bg-red-600/80 opacity-80 hover:bg-red-600 text-white rounded-full shadow-lg backdrop-blur transition-transform active:scale-95 flex items-center justify-center group"
                 aria-label="Exit Standby"
             >
-                <XMarkIcon className="w-8 h-8 md:w-10 md:h-10 group-hover:rotate-90 transition-transform duration-300" />
+                <XMarkIcon className="w-5 h-5 md:w-5 md:h-5 group-hover:rotate-90 transition-transform duration-300" />
             </button>
 
             {/* Hold Feedback Overlay */}
