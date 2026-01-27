@@ -56,7 +56,7 @@ const AdminSettings: React.FC = () => {
         const data = await getLatestBackup('settings');
         if (data) {
             importAll({ settings: data });
-            logEvent('settings', 'update', 'restore', 'Restaurar último backup de configurações');
+            logEvent('settings', 'update', 'restore', t('admin.restoreBackupConfirm')); // Using closest semantic key or generic log message
         }
     };
     const handleExport = () => {
@@ -68,7 +68,7 @@ const AdminSettings: React.FC = () => {
         a.download = `backup-autoliv-${new Date().toISOString()}.json`;
         a.click();
         URL.revokeObjectURL(url);
-        logEvent('settings', 'view', 'export', 'Exportar backup JSON');
+        logEvent('settings', 'view', 'export', t('admin.backup') + ' Export JSON');
     };
     const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -78,7 +78,7 @@ const AdminSettings: React.FC = () => {
             try {
                 const data = JSON.parse(String(reader.result));
                 importAll(data);
-                logEvent('settings', 'view', 'import', 'Importar backup JSON');
+                logEvent('settings', 'view', 'import', t('admin.backup') + ' Import JSON');
             } catch { }
         };
         reader.readAsText(file);
@@ -152,7 +152,7 @@ const AdminSettings: React.FC = () => {
                     </div>
                     {/* Shift Check Interval */}
                     <div>
-                        <label className="block text-xl mb-2">Intervalo de Verificação de Turno (segundos)</label>
+                        <label className="block text-xl mb-2">{t('admin.shiftCheckInterval')}</label>
                         <input
                             type="number"
                             value={settings.shiftCheckInterval || 60}
@@ -162,7 +162,7 @@ const AdminSettings: React.FC = () => {
                     </div>
                     {/* Production Refresh Interval */}
                     <div>
-                        <label className="block text-xl mb-2">Intervalo Atualização Produção (segundos)</label>
+                        <label className="block text-xl mb-2">{t('admin.productionUpdateInterval')}</label>
                         <input
                             type="number"
                             value={settings.productionRefreshInterval || 300}
@@ -216,13 +216,13 @@ const AdminSettings: React.FC = () => {
                             onChange={(e) => updateSetting('gestureNavigation', e.target.checked)}
                             className="w-6 h-6 accent-cyan-500"
                         />
-                        <span className="text-xl text-gray-900 dark:text-white">Navegação por Gestos</span>
+                        <span className="text-xl text-gray-900 dark:text-white">{t('admin.gestureNavigation')}</span>
                     </label>
 
                     {settings.gestureNavigation && (
                         <div className="p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-700">
                             <label className="block text-xl mb-2 text-gray-900 dark:text-white">
-                                Sensibilidade (Px): <span className="font-bold text-cyan-500">{settings.gestureSensitivity || 100}px</span>
+                                {t('admin.sensitivity')} (Px): <span className="font-bold text-cyan-500">{settings.gestureSensitivity || 100}px</span>
                             </label>
                             <input
                                 type="range"
@@ -234,8 +234,8 @@ const AdminSettings: React.FC = () => {
                                 className="w-full accent-cyan-500 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
                             />
                             <div className="flex justify-between text-xs text-gray-500 mt-1">
-                                <span>Mais Sensível (50px)</span>
-                                <span>Menos Sensível (300px)</span>
+                                <span>{t('admin.moreSensitive')} (50px)</span>
+                                <span>{t('admin.lessSensitive')} (300px)</span>
                             </div>
                         </div>
                     )}
@@ -435,7 +435,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin, setIsAdmin, subPage, s
             case AdminSubPage.Plants: return t('admin.plantManagement');
             case AdminSubPage.History: return t('admin.logs');
             case AdminSubPage.Settings: return t('admin.settings');
-            case AdminSubPage.L2LSync: return 'Sincronização L2L';
+            case AdminSubPage.L2LSync: return t('admin.l2lSync') || 'Sincronização L2L';
             default: return page;
         }
     };

@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 // import { useData } from '../contexts/DataContext';
 import { usePlants } from '../hooks/usePlants';
 import { useAuth } from '../contexts/AuthContext';
+import { useI18n } from '../contexts/I18nContext';
 import { Plant } from '../types';
 import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { useSettings } from '../contexts/SettingsContext';
 import Modal from './common/Modal'; // Importando Modal
 
 const AdminPlantManagement: React.FC = () => {
+    const { t } = useI18n();
     const { currentUser } = useAuth();
     // Use usePlants directly instead of DataContext wrappers
     const { plants: apiPlants, createPlant, updatePlant, deletePlant } = usePlants(true, currentUser?.id);
@@ -73,7 +75,7 @@ const AdminPlantManagement: React.FC = () => {
         setError('');
 
         if (!formData.name.trim()) {
-            setError('Nome é obrigatório');
+            setError(t('admin.plantName') + ' ' + t('common.required'));
             return;
         }
 
@@ -88,7 +90,7 @@ const AdminPlantManagement: React.FC = () => {
                         location: formData.location
                     }) as unknown as Plant;
                 } catch (err: any) {
-                    setError('Falha ao criar planta: ' + (err.message || String(err)));
+                    setError(t('admin.plantCreatedError', { error: err.message || String(err) }));
                     return;
                 }
 
@@ -106,11 +108,11 @@ const AdminPlantManagement: React.FC = () => {
                     } catch (err: any) {
                         const errorMsg = String(err.message || err);
                         if (errorMsg.includes('duplicate key')) {
-                            setError('Este Contexto/Site ID já está em uso por outra planta.');
+                            setError(t('admin.duplicateSiteId'));
                             setEditingId(newPlant.id); // Allow user to fix
                             setIsAdding(false);
                         } else {
-                            setError('Planta criada, mas falha ao salvar detalhes: ' + errorMsg);
+                            setError(t('admin.plantCreatedError', { error: errorMsg }));
                         }
                     }
                 }
@@ -127,9 +129,9 @@ const AdminPlantManagement: React.FC = () => {
                 } catch (err: any) {
                     const errorMsg = String(err.message || err);
                     if (errorMsg.includes('duplicate key') || errorMsg.includes('IX_plants_external_id')) {
-                        setError('Este Site ID já está em uso por outra planta.');
+                        setError(t('admin.duplicateSiteId'));
                     } else {
-                        setError('Falha ao atualizar planta: ' + errorMsg);
+                        setError(t('admin.plantUpdateError', { error: errorMsg }));
                     }
                 }
             }
@@ -147,7 +149,7 @@ const AdminPlantManagement: React.FC = () => {
             // Success is implied if no error thrown
         } catch (err) {
             console.error('Erro ao inativar:', err);
-            setError('Erro ao inativar planta.');
+            setError(t('admin.errorInactivatingPlant'));
         } finally {
             setIsDeleteModalOpen(false);
             setPlantToDelete(null);
@@ -163,52 +165,52 @@ const AdminPlantManagement: React.FC = () => {
         <div className={`p-6 rounded-lg ${settings.theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
             {/* Header ... */}
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">Gerenciamento de Plantas</h2>
+                <h2 className="text-2xl font-bold">{t('admin.plantManagement')}</h2>
                 {!isAdding && !editingId && (
                     <button
                         onClick={() => setIsAdding(true)}
                         className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-500 transition"
                     >
                         <PlusIcon className="h-5 w-5" />
-                        Nova Planta
+                        {t('admin.newPlant')}
                     </button>
                 )}
             </div>
 
             {(isAdding || editingId) && (
                 <div className="mb-8 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <h3 className="text-lg font-semibold mb-4">{isAdding ? 'Nova Planta' : 'Editar Planta'}</h3>
+                    <h3 className="text-lg font-semibold mb-4">{isAdding ? t('admin.newPlant') : t('admin.editPlant')}</h3>
                     {error && <p className="text-red-500 mb-4">{error}</p>}
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium mb-1">Nome</label>
+                                <label className="block text-sm font-medium mb-1">{t('admin.plantName')}</label>
                                 <input
                                     type="text"
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                                     className="w-full p-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800"
-                                    placeholder="Ex: Planta Taubaté"
+                                    placeholder={t('admin.plantNamePlaceholder') || "Ex: Planta Taubaté"}
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Localização</label>
+                                <label className="block text-sm font-medium mb-1">{t('admin.plantLocation')}</label>
                                 <input
                                     type="text"
                                     value={formData.location}
                                     onChange={e => setFormData({ ...formData, location: e.target.value })}
                                     className="w-full p-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800"
-                                    placeholder="Ex: Taubaté, SP"
+                                    placeholder={t('admin.plantLocationPlaceholder') || "Ex: Taubaté, SP"}
                                 />
                             </div>
                             <div className="md:col-span-2">
-                                <label className="block text-sm font-medium mb-1">Site ID (Opcional)</label>
+                                <label className="block text-sm font-medium mb-1">{t('admin.siteIdOptional')}</label>
                                 <input
                                     type="text"
                                     value={formData.external_id}
                                     onChange={e => setFormData({ ...formData, external_id: e.target.value })}
                                     className="w-full p-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800"
-                                    placeholder="Identificador externo único (opcional)"
+                                    placeholder={t('admin.siteIdPlaceholder')}
                                 />
                             </div>
                         </div>
@@ -222,7 +224,7 @@ const AdminPlantManagement: React.FC = () => {
                                             <span className="font-medium">{shift.name}</span>
                                         </div>
                                         <div>
-                                            <label className="text-xs text-gray-500 block">Início</label>
+                                            <label className="text-xs text-gray-500 block">{t('admin.startTime')}</label>
                                             <input
                                                 type="time"
                                                 value={shift.startTime}
@@ -235,7 +237,7 @@ const AdminPlantManagement: React.FC = () => {
                                             />
                                         </div>
                                         <div>
-                                            <label className="text-xs text-gray-500 block">Fim</label>
+                                            <label className="text-xs text-gray-500 block">{t('admin.endTime')}</label>
                                             <input
                                                 type="time"
                                                 value={shift.endTime}
@@ -257,7 +259,7 @@ const AdminPlantManagement: React.FC = () => {
                                                     setFormData({ ...formData, shift_config: newShifts });
                                                 }}
                                             />
-                                            <span className="text-sm">Ativo</span>
+                                            <span className="text-sm">{t('admin.active')}</span>
                                         </label>
                                     </div>
                                 ))}
@@ -270,13 +272,13 @@ const AdminPlantManagement: React.FC = () => {
                                 onClick={resetForm}
                                 className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
                             >
-                                Cancelar
+                                {t('common.cancel')}
                             </button>
                             <button
                                 type="submit"
                                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500"
                             >
-                                Salvar
+                                {t('common.save')}
                             </button>
                         </div>
                     </form>
@@ -290,7 +292,7 @@ const AdminPlantManagement: React.FC = () => {
                             <div className="flex justify-between items-start">
                                 <h3 className="text-xl font-semibold text-cyan-600">{plant.name}</h3>
                                 <span className={`px-2 py-0.5 rounded text-xs ${plant.status === 'active' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
-                                    {plant.status === 'active' ? 'Ativo' : 'Inativo'}
+                                    {plant.status === 'active' ? t('admin.active') : t('admin.inactive')}
                                 </span>
                             </div>
                             <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm">{plant.location}</p>
@@ -300,7 +302,7 @@ const AdminPlantManagement: React.FC = () => {
                             <button
                                 onClick={() => handleEdit(plant)}
                                 className="p-2 text-blue-600 hover:bg-blue-100 rounded-full"
-                                title="Editar"
+                                title={t('common.edit')}
                             >
                                 <PencilIcon className="h-5 w-5" />
                             </button>
@@ -308,7 +310,7 @@ const AdminPlantManagement: React.FC = () => {
                                 <button
                                     onClick={() => openDeleteModal(plant)}
                                     className="p-2 text-red-600 hover:bg-red-100 rounded-full"
-                                    title="Inativar"
+                                    title={t('admin.inactivatePlant')}
                                 >
                                     <TrashIcon className="h-5 w-5" />
                                 </button>
@@ -322,28 +324,28 @@ const AdminPlantManagement: React.FC = () => {
             <Modal
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
-                title="Confirmar Inativação"
+                title={t('admin.inactivatePlant')}
                 size="md"
             >
                 <div className="space-y-4">
                     <p className="text-gray-600 dark:text-gray-300">
-                        Tem certeza que deseja inativar a planta <strong>{plantToDelete?.name}</strong>?
+                        {t('admin.confirmInactivatePlant', { name: plantToDelete?.name })}
                         <br />
-                        Esta ação não pode ser desfeita facilmente.
+                        {t('admin.actionCannotBeUndone')}
                     </p>
                     <div className="flex justify-end gap-3 mt-6">
                         <button
                             onClick={() => setIsDeleteModalOpen(false)}
                             className="px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition-colors"
                         >
-                            Cancelar
+                            {t('common.cancel')}
                         </button>
                         <button
                             onClick={confirmDelete}
                             className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
                         >
                             <TrashIcon className="h-4 w-4" />
-                            Inativar Planta
+                            {t('admin.inactivatePlant')}
                         </button>
                     </div>
                 </div>

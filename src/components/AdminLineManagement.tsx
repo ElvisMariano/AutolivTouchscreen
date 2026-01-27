@@ -98,7 +98,7 @@ const AdminLineManagement: React.FC = () => {
             setShowProductionInStandby(true);
         } catch (error) {
             console.error('Error updating line:', error);
-            alert('Erro ao atualizar linha');
+            alert(t('admin.errorUpdatingLine'));
         }
     };
 
@@ -133,7 +133,7 @@ const AdminLineManagement: React.FC = () => {
         e.preventDefault();
         if (!currentUser || !lineName.trim()) return;
         if (!selectedPlantId) {
-            alert('Selecione uma planta antes de criar a linha.');
+            alert(t('admin.selectPlantFirst'));
             return;
         }
 
@@ -163,19 +163,19 @@ const AdminLineManagement: React.FC = () => {
             setIsCreatingLine(false);
         } catch (error) {
             console.error('Error creating line:', error);
-            alert('Erro ao criar linha');
+            alert(t('admin.errorCreatingLine'));
         }
     };
 
     const handleDeleteLine = async (lineId: string) => {
-        if (!confirm('Tem certeza que deseja desativar esta linha?')) return;
+        if (!confirm(t('admin.deleteLineConfirm'))) return;
 
         try {
             await deleteLine(lineId);
             await refreshLines();
         } catch (error) {
             console.error('Error deleting line:', error);
-            alert('Erro ao deletar linha');
+            alert(t('admin.errorDeletingLine'));
         }
     };
 
@@ -222,7 +222,7 @@ const AdminLineManagement: React.FC = () => {
             setStationDescription('');
         } catch (error) {
             console.error('Error saving station:', error);
-            alert('Erro ao salvar estação');
+            alert(t('admin.errorSavingStation'));
         }
     };
 
@@ -239,7 +239,7 @@ const AdminLineManagement: React.FC = () => {
     };
 
     const handleDeleteStation = async (stationId: string) => {
-        if (!confirm('Tem certeza que deseja deletar esta estação?')) return;
+        if (!confirm(t('admin.deleteStationConfirm'))) return;
 
         try {
             await deleteStation(stationId);
@@ -248,14 +248,14 @@ const AdminLineManagement: React.FC = () => {
             }
         } catch (error) {
             console.error('Error deleting station:', error);
-            alert('Erro ao deletar estação');
+            alert(t('admin.errorDeletingStation'));
         }
     };
 
     return (
         <div className="p-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                Gestão de Linhas de Produção
+                {t('admin.productionLines')}
             </h2>
 
             {/* Criar/Editar Linha */}
@@ -266,17 +266,17 @@ const AdminLineManagement: React.FC = () => {
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
                     >
                         <PlusIcon className="w-5 h-5" />
-                        Nova Linha
+                        {t('admin.newLine')}
                     </button>
                 ) : (
                     <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-300 dark:border-gray-700">
                         <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-                            {editingLine ? 'Editar Linha' : 'Nova Linha'}
+                            {editingLine ? t('admin.editLine') : t('admin.newLine')}
                         </h3>
                         <form onSubmit={editingLine ? handleUpdateLine : handleCreateLine} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    Nome da Linha *
+                                    {t('admin.lineName')} *
                                 </label>
                                 <input
                                     type="text"
@@ -288,7 +288,7 @@ const AdminLineManagement: React.FC = () => {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    ID Externo (Leading2Lean)
+                                    {t('admin.externalIdL2L')}
                                 </label>
                                 <input
                                     type="text"
@@ -300,7 +300,7 @@ const AdminLineManagement: React.FC = () => {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    Descrição
+                                    {t('common.description')}
                                 </label>
                                 <textarea
                                     value={lineDescription}
@@ -319,14 +319,14 @@ const AdminLineManagement: React.FC = () => {
                                     className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                                 />
                                 <label htmlFor="showProductionInStandby" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    {t('admin.showProductionInStandby') || 'Exibir Métricas de Produção na Tela de Stand-by'}
+                                    {t('admin.showProductionInStandby')}
                                 </label>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4 border-gray-200 dark:border-gray-700">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Tempo Produção (s)
+                                        {t('admin.productionDuration')}
                                     </label>
                                     <input
                                         type="number"
@@ -338,7 +338,7 @@ const AdminLineManagement: React.FC = () => {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Tempo Apresentação (s)
+                                        {t('admin.presentationDuration')}
                                     </label>
                                     <input
                                         type="number"
@@ -350,7 +350,7 @@ const AdminLineManagement: React.FC = () => {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Tempo Alerta (s)
+                                        {t('admin.alertDuration')}
                                     </label>
                                     <input
                                         type="number"
@@ -363,7 +363,7 @@ const AdminLineManagement: React.FC = () => {
                             </div>
                             <div className="flex gap-2">
                                 <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                                    {editingLine ? 'Salvar Alterações' : 'Criar'}
+                                    {editingLine ? t('admin.saveChanges') : t('common.create')}
                                 </button>
                                 <button
                                     type="button"
@@ -384,7 +384,7 @@ const AdminLineManagement: React.FC = () => {
                                     }}
                                     className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
                                 >
-                                    Cancelar
+                                    {t('common.cancel')}
                                 </button>
                             </div>
                         </form>
@@ -414,14 +414,14 @@ const AdminLineManagement: React.FC = () => {
                                 {getLineDescription(line) ? (
                                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{getLineDescription(line)}</p>
                                 ) : (
-                                    <p className="text-sm text-gray-400 italic mt-1">Sem descrição</p>
+                                    <p className="text-sm text-gray-400 italic mt-1">{t('common.noDescription') || 'Sem descrição'}</p>
                                 )}
                             </div>
                             <div className="flex gap-2 ml-4">
                                 <button
                                     onClick={() => startEditing(line)}
                                     className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
-                                    title="Editar Linha"
+                                    title={t('admin.editLine')}
                                 >
                                     <PencilIcon className="w-5 h-5" />
                                 </button>
@@ -429,7 +429,7 @@ const AdminLineManagement: React.FC = () => {
                                     onClick={() => loadStations(line.id)}
                                     className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
                                 >
-                                    Gerenciar Estações
+                                    {t('admin.manageStations') || 'Gerenciar Estações'}
                                 </button>
                                 <button
                                     onClick={() => handleDeleteLine(line.id)}
@@ -443,7 +443,7 @@ const AdminLineManagement: React.FC = () => {
                         {/* Gestão de Estações */}
                         {selectedLineForStations === line.id && (
                             <div className="mt-4 pt-4 border-t border-gray-300 dark:border-gray-700">
-                                <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Estações de Trabalho</h4>
+                                <h4 className="font-semibold text-gray-900 dark:text-white mb-3">{t('admin.workStations') || 'Estações de Trabalho'}</h4>
 
                                 {/* Adicionar Estação */}
                                 <form onSubmit={handleCreateStation} className="mb-4 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
@@ -452,14 +452,14 @@ const AdminLineManagement: React.FC = () => {
                                             type="text"
                                             value={stationName}
                                             onChange={(e) => setStationName(e.target.value)}
-                                            placeholder="Nome da estação"
+                                            placeholder={t('admin.stationName') || "Nome da estação"}
                                             className="px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                                         />
                                         <input
                                             type="text"
                                             value={stationDescription}
                                             onChange={(e) => setStationDescription(e.target.value)}
-                                            placeholder="Descrição (opcional)"
+                                            placeholder={t('common.descriptionOptional') || "Descrição (opcional)"}
                                             className="px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                                         />
                                     </div>
@@ -468,12 +468,12 @@ const AdminLineManagement: React.FC = () => {
                                             {editingStationId ? (
                                                 <>
                                                     <PencilIcon className="w-4 h-4 mr-1" />
-                                                    Salvar Alterações
+                                                    {t('admin.saveChanges')}
                                                 </>
                                             ) : (
                                                 <>
                                                     <PlusIcon className="w-4 h-4 mr-1" />
-                                                    Adicionar Estação
+                                                    {t('admin.addStation') || 'Adicionar Estação'}
                                                 </>
                                             )}
                                         </button>
@@ -483,7 +483,7 @@ const AdminLineManagement: React.FC = () => {
                                                 onClick={cancelEditingStation}
                                                 className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600"
                                             >
-                                                Cancelar
+                                                {t('common.cancel')}
                                             </button>
                                         )}
                                     </div>
@@ -491,9 +491,9 @@ const AdminLineManagement: React.FC = () => {
 
                                 {/* Lista de Estações */}
                                 {isLoadingStations ? (
-                                    <p className="text-gray-500 dark:text-gray-400 text-sm">Carregando...</p>
+                                    <p className="text-gray-500 dark:text-gray-400 text-sm">{t('common.loading') || 'Carregando...'}</p>
                                 ) : stations.length === 0 ? (
-                                    <p className="text-gray-500 dark:text-gray-400 text-sm">Nenhuma estação cadastrada</p>
+                                    <p className="text-gray-500 dark:text-gray-400 text-sm">{t('admin.noStationsRegistered') || 'Nenhuma estação cadastrada'}</p>
                                 ) : (
                                     <div className="space-y-2">
                                         {stations.map(station => (
@@ -513,14 +513,14 @@ const AdminLineManagement: React.FC = () => {
                                                     <button
                                                         onClick={() => startEditingStation(station)}
                                                         className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
-                                                        title="Editar Estação"
+                                                        title={t('admin.editStation') || "Editar Estação"}
                                                     >
                                                         <PencilIcon className="w-4 h-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => handleDeleteStation(station.id)}
                                                         className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                                                        title="Excluir Estação"
+                                                        title={t('common.delete')}
                                                     >
                                                         <TrashIcon className="w-4 h-4" />
                                                     </button>

@@ -1,4 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence, PanInfo } from 'framer-motion';
+import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useI18n } from '../contexts/I18nContext';
 import { useShiftProduction } from '../hooks/useShiftProduction';
 import { useLine } from '../contexts/LineContext';
@@ -141,35 +143,35 @@ const StandbyScreen: React.FC<StandbyScreenProps> = ({
 
     // Render Components
     const renderProduction = () => (
-        <div className="standby-content">
+        <div className="flex-1 flex items-center justify-center p-4 md:p-12 w-full">
             {shiftLoading && !shiftData && (
-                <div className="standby-loading">
-                    <div className="spinner"></div>
-                    <p>{t('common.loading')}</p>
+                <div className="flex flex-col items-center text-white/80">
+                    <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin mb-4"></div>
+                    <p className="text-xl">{t('common.loading')}</p>
                 </div>
             )}
             {shiftError && (
-                <div className="standby-error">
-                    <p>{t('common.error')}: {shiftError}</p>
+                <div className="text-center">
+                    <p className="text-2xl text-red-400 font-bold">{t('common.error')}: {shiftError}</p>
                 </div>
             )}
             {shiftData && (
-                <div className="metrics-grid">
-                    <div className="metric-card metric-target">
-                        <div className="metric-label">{t('standby.target')}</div>
-                        <div className="metric-value">{shiftData.target.toLocaleString(locale || 'pt-BR')}</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 w-full max-w-6xl">
+                    <div className="bg-white/5 backdrop-blur-md border border-green-500/30 rounded-2xl p-6 md:p-10 flex flex-col items-center justify-center shadow-xl transition-all hover:scale-[1.02]">
+                        <div className="text-lg md:text-2xl uppercase tracking-widest mb-2 md:mb-4 text-green-400 font-semibold">{t('standby.target')}</div>
+                        <div className="text-5xl md:text-7xl font-bold text-green-200 font-mono">{shiftData.target.toLocaleString(locale || 'pt-BR')}</div>
                     </div>
-                    <div className="metric-card metric-actuals">
-                        <div className="metric-label">{t('standby.actuals')}</div>
-                        <div className="metric-value">{shiftData.actuals.toLocaleString(locale || 'pt-BR')}</div>
+                    <div className="bg-white/5 backdrop-blur-md border border-green-500/30 rounded-2xl p-6 md:p-10 flex flex-col items-center justify-center shadow-xl transition-all hover:scale-[1.02]">
+                        <div className="text-lg md:text-2xl uppercase tracking-widest mb-2 md:mb-4 text-green-400 font-semibold">{t('standby.actuals')}</div>
+                        <div className="text-5xl md:text-7xl font-bold text-green-300 font-mono">{shiftData.actuals.toLocaleString(locale || 'pt-BR')}</div>
                     </div>
-                    <div className="metric-card metric-efficiency">
-                        <div className="metric-label">{t('standby.efficiency')}</div>
-                        <div className="metric-value">{shiftData.efficiency}%</div>
+                    <div className="bg-white/5 backdrop-blur-md border border-green-500/30 rounded-2xl p-6 md:p-10 flex flex-col items-center justify-center shadow-xl transition-all hover:scale-[1.02]">
+                        <div className="text-lg md:text-2xl uppercase tracking-widest mb-2 md:mb-4 text-green-400 font-semibold">{t('standby.efficiency')}</div>
+                        <div className="text-5xl md:text-7xl font-bold text-green-500 font-mono">{shiftData.efficiency}%</div>
                     </div>
-                    <div className="metric-card metric-downtime">
-                        <div className="metric-label">{t('standby.shiftDowntime')}</div>
-                        <div className="metric-value">{shiftData.downtimeFormatted}</div>
+                    <div className="bg-white/5 backdrop-blur-md border border-red-500/30 rounded-2xl p-6 md:p-10 flex flex-col items-center justify-center shadow-xl transition-all hover:scale-[1.02]">
+                        <div className="text-lg md:text-2xl uppercase tracking-widest mb-2 md:mb-4 text-red-400 font-semibold">{t('standby.shiftDowntime')}</div>
+                        <div className="text-5xl md:text-7xl font-bold text-red-500 font-mono">{shiftData.downtimeFormatted}</div>
                     </div>
                 </div>
             )}
@@ -186,9 +188,9 @@ const StandbyScreen: React.FC<StandbyScreenProps> = ({
         const pageDuration = presentation.metadata?.page_duration || 10;
 
         return (
-            <div className="w-full h-full bg-white dark:bg-gray-900 flex flex-col items-center justify-center p-4">
-                <h2 className="text-3xl font-bold mb-4 text-cyan-600 dark:text-cyan-400">{presentation.title}</h2>
-                <div className="w-full h-full bg-black border-4 border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-2xl relative">
+            <div className="w-full h-full bg-white dark:bg-gray-900 flex flex-col items-center justify-center p-2 md:p-4">
+                <h2 className="text-xl md:text-3xl font-bold mb-2 md:mb-4 text-cyan-600 dark:text-cyan-400 text-center px-4 truncate w-full">{presentation.title}</h2>
+                <div className="w-full flex-1 bg-black border-2 md:border-4 border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-2xl relative">
                     <AutoCyclingPdfViewer
                         pdfUrl={targetUrl}
                         fallbackUrl={presentation.url !== targetUrl ? presentation.url : undefined}
@@ -204,40 +206,41 @@ const StandbyScreen: React.FC<StandbyScreenProps> = ({
         const severityClass = getSeverityColorClass(alert.severity);
         // Reuse PDF Viewer if URL exists, else show big card
         return (
-            <div className="w-full h-full bg-gray-50 dark:bg-gray-900 p-8 flex flex-col">
-                <div className={`p-6 rounded-t-xl text-white flex justify-between items-center ${severityClass}`}>
-                    <div className="flex items-center gap-4">
-                        <h2 className="text-4xl font-bold uppercase">{t('qualityAlerts.title')}</h2>
-                        <span className="px-4 py-1 bg-white/20 rounded-lg text-2xl font-bold">{t('admin.severity')} {alert.severity}</span>
+            <div className="w-full h-full bg-gray-50 dark:bg-gray-900 p-4 md:p-8 flex flex-col">
+                <div className={`p-4 md:p-6 rounded-t-xl text-white flex justify-between items-center ${severityClass}`}>
+                    <div className="flex items-center gap-2 md:gap-4">
+                        <h2 className="text-2xl md:text-4xl font-bold uppercase">{t('qualityAlerts.title')}</h2>
+                        <span className="px-2 py-0.5 md:px-4 md:py-1 bg-white/20 rounded-lg text-lg md:text-2xl font-bold whitespace-nowrap">{t('admin.severity')} {alert.severity}</span>
                     </div>
-                    <div className="text-2xl opacity-90">
+                    <div className="text-lg md:text-2xl opacity-90 hidden md:block">
                         {new Date(alert.createdAt).toLocaleDateString(locale)}
                     </div>
                 </div>
 
-                <div className="flex-1 bg-white dark:bg-gray-800 rounded-b-xl shadow-xl flex flex-col md:flex-row overflow-hidden border-2 border-t-0 p-8 gap-8">
-                    <div className="flex-1 flex flex-col justify-center gap-6">
-                        <h1 className="text-5xl font-extrabold text-gray-900 dark:text-white leading-tight">
+                <div className="flex-1 bg-white dark:bg-gray-800 rounded-b-xl shadow-xl flex flex-col md:flex-row overflow-hidden border-2 border-t-0 p-4 md:p-8 gap-4 md:gap-8">
+                    <div className="flex-1 flex flex-col justify-center gap-4 md:gap-6">
+                        <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 dark:text-white leading-tight">
                             {alert.title}
                         </h1>
-                        <p className="text-3xl text-gray-600 dark:text-gray-300 leading-relaxed">
+                        <p className="text-xl md:text-3xl text-gray-600 dark:text-gray-300 leading-relaxed line-clamp-6 md:line-clamp-none">
                             {alert.description}
                         </p>
-                        <div className="mt-8 p-6 bg-red-50 dark:bg-red-900/20 border-l-8 border-red-500 rounded-r-lg">
-                            <p className="text-xl text-red-700 dark:text-red-300 font-bold uppercase flex items-center gap-2">
+                        <div className="mt-4 md:mt-8 p-4 md:p-6 bg-red-50 dark:bg-red-900/20 border-l-4 md:border-l-8 border-red-500 rounded-r-lg">
+                            <p className="text-lg md:text-xl text-red-700 dark:text-red-300 font-bold uppercase flex items-center gap-2">
                                 ⚠️ {t('qualityAlerts.validUntil')}: {new Date(alert.expiresAt).toLocaleDateString(locale)}
                             </p>
                         </div>
                     </div>
 
                     {alert.pdfUrl && (
-                        <div className="w-1/2 h-full bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden shadow-inner relative">
+                        <div className="w-full md:w-1/2 h-64 md:h-full bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden shadow-inner relative flex-shrink-0">
                             <iframe
                                 src={alert.pdfUrl}
                                 className="w-full h-full"
                                 title="Alert PDF"
                             />
                             {/* Overlay to prevent interaction if desired, or let them scroll */}
+                            <div className="absolute inset-0 bg-transparent" />
                         </div>
                     )}
                 </div>
@@ -245,34 +248,180 @@ const StandbyScreen: React.FC<StandbyScreenProps> = ({
         );
     };
 
+
+    // --- Exit Logic (Hold 3s + Button) ---
+    const [isHolding, setIsHolding] = useState(false);
+    const [holdProgress, setHoldProgress] = useState(0);
+    const holdTimerRef = useRef<any>(null);
+
+    const startExitHold = () => {
+        setIsHolding(true);
+        setHoldProgress(0);
+        const startTime = Date.now();
+        const duration = 3000;
+
+        if (holdTimerRef.current) clearInterval(holdTimerRef.current);
+
+        holdTimerRef.current = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min((elapsed / duration) * 100, 100);
+            setHoldProgress(progress);
+
+            if (progress >= 100) {
+                if (holdTimerRef.current) clearInterval(holdTimerRef.current);
+                onExit();
+            }
+        }, 30);
+    };
+
+    const cancelExitHold = () => {
+        setIsHolding(false);
+        setHoldProgress(0);
+        if (holdTimerRef.current) {
+            clearInterval(holdTimerRef.current);
+            holdTimerRef.current = null;
+        }
+    };
+
+    // Gestures (Swipe)
+    const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+        const threshold = 100; // px
+        const velocityThreshold = 500;
+
+        if (info.offset.x < -threshold || info.velocity.x < -velocityThreshold) {
+            // Swipe Left -> Next
+            setCurrentIndex(prev => (prev + 1) % playlist.length);
+        } else if (info.offset.x > threshold || info.velocity.x > velocityThreshold) {
+            // Swipe Right -> Prev
+            setCurrentIndex(prev => (prev - 1 + playlist.length) % playlist.length);
+        }
+    };
+
+    const swipeVariants = {
+        enter: (direction: number) => ({
+            x: direction > 0 ? 1000 : -1000,
+            opacity: 0,
+            scale: 0.95
+        }),
+        center: {
+            zIndex: 1,
+            x: 0,
+            opacity: 1,
+            scale: 1
+        },
+        exit: (direction: number) => ({
+            zIndex: 0,
+            x: direction < 0 ? 1000 : -1000,
+            opacity: 0,
+            scale: 0.95
+        })
+    };
+
+    // Track direction for animation
+    // We can just use a simple state or ref, or infer from index diff. 
+    // For simplicity, let's just use standard fade/scale for now or assume forward.
+    // To do it right, we'd need usePrevious hook. Let's stick to a premium Fade/Scale transition for safety.
+
+    const pageVariants = {
+        initial: { opacity: 0, scale: 0.98, filter: 'blur(10px)' },
+        animate: { opacity: 1, scale: 1, filter: 'blur(0px)' },
+        exit: { opacity: 0, scale: 1.02, filter: 'blur(10px)' }
+    };
+
     return (
-        <div className="standby-screen" onClick={onExit}>
+        <div
+            className="fixed inset-0 w-screen h-screen z-[9999] flex flex-col bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f3460] cursor-default overflow-hidden select-none"
+            onMouseDown={startExitHold}
+            onMouseUp={cancelExitHold}
+            onMouseLeave={cancelExitHold}
+            onTouchStart={startExitHold}
+            onTouchEnd={cancelExitHold}
+        >
             {/* Header */}
-            <div className={`standby-header transition-colors duration-500 ${currentSlide.type === 'alert' ? 'bg-red-900 border-red-700' : ''}`}>
+            <div className={`standby-header relative z-10 transition-colors duration-500 ${currentSlide.type === 'alert' ? 'bg-red-900/90 border-b border-red-700' : 'bg-opacity-90 backdrop-blur-md'}`}>
                 <div className="standby-status">
                     <span className={`status-indicator ${currentSlide.type === 'alert' ? 'bg-red-500 animate-pulse' : ''}`}></span>
-                    <span className="status-text">{lineName} - {t('standby.lineStatus')}</span>
+                    <span className="status-text text-xl md:text-2xl truncate max-w-[50vw]">{lineName} - {t('standby.lineStatus')}</span>
                 </div>
                 {playlist.length > 1 && (
-                    <div className="flex gap-2 mx-auto">
+                    <div className="flex gap-2 mx-auto absolute left-1/2 transform -translate-x-1/2 bottom-2 md:bottom-auto">
                         {playlist.map((_, idx) => (
-                            <div key={idx} className={`h-2 w-2 rounded-full transition-all ${idx === currentIndex ? 'bg-cyan-400 w-6' : 'bg-gray-500'}`} />
+                            <div key={idx} className={`h-2 rounded-full transition-all duration-300 ${idx === currentIndex ? 'bg-cyan-400 w-6 md:w-8' : 'bg-gray-500/50 w-2'}`} />
                         ))}
                     </div>
                 )}
-                <div className="standby-time">{formatTime(currentTime)}</div>
+                <div className="standby-time text-2xl md:text-4xl">{formatTime(currentTime)}</div>
             </div>
 
-            {/* Content Switcher */}
+            {/* Exit Button (X) */}
+            <button
+                onClick={(e) => { e.stopPropagation(); onExit(); }}
+                className="absolute top-24 right-4 md:top-4 md:right-4 z-50 p-3 md:p-4 bg-red-600/80 hover:bg-red-600 text-white rounded-full shadow-lg backdrop-blur transition-transform active:scale-95 flex items-center justify-center group"
+                aria-label="Exit Standby"
+            >
+                <XMarkIcon className="w-8 h-8 md:w-10 md:h-10 group-hover:rotate-90 transition-transform duration-300" />
+            </button>
+
+            {/* Hold Feedback Overlay */}
+            {isHolding && (
+                <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none bg-black/40 backdrop-blur-sm transition-opacity duration-300">
+                    <div className="relative flex flex-col items-center gap-4">
+                        <svg className="w-64 h-64 transform -rotate-90">
+                            <circle
+                                cx="90"
+                                cy="90"
+                                r="56"
+                                stroke="white"
+                                strokeWidth="8"
+                                fill="transparent"
+                                className="opacity-20"
+                            />
+                            <circle
+                                cx="90"
+                                cy="90"
+                                r="56"
+                                stroke="cyan"
+                                strokeWidth="8"
+                                fill="transparent"
+                                strokeDasharray={351.86} // 2 * pi * 56
+                                strokeDashoffset={351.86 - (351.86 * holdProgress) / 100}
+                                strokeLinecap="round"
+                                className="transition-all duration-75 ease-linear"
+                            />
+                        </svg>
+                        <span className="text-2xl font-bold text-white tracking-widest uppercase animate-pulse">
+                            {t('common.holdingToExit') || "Segure para sair..."}
+                        </span>
+                    </div>
+                </div>
+            )}
+
+            {/* Content Switcher with AnimatePresence */}
             <div className="flex-1 overflow-hidden relative w-full h-full">
-                {currentSlide.type === 'production' && renderProduction()}
-                {currentSlide.type === 'presentation' && renderPresentation(currentSlide.data)}
-                {currentSlide.type === 'alert' && renderAlert(currentSlide.data)}
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={currentIndex}
+                        variants={pageVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        transition={{ duration: 0.4, ease: "easeInOut" }}
+                        className="w-full h-full"
+                        drag="x"
+                        dragConstraints={{ left: 0, right: 0 }}
+                        dragElastic={0.2}
+                        onDragEnd={handleDragEnd}
+                    >
+                        {currentSlide.type === 'production' && renderProduction()}
+                        {currentSlide.type === 'presentation' && renderPresentation(currentSlide.data)}
+                        {currentSlide.type === 'alert' && renderAlert(currentSlide.data)}
+                    </motion.div>
+                </AnimatePresence>
             </div>
 
             {/* Hint */}
-            <div className="standby-hint">
-                {t('standby.tapToReturn')}
+            <div className="standby-hint absolute bottom-4 w-full text-center pointer-events-none opacity-50 text-sm md:text-base">
+                {playlist.length > 1 ? "Arraste para navegar • " : ""} {t('standby.tapToReturn')} (Segure 3s)
             </div>
         </div>
     );

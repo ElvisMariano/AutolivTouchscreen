@@ -61,6 +61,14 @@ AutolivTouchScreen/
 - **Integração PowerBI:** Visualização de relatórios embutidos
 - **Validação:** Bloqueio de cadastro de documentos caso nenhuma linha de produção esteja selecionada, garantindo integridade dos dados
 
+### 📊 Gestão de Apresentações (Novo)
+- **Modo Híbrido:** Suporte flexível para diferentes contextos de exibição:
+    - **Dashboard Interativo:** Prioriza URLs (Links externos, Embed codes) para interatividade.
+    - **Standby Screen:** Prioriza arquivos PDF para exibição passiva e robusta.
+- **Upload de PDF:** Suporte para upload de arquivos PDF salvos localmente (IndexedDB), eliminando dependência de links externos para o modo Standby.
+- **Duração de Página Configurável:** Controle preciso do tempo de exibição (em segundos) de cada página do PDF no carrossel automático do Standby.
+- **Controle de Visibilidade:** Opções independentes para exibir apresentações apenas no Dashboard, apenas no Standby, ou em ambos.
+
 ### 👤 Gestão de Usuários e Roles
 - **CRUD de Usuários:** Cadastro completo com vinculação a roles e plantas
 - **Editor de Roles:** Interface visual para criar perfis de acesso personalizados, selecionando permissões específicas (ex: `view:dashboard`, `admin:manage_users`)
