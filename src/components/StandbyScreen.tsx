@@ -258,7 +258,7 @@ const StandbyScreen: React.FC<StandbyScreenProps> = ({
         setIsHolding(true);
         setHoldProgress(0);
         const startTime = Date.now();
-        const duration = 3000;
+        const duration = 2000;
 
         if (holdTimerRef.current) clearInterval(holdTimerRef.current);
 
@@ -338,19 +338,42 @@ const StandbyScreen: React.FC<StandbyScreenProps> = ({
             onTouchEnd={cancelExitHold}
         >
             {/* Header */}
-            <div className={`standby-header relative z-10 transition-colors duration-500 ${currentSlide.type === 'alert' ? 'bg-red-900/90 border-b border-red-700' : 'bg-opacity-90 backdrop-blur-md'}`}>
-                <div className="standby-status">
-                    <span className={`status-indicator ${currentSlide.type === 'alert' ? 'bg-red-500 animate-pulse' : ''}`}></span>
-                    <span className="status-text text-xl md:text-2xl truncate max-w-[50vw]">{lineName} - {t('standby.lineStatus')}</span>
+            <div className={`standby-header relative z-10 transition-colors duration-500 px-6 py-5 md:px-10 md:py-6 flex justify-between items-center shadow-2xl ${currentSlide.type === 'alert' ? 'bg-red-900/95 border-b-4 border-red-600' : 'bg-[#0f172a]/90 backdrop-blur-xl border-b border-white/10'}`}>
+
+                {/* Left: Logo & Line Info */}
+                <div className="flex items-center gap-6">
+                    <div className="bg-white p-3 rounded-xl shadow-lg shadow-black/20 hidden md:block opacity-90">
+                        <img src="/AutolivLogo.svg" alt="Autoliv" className="h-8 w-auto md:h-10" />
+                    </div>
+                    <div className="flex flex-col justify-center">
+                        <h1 className="text-2xl md:text-4xl font-black text-white tracking-tight leading-none mb-1 shadow-black/50 drop-shadow-md">
+                            {lineName}
+                        </h1>
+                        <div className="flex items-center gap-3">
+                            <span className={`h-3 w-3 md:h-4 md:w-4 rounded-full shadow-[0_0_10px_currentColor] ${currentSlide.type === 'alert' ? 'bg-red-500 text-red-500 animate-pulse' : 'bg-emerald-500 text-emerald-500 box-shadow-green'}`}></span>
+                            <span className="text-sm md:text-lg text-gray-300 font-medium tracking-wide uppercase opacity-90">{t('standby.lineStatus')}</span>
+                        </div>
+                    </div>
                 </div>
+
+                {/* Center: Indicators */}
                 {playlist.length > 1 && (
-                    <div className="flex gap-2 mx-auto absolute left-1/2 transform -translate-x-1/2 bottom-2 md:bottom-auto">
+                    <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex gap-3 bg-black/30 px-6 py-3 rounded-full backdrop-blur-md border border-white/5 shadow-inner hidden lg:flex">
                         {playlist.map((_, idx) => (
-                            <div key={idx} className={`h-2 rounded-full transition-all duration-300 ${idx === currentIndex ? 'bg-cyan-400 w-6 md:w-8' : 'bg-gray-500/50 w-2'}`} />
+                            <div key={idx} className={`h-2.5 rounded-full transition-all duration-500 ${idx === currentIndex ? 'bg-cyan-400 w-12 shadow-[0_0_12px_0_rgba(34,211,238,0.6)]' : 'bg-gray-600 w-2.5 hover:bg-gray-500'}`} />
                         ))}
                     </div>
                 )}
-                <div className="standby-time text-2xl md:text-4xl">{formatTime(currentTime)}</div>
+
+                {/* Right: Time & Date */}
+                <div className="flex flex-col items-end">
+                    <div className="text-4xl md:text-6xl font-black font-mono tracking-wider text-white leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
+                        {formatTime(currentTime)}
+                    </div>
+                    <div className="text-sm md:text-xl text-cyan-100/70 font-medium mt-1 uppercase tracking-[0.2em]">
+                        {currentTime.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' })}
+                    </div>
+                </div>
             </div>
 
             {/* Exit Button (X) */}
