@@ -151,6 +151,30 @@ app.use('/api/1.0', async (req, res) => {
     }
 });
 
+// PDF PROXY (Bypass CORS/X-Frame-Options)
+app.get('/api/proxy/pdf', async (req, res) => {
+    const { url } = req.query;
+
+    if (!url) {
+        return res.status(400).send('Missing url parameter');
+    }
+
+    try {
+        console.log(`📄 Proxying PDF: ${url}`);
+        const response = await axios({
+            method: 'get',
+            url: url,
+            responseType: 'stream'
+        });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        response.data.pipe(res);
+    } catch (error) {
+        console.error('❌ PDF Proxy Error:', error.message);
+        res.status(500).send('Error fetching PDF');
+    }
+});
+
 // TODAS as outras rotas /api/* requerem autenticação
 // Middleware global de autenticação (pode ser desabilitado temporariamente comentando)
 const AUTH_ENABLED = process.env.AUTH_ENABLED !== 'false'; // Controle via .env

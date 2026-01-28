@@ -50,8 +50,17 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ url: urlProp, document, cl
                     }
                     pdfData = await blob.arrayBuffer();
                 } else {
-                    // URL externa
-                    pdfData = url;
+                    // URL externa - Usar Backend Proxy para evitar CORS
+                    // Verifique se a URL já não é local ou base64
+                    if (url.startsWith('http')) {
+                        const updatedUrl = `/api/proxy/pdf?url=${encodeURIComponent(url)}`;
+                        // Carregar via PDF.js usando a URL do proxy
+                        // O PDF.js sabe lidar com URLs relativas/absolutas se passadas diretamente
+                        // Mas para ter certeza que é um arraybuffer ou string url compatível:
+                        pdfData = updatedUrl;
+                    } else {
+                        pdfData = url;
+                    }
                 }
 
                 const loadingTask = pdfjsLib.getDocument(pdfData);
