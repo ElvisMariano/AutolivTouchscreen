@@ -218,29 +218,31 @@ const StandbyScreen: React.FC<StandbyScreenProps> = ({
                 </div>
 
                 <div className="flex-1 bg-white dark:bg-gray-800 rounded-b-xl shadow-xl flex flex-col md:flex-row overflow-hidden border-2 border-t-0 p-4 md:p-8 gap-4 md:gap-8">
-                    <div className="flex-1 flex flex-col justify-center gap-4 md:gap-6">
-                        <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 dark:text-white leading-tight">
+                    {/* Text Section - Reduced width */}
+                    <div className="w-full md:w-[30%] flex flex-col justify-center gap-3 md:gap-4 flex-shrink-0">
+                        <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white leading-tight">
                             {alert.title}
                         </h1>
-                        <p className="text-xl md:text-3xl text-gray-600 dark:text-gray-300 leading-relaxed line-clamp-6 md:line-clamp-none">
+                        <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 leading-relaxed overflow-y-auto max-h-[40vh] md:max-h-none">
                             {alert.description}
                         </p>
-                        <div className="mt-4 md:mt-8 p-4 md:p-6 bg-red-50 dark:bg-red-900/20 border-l-4 md:border-l-8 border-red-500 rounded-r-lg">
-                            <p className="text-lg md:text-xl text-red-700 dark:text-red-300 font-bold uppercase flex items-center gap-2">
-                                ⚠️ {t('qualityAlerts.validUntil')}: {new Date(alert.expiresAt).toLocaleDateString(locale)}
-                            </p>
+                        <div className="mt-auto pt-4 md:pt-6">
+                            <div className="p-3 md:p-4 bg-red-50 dark:bg-red-900/20 border-l-4 md:border-l-8 border-red-500 rounded-r-lg">
+                                <p className="text-base md:text-lg text-red-700 dark:text-red-300 font-bold uppercase flex items-center gap-2">
+                                    ⚠️ {t('qualityAlerts.validUntil')}: {new Date(alert.expiresAt).toLocaleDateString(locale)}
+                                </p>
+                            </div>
                         </div>
                     </div>
 
+                    {/* PDF Section - Increased width & Auto Cycling */}
                     {alert.pdfUrl && (
-                        <div className="w-full md:w-1/2 h-64 md:h-full bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden shadow-inner relative flex-shrink-0">
-                            <iframe
-                                src={alert.pdfUrl}
+                        <div className="flex-1 h-96 md:h-full bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden shadow-inner relative">
+                            <AutoCyclingPdfViewer
+                                pdfUrl={alert.pdfUrl}
                                 className="w-full h-full"
-                                title="Alert PDF"
+                                pageDurationSeconds={15} // Cycle pages every 15s to show 2nd page
                             />
-                            {/* Overlay to prevent interaction if desired, or let them scroll */}
-                            <div className="absolute inset-0 bg-transparent" />
                         </div>
                     )}
                 </div>
