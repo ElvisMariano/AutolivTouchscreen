@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useData } from '../contexts/DataContext';
+// import { useData } from '../contexts/DataContext';
+import { useDocuments } from '../hooks/useDocuments';
 import { QualityAlert, AlertSeverity } from '../types';
 import Modal from './common/Modal';
 import { PencilSquareIcon, TrashIcon } from './common/Icons';
@@ -8,7 +9,10 @@ import { useI18n } from '../contexts/I18nContext';
 import { useLine } from '../contexts/LineContext';
 
 const AdminAlertsManagement: React.FC = () => {
-  const { alerts, addAlert, updateAlert, deleteAlert } = useData();
+  // const { alerts, addAlert, updateAlert, deleteAlert } = useData(); // REMOVED: Legacy DataContext
+  const { data: docsData, createDocument, updateDocument, deleteDocument } = useDocuments(); // NEW: Hook
+  const alerts = docsData?.alerts || [];
+
   const { selectedLine } = useLine();
   const { t, locale } = useI18n();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -16,8 +20,8 @@ const AdminAlertsManagement: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
-  // Filter alerts for the selected line
-  const filteredAlerts = (alerts || []).filter(a => selectedLine && a.lineId === selectedLine.id);
+  // Filter alerts for the selected line (Robust comparison)
+  const filteredAlerts = (alerts || []).filter(a => selectedLine && String(a.lineId) === String(selectedLine.id));
 
   const openModal = (item: QualityAlert | null = null) => {
     setEditingItem(item);
@@ -34,9 +38,9 @@ const AdminAlertsManagement: React.FC = () => {
     setIsDeleteModalOpen(true);
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (itemToDelete) {
-      deleteAlert(itemToDelete);
+      await deleteDocument.mutateAsync(itemToDelete);
       setIsDeleteModalOpen(false);
       setItemToDelete(null);
     }
@@ -151,14 +155,22 @@ const AdminAlertsManagement: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
+      // Block if no line selected
+      if (!selectedLine?.id && !editingItem) {
+        alert(t('admin.selectLineToEnable'));
+        return;
+      }
+
+      let pdfUrl = formData.pdfUrl || '';
+      let pdfName = formData.pdfName;
 
       if (uploadMode === 'upload' && selectedFile) {
         try {
           setUploadProgress(t('admin.uploading'));
           const targetId = editingItem ? editingItem.id : `alert-${Date.now()}`;
           const indexedDBUrl = await savePDF(selectedFile, targetId);
-          formData.pdfUrl = indexedDBUrl;
-          formData.pdfName = selectedFile.name;
+          pdfUrl = indexedDBUrl;
+          pdfName = selectedFile.name;
           setUploadProgress(t('admin.uploadComplete'));
         } catch (error) {
           alert(t('admin.uploadError'));
@@ -168,22 +180,45 @@ const AdminAlertsManagement: React.FC = () => {
       }
 
       // Ensure expiresAt is in correct ISO format
-      const alertData = { ...formData };
-      if (alertData.expiresAt) {
-        // Convert to ISO string if needed
-        const expiresDate = new Date(alertData.expiresAt);
-        alertData.expiresAt = expiresDate.toISOString();
+      let expiresAt = new Date().toISOString();
+      if (formData.expiresAt) {
+        expiresAt = new Date(formData.expiresAt).toISOString();
       }
 
-      if (editingItem) {
-        updateAlert({ ...editingItem, ...alertData, lineId: selectedLine?.id || editingItem.lineId } as QualityAlert);
-      } else {
-        // Ensure lineId is added if not present (though addAlert might handle it based on DataContext, we should ideally pass it explicitly if we moved away from DataContext dependency)
-        // DataContext's addAlert uses selectedLineId from DataContext, which might be auto-selected.
-        // But since we are blocking the UI if no line is selected, we assume selectedLine exists here.
-        addAlert({ ...alertData, lineId: selectedLine?.id } as any);
+      const metadata = {
+        description: formData.description,
+        severity: formData.severity,
+        expiresAt: expiresAt,
+        pdfName: pdfName,
+        is_standby_active: formData.metadata?.is_standby_active || false
+      };
+
+      try {
+        if (editingItem) {
+          await updateDocument.mutateAsync({
+            id: editingItem.id,
+            updates: {
+              title: formData.title,
+              document_url: pdfUrl,
+              metadata: metadata
+            }
+          });
+        } else {
+          await createDocument.mutateAsync({
+            lineId: selectedLine!.id,
+            type: 'alert',
+            documentId: pdfUrl || `manual-alert-${Date.now()}`,
+            title: formData.title || 'Alerta',
+            uploadedBy: 'Admin', // Placeholder, ideal would be to get from Auth Context if needed
+            version: '1',
+            metadata: metadata
+          });
+        }
+        onClose();
+      } catch (err) {
+        console.error("Error saving alert:", err);
+        alert(t('common.error'));
       }
-      onClose();
     }
 
     const commonClass = "w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-3 rounded-lg text-lg border-2 border-gray-300 dark:border-gray-600 focus:border-cyan-500 focus:outline-none transition-colors";
