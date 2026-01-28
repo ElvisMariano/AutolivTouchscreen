@@ -219,7 +219,7 @@ const StandbyScreen: React.FC<StandbyScreenProps> = ({
 
                 <div className="flex-1 bg-white dark:bg-gray-800 rounded-b-xl shadow-xl flex flex-col md:flex-row overflow-hidden border-2 border-t-0 p-4 md:p-8 gap-4 md:gap-8">
                     {/* Text Section - Reduced width */}
-                    <div className="w-full md:w-[30%] flex flex-col justify-center gap-3 md:gap-4 flex-shrink-0">
+                    <div className="w-full md:w-[20%] flex flex-col justify-center gap-3 md:gap-4 flex-shrink-0">
                         <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white leading-tight">
                             {alert.title}
                         </h1>
@@ -241,7 +241,7 @@ const StandbyScreen: React.FC<StandbyScreenProps> = ({
                             <AutoCyclingPdfViewer
                                 pdfUrl={alert.pdfUrl}
                                 className="w-full h-full"
-                                pageDurationSeconds={15} // Cycle pages every 15s to show 2nd page
+                                pageDurationSeconds={10} // Cycle pages every 15s to show 2nd page
                             />
                         </div>
                     )}
