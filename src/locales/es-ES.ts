@@ -99,6 +99,8 @@ export default {
         currentShift: "Turno Actual",
         hourlyProduction: "Producción por Hora",
         holdingToExit: "Mantenga presionado para salir...",
+        readConfirmed: "¡Lectura confirmada con éxito!",
+        readConfirmError: "Error al confirmar lectura. Inténtelo de nuevo.",
     },
     standby: {
         lineStatus: "Línea en Operación",

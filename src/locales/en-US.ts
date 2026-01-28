@@ -99,6 +99,8 @@ export default {
         currentShift: "Current Shift",
         hourlyProduction: "Hourly Production",
         holdingToExit: "Holding to exit...",
+        readConfirmed: "Read confirmed successfully!",
+        readConfirmError: "Error confirming read. Try again.",
     },
     standby: {
         lineStatus: "Line Running",
