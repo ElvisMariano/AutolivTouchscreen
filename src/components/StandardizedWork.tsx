@@ -11,9 +11,14 @@ import { useLine } from '../contexts/LineContext';
 import { useShift } from '../contexts/ShiftContext';
 import { useLog } from '../contexts/LogContext';
 
+import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
+
 const StandardizedWork: React.FC = () => {
     // 1. Hook Data
     const { t } = useI18n();
+    const { success, error } = useToast();
+    const { currentUser } = useAuth();
     const { logEvent } = useLog();
     const { selectedLine } = useLine();
     const selectedLineId = selectedLine?.id || null;
@@ -76,10 +81,12 @@ const StandardizedWork: React.FC = () => {
             await acknowledgeDocument.mutateAsync({
                 documentId: selectedDoc.id,
                 shift: currentShift,
-                userId: undefined
+                userId: currentUser?.id
             });
-        } catch (error) {
-            console.error('Error acknowledging document:', error);
+            success(t('common.readConfirmed') || 'Leitura confirmada com sucesso!');
+        } catch (err) {
+            console.error('Error acknowledging document:', err);
+            error(t('common.readConfirmError') || 'Erro ao confirmar leitura. Tente novamente.');
         }
     };
 

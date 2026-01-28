@@ -20,12 +20,16 @@ import { useDocuments } from '../hooks/useDocuments';
 import { useUnreadDocuments } from '../hooks/useUnreadDocuments';
 import { useLine } from '../contexts/LineContext'; // Use LineContext for selection
 import { useShift } from '../contexts/ShiftContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 
 // Lazy load PdfViewer
 const PdfViewer = React.lazy(() => import('./common/PdfViewer'));
 
 const WorkInstructions: React.FC = () => {
     // 1. Hooks for Global State
+    const { currentUser } = useAuth();
+    const { success, error } = useToast();
     const { settings } = useSettings();
     const { t } = useI18n();
     const { selectedLine, lines } = useLine(); // Use specific context
@@ -173,14 +177,20 @@ const WorkInstructions: React.FC = () => {
         u.title === instructionDoc.title
     )?.id;
 
-    const handleConfirmRead = () => {
+    const handleConfirmRead = async () => {
         if (unreadDocId) {
-            // Use Mutation from hook
-            acknowledgeDocument.mutate({
-                documentId: unreadDocId,
-                shift: currentShift,
-                userId: undefined // Pass undefined for now or current user? DataContext passed currentUser?.id
-            });
+            try {
+                // Use Mutation from hook
+                await acknowledgeDocument.mutateAsync({
+                    documentId: unreadDocId,
+                    shift: currentShift,
+                    userId: currentUser?.id
+                });
+                success(t('common.readConfirmed') || 'Leitura confirmada com sucesso!');
+            } catch (err) {
+                console.error('Error acknowledging document:', err);
+                error(t('common.readConfirmError') || 'Erro ao confirmar leitura. Tente novamente.');
+            }
         }
     };
 

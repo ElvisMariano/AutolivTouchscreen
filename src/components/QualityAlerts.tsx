@@ -17,8 +17,13 @@ import { useUnreadDocuments } from '../hooks/useUnreadDocuments';
 import { useLine } from '../contexts/LineContext';
 import { useShift } from '../contexts/ShiftContext';
 
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+
 const QualityAlerts: React.FC = () => {
     // Global State from Hooks
+    const { currentUser } = useAuth();
+    const { success, error } = useToast();
     const { settings } = useSettings();
     const { t, locale } = useI18n();
     const { selectedLine } = useLine();
@@ -95,12 +100,15 @@ const QualityAlerts: React.FC = () => {
         if (isAlertUnread || !selectedAlert.isRead) {
             try {
                 // Use mutation
-                acknowledgeDocument.mutate({
+                await acknowledgeDocument.mutateAsync({
                     documentId: selectedAlert.id,
-                    shift: currentShift
+                    shift: currentShift,
+                    userId: currentUser?.id
                 });
-            } catch (error) {
-                console.error('Error acknowledging alert:', error);
+                success(t('common.readConfirmed') || 'Leitura confirmada com sucesso!');
+            } catch (err) {
+                console.error('Error acknowledging alert:', err);
+                error(t('common.readConfirmError') || 'Erro ao confirmar leitura. Tente novamente.');
             }
         }
     };

@@ -20,7 +20,20 @@ async function getAcknowledgments(req, res, next) {
 
 async function createAcknowledgment(req, res, next) {
     try {
-        const { document_id, shift, user_id } = req.body;
+        let { document_id, shift, user_id } = req.body;
+
+        // Fallback to authenticated user if not provided in body
+        if (!user_id && req.user && req.user.id) {
+            console.log('⚠️ createAcknowledgment: user_id missing in body, using req.user.id:', req.user.id);
+            user_id = req.user.id;
+        }
+
+        if (!user_id) {
+            console.warn('⚠️ createAcknowledgment: No user_id provided and no authenticated user found.');
+            // Optional: Decide whether to fail or allow NULL if DB allows. 
+            // Assuming DB requires it, but let's log it.
+        }
+
         const data = await acknowledgmentService.createAcknowledgment({ document_id, shift, user_id });
         res.status(201).json(data);
     } catch (error) {
